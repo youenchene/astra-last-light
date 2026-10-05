@@ -1,0 +1,77 @@
+[art]
+depth = 4
+# Register only runtime assets: legacy prototypes, unused title plates and
+# campaign_flash remain source/reference files, not duplicate executable data.
+# actors16.txt is the authoring input for sector_enemies/shots/bonuses.
+
+[font]
+source = "font.txt"
+kind = "bitmap"
+
+[graveyard]
+source = "graveyard.png"
+kind = "bitmap"
+depth = 4
+
+[hero32]
+source = "hero32.txt"
+kind = "bitmap"
+depth = 4
+palette = "sprite-palette.txt"
+
+[sector_enemies]
+source = "sector_enemies.txt"
+kind = "bitmap"
+depth = 4
+palette = "sprite-palette.txt"
+
+[decor]
+source = "decor.txt"
+kind = "bitmap"
+depth = 4
+
+[bullets]
+source = "bullets.txt"
+kind = "bitmap"
+depth = 2
+palette = "bullet-palette.txt"
+
+[bonuses]
+source = "bonuses.txt"
+kind = "bob"
+depth = 4
+
+[pshot]
+source = "pshot.txt"
+kind = "bob"
+depth = 4
+
+[lance]
+source = "lance.txt"
+kind = "bob"
+depth = 4
+
+[campaign_boss]
+source = "campaign_boss.txt"
+kind = "bob"
+depth = 4
+
+[campaign_fx16]
+source = "campaign_fx16.txt"
+kind = "bob"
+depth = 4
+
+[campaign_fx32]
+source = "campaign_fx32.txt"
+kind = "bob"
+depth = 4
+
+[campaign_fx64]
+source = "campaign_fx64.txt"
+kind = "bob"
+depth = 4
+
+[campaign_manga]
+source = "campaign_manga.txt"
+kind = "bitmap"
+depth = 4

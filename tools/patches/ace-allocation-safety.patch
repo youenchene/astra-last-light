@@ -1,0 +1,63 @@
+From: Astra local allocation safety
+Subject: [PATCH] Check bitmap descriptors and expose BOB buffer readiness
+
+For ACE 10ca68a321989738e9ac40f895bdd9f1d8e040fe, after ace-agk.patch.
+Modified ACE files retain their Mozilla Public License 2.0 headers.
+Stored as LF; bootstrap restores CRLF in BOB hunks to match the pinned files.
+
+diff --git a/include/ace/managers/bob.h b/include/ace/managers/bob.h
+--- a/include/ace/managers/bob.h
++++ b/include/ace/managers/bob.h
+@@ -139,6 +139,12 @@
+  */
+ void bobReallocateBuffers(void);
+ 
++/**
++ * @brief Check after bobReallocateBuffers(), before beginning a frame.
++ * On failure, call bobManagerDestroy() to release partial allocations.
++ */
++UBYTE bobBuffersReady(void);
++
+ /**
+  * @brief Changes bob's animation frame.
+  *
+diff --git a/src/ace/managers/bob.c b/src/ace/managers/bob.c
+--- a/src/ace/managers/bob.c
++++ b/src/ace/managers/bob.c
+@@ -198,6 +198,22 @@
+ 	systemUnuse();
+ }
+ 
++UBYTE bobBuffersReady(void) {
++	if(!s_pQueues[0].pBobs || !s_pQueues[1].pBobs) {
++		return 0;
++	}
++#if defined(ACE_BOB_PRISTINE_BUFFER)
++	return s_pPristineBuffer && s_pPristineBuffer->Planes[0];
++#else
++	for(UBYTE i = 0; i < 2; ++i) {
++		if(!s_pQueues[i].pBg || !s_pQueues[i].pBg->Planes[0]) {
++			return 0;
++		}
++	}
++	return 1;
++#endif
++}
++
+ void bobManagerDestroy(void) {
+ 	bobDeallocBuffers();
+ }
+diff --git a/src/ace/utils/bitmap.c b/src/ace/utils/bitmap.c
+--- a/src/ace/utils/bitmap.c
++++ b/src/ace/utils/bitmap.c
+@@ -147,6 +147,10 @@
+ 
+ 	pBitMap = (tBitMap*) memAllocFastClear(sizeof(tBitMap));
+ 	logWrite("addr: %p\n", pBitMap);
++	if(!pBitMap) {
++		logWrite("ERR: Can't alloc bitmap descriptor\n");
++		goto fail;
++	}
+ 
+ 	pBitMap->BytesPerRow = uwWidth / 8;
+ 	pBitMap->Rows = uwHeight;

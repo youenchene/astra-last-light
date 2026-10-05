@@ -1,0 +1,14 @@
+wait-serial "AGK title_ready" 600
+press left 1
+wait 2
+press fire 1
+wait-serial "AGK combat_ready" 600
+press fire 120
+screenshot citadel
+expect-serial "phase=1 level=4"
+expect-serial "phase=6 level=4 .*scene=9"
+expect-serial "scene_ready=1 preparing=0"
+expect-serial "AGK music sector4"
+expect-serial "phase=1 level=4 .*wave=1 .*enemies=6"
+expect-no-serial "bullet_hidden=[1-9]"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

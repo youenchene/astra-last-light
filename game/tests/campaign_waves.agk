@@ -1,0 +1,28 @@
+# Natural first formation, no firing or state injection: all six remain alive.
+# Captures bracket a six-member barrage; serial perf windows include entry/exit.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "scene_ready=1" 300
+screenshot sector_intro
+expect-serial "phase=6 level=1 .*stage=0 sim=0 scene=0"
+expect-serial "scene_ready=1 preparing=0"
+wait-serial "AGK combat_ready" 600
+wait 50
+screenshot six_ships
+expect-color six_ships 288 68 0xA43
+expect-color six_ships 264 95 0xA43
+expect-color six_ships 288 122 0xA43
+expect-color six_ships 264 149 0xA43
+expect-color six_ships 288 176 0xA43
+expect-color six_ships 264 203 0xA43
+mark barrage_entry
+wait 100
+screenshot six_barrage
+mark barrage_exit
+wait 50
+screenshot after_barrage
+expect-serial "phase=1 .*wave=1 .*enemies=6 .*stage=[0-9]+ sim=[0-9]+"
+expect-serial "phase=1 .*wave=1 .*hostile_bullets=[1-9][0-9]* .*enemies=6"
+expect-no-serial "bullet_hidden=[1-9]|ERR|STACK SMASHED|allocation failure"
+expect-serial "AGK music sector1"
+expect-sound barrage_entry barrage_exit

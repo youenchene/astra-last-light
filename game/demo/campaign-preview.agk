@@ -1,0 +1,31 @@
+# Ordinary-input preview: original logos, title, first manga scene and combat.
+# Fixed waits intentionally retain these sequences in the recorded video.
+# This is not the injected native campaign fixture or a full campaign clear.
+wait 60
+screenshot ace
+wait 120
+screenshot micrix
+wait 420
+screenshot title
+press fire 1
+wait 260
+screenshot sector_intro
+wait 400
+press fire 1
+wait 7
+press fire 1
+wait 7
+press fire 1
+wait 7
+press fire 1
+wait 7
+press fire 55
+screenshot charged
+wait 12
+screenshot combat
+expect-serial "AGK sfx shot"
+expect-serial "AGK sfx lance"
+expect-serial "AGK music sector1"
+expect-serial "phase=6 level=1"
+expect-serial "AGK combat_ready"
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

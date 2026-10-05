@@ -1,0 +1,88 @@
+# NON-SHIPPING injected-state fixture; not an ordinary campaign clear.
+# No performance assertions here: checker reports budget failures separately.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK qa_scene=0 " 600
+screenshot scene00
+wait-serial "AGK qa_F_badge=1" 600
+screenshot F_badge
+wait-serial "AGK qa_F_pattern=2" 100
+screenshot F2
+wait-serial "AGK qa_F_pattern=3" 100
+screenshot F3
+wait-serial "AGK qa_fx=1 " 600
+screenshot fx1
+wait-serial "AGK qa_hero=0 " 300
+screenshot hero0
+wait-serial "AGK qa_scene=1 " 600
+screenshot scene01
+wait-serial "AGK qa_boss=1 " 600
+screenshot boss1
+wait-serial "AGK qa_flash=1 " 100
+screenshot flash1
+wait-serial "AGK qa_hero=1 " 200
+screenshot hero1
+wait-serial "AGK qa_dead=1 " 300
+screenshot dead1
+wait-serial "AGK qa_scene=2 " 300
+screenshot scene02
+wait-serial "AGK qa_scene=3 " 600
+screenshot scene03
+wait-serial "AGK qa_fx=2 " 600
+screenshot fx2
+wait-serial "AGK qa_hero=2 " 300
+screenshot hero2
+wait-serial "AGK qa_scene=4 " 600
+screenshot scene04
+wait-serial "AGK qa_boss=2 " 600
+screenshot boss2
+wait-serial "AGK qa_flash=2 " 100
+screenshot flash2
+wait-serial "AGK qa_hero=3 " 200
+screenshot hero3
+wait-serial "AGK qa_dead=2 " 300
+screenshot dead2
+wait-serial "AGK qa_scene=5 " 300
+screenshot scene05
+wait-serial "AGK qa_scene=6 " 600
+screenshot scene06
+wait-serial "AGK qa_fx=3 " 600
+screenshot fx3
+wait-serial "AGK qa_hero=4 " 300
+screenshot hero4
+wait-serial "AGK qa_scene=7 " 600
+screenshot scene07
+wait-serial "AGK qa_boss=3 " 600
+screenshot boss3
+wait-serial "AGK qa_flash=3 " 100
+screenshot flash3
+wait-serial "AGK qa_hero=5 " 200
+screenshot hero5
+wait-serial "AGK qa_dead=3 " 300
+screenshot dead3
+wait-serial "AGK qa_scene=8 " 300
+screenshot scene08
+wait-serial "AGK qa_scene=9 " 600
+screenshot scene09
+wait-serial "AGK qa_fx=4 " 600
+screenshot fx4
+wait-serial "AGK qa_hero=6 " 300
+screenshot hero6
+wait-serial "AGK qa_scene=10 " 600
+screenshot scene10
+wait-serial "AGK qa_boss=4 " 600
+screenshot boss4
+wait-serial "AGK qa_flash=4 " 100
+screenshot flash4
+wait-serial "AGK qa_hero=7 " 200
+screenshot hero7
+wait-serial "AGK qa_dead=4 " 300
+screenshot dead4
+wait-serial "AGK qa_scene=11 " 300
+screenshot scene11
+wait-serial "AGK qa_scene=12 " 600
+screenshot scene12
+wait-serial "AGK qa_complete=8191 " 300
+wait 50
+expect-no-serial "qa_fail=|bullet_hidden=[1-9]|ERR|STACK SMASHED|allocation failure"
+expect-serial "AGK qa_NON_SHIPPING_injected_fixture"

@@ -1,0 +1,10 @@
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK combat_ready" 600
+wait 10
+screenshot first
+expect-color first 250 58 0x001
+wait 16
+screenshot second
+expect-color second 250 58 0x001
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

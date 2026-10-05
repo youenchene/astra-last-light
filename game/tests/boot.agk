@@ -1,0 +1,10 @@
+# Both requested intros and the final title. Golden names intentionally differ
+# from the unrelated AGK template's old wall-demo image.
+wait 45
+screenshot ace
+wait 120
+screenshot micrix
+wait-serial "AGK title_ready" 600
+screenshot title
+expect-serial "AGK ready"
+expect-no-serial "ERR|STACK SMASHED"

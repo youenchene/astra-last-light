@@ -1,0 +1,39 @@
+; Original: Alloy Oracle. 16 bars, B minor / G / Em / F-sharp dominant.
+#title Alloy Oracle
+#tempo 104
+#grid 4
+#inst brass saw vol=23 decay=3
+#inst cog pulse25 vol=20 decay=2
+#inst bass triangle vol=42 decay=2
+#inst kick kick vol=36
+
+; A: clipped industrial calls yield to low sustained answering intervals.
+A @brass o3 q4 v15 b8 r8 f+4 d8 r8 c+4 | b2 r2
+A g8 r8 d4 b8 r8 a4 | g2 r2
+A e8 r8 b4 g8 r8 f+4 | e2 r2
+A f+8 r8 c+4 a+8 r8 g4 | f+2 r2
+A b4 d8 r8 f+4 c+8 r8 | d4 b4 a4 r4
+A g4 b8 r8 d4 a8 r8 | b4 g4 f+4 r4
+A e4 g8 r8 b4 f+8 r8 | g4 e4 d4 r4
+A f+4 a+8 r8 c+4 g8 r8 | f+4 r4 r2
+
+; B: sixteenth machinery bursts, contrasting displaced eighth-note answers.
+B @cog o4 q4 v15 [b16 f+16 d16 c+16 r4 d8 f+8 r4]2
+B [g16 d16 o3 b16 o4 d16 r4 g8 a8 r4]2
+B [e16 b16 g16 f+16 r4 e8 g8 r4]2
+B f+16 c+16 a+16 g16 r4 f+8 a+8 r4 | c+4 r4 r2
+B b16 a16 f+16 d16 r8 c+8 d8 r8 f+4 | r8 b8 r8 a8 f+4 d4
+B g16 f+16 d16 o3 b16 o4 r8 d8 g8 r8 a4 | r8 b8 r8 a8 g4 d4
+B e16 d16 o3 b16 o4 g16 r8 f+8 e8 r8 g4 | r8 b8 r8 g8 f+4 e4
+B f+16 g16 a+16 c+16 r8 a+8 g8 r8 f+4 | c+4 r4 r2
+
+; C: attacks displaced by rests; each eighth is two tracker rows.
+C q4 v15 [@kick o4 c8 @bass o1 b8 r8 b8 @kick o4 c8 @bass o2 f+8 o1 b4
+C @bass o1 b8 r8 @kick o4 c8 @bass o2 d8 o1 b4 r4
+C @kick o4 c8 @bass o1 g8 r8 g8 @kick o4 c8 @bass o2 d8 o1 g4
+C @bass o1 g8 r8 @kick o4 c8 @bass o1 b8 g4 r4
+C @kick o4 c8 @bass o2 e8 r8 e8 @kick o4 c8 @bass o1 b8 o2 e4
+C @bass o2 e8 r8 @kick o4 c8 @bass o2 g8 e4 r4
+C @kick o4 c8 @bass o1 f+8 r8 f+8 @kick o4 c8 @bass o2 c+8 o1 f+4
+C @bass o1 f+4 r4 r2]2
+D [r1]16

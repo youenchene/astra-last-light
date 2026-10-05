@@ -1,0 +1,60 @@
+{
+  "sources": [
+    {
+      "source": "rd_hero16.png",
+      "sha256": "fd7ba957316d727ad4a9b536fb5e6b37d9356b53868f671b3e7fb9f811dcf6df",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_scout16.png",
+      "sha256": "ac148d9b1b77714f1ee30a00bcb4359c1fb642e70a8356a1511b48b7b7dff645",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_weaver16.png",
+      "sha256": "9db1196be897edb281620162918039832f58896f195262481a6bc7a35b2d8e75",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_gunner16.png",
+      "sha256": "5d7d931c7156d73c5ca1e9b3336b0985309160b67745f440e1e2430af8f52c81",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_dart16.png",
+      "sha256": "65068736c1a4332a249ce3d1e738faa7e13c7eac04f479cd390d8e0eee8c1d33",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_boss16.png",
+      "sha256": "11050bce4325180d15d3661192b7ed28557958e6e0cfe02f05101d47ed835bb4",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_asteroid16.png",
+      "sha256": "ba2cf20f53150b858762517acd0aa023c356f6343d69609c6cfd163bfd27ceb5",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_decor0.png",
+      "sha256": "3025093ce48ff702d7c9c5908a991966df5158dd7fb916b9b01fd4d97654a1de",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_decor1.png",
+      "sha256": "4bedc9b5394b392bc60faf29878ba125caff05c89b00d08017029832cd788af1",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_decor2.png",
+      "sha256": "f722e1d098a9be42307ac6ff3421012b2f45c52404f8920250abaa4e8ce60382",
+      "border_pixels_removed": 0
+    },
+    {
+      "source": "rd_decor3.png",
+      "sha256": "0deda6a73594b9a5cfb98d3980507dc5706348623fcbe863e1336cc28532cae7",
+      "border_pixels_removed": 0
+    }
+  ],
+  "processing": "Border-connected cleanup; nearest-neighbor fit; palette quantization; 2-row corridor clearance; seam endpoint match"
+}

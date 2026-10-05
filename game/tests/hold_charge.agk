@@ -1,0 +1,9 @@
+# Ordinary input: hold-only must never emit a shot, even after full charge.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK combat_ready" 600
+press fire 55
+screenshot held_ready
+expect-serial "AGK sfx charge"
+expect-no-serial "AGK sfx shot|AGK sfx lance|shot_bobs=[1-9]"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

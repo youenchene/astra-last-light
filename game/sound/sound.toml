@@ -1,0 +1,123 @@
+# Original Astra synthesis recipes; no sampled recordings.
+[sound]
+sfx_channels = [3]
+
+[sfx.shot]
+wave = "pulse12"
+freq = [1760, 330]
+length = 0.07
+attack = 0.002
+decay = 28
+release = 0.018
+volume = 34
+priority = 1
+
+[sfx.explosion]
+wave = "noise"
+freq = [4200, 180]
+length = 0.24
+attack = 0.002
+decay = 12
+release = 0.05
+volume = 52
+priority = 4
+
+[sfx.hit]
+wave = "noise"
+freq = [2200, 700]
+length = 0.09
+attack = 0.002
+decay = 24
+release = 0.025
+volume = 46
+priority = 5
+
+[sfx.charge]
+wave = "triangle"
+freq = [165, 990]
+length = 0.22
+attack = 0.08
+decay = 0
+release = 0.035
+volume = 42
+priority = 2
+
+[sfx.warp]
+wave = "saw"
+freq = [1320, 82.5]
+length = 0.28
+attack = 0.018
+decay = 5
+release = 0.06
+volume = 44
+priority = 6
+
+[sfx.intro_rise]
+wave = "triangle"
+freq = [110, 880]
+length = 0.36
+attack = 0.16
+decay = 0
+release = 0.07
+volume = 40
+priority = 2
+
+[sfx.intro_spark]
+wave = "sine"
+steps = [[660, 0.04], [990, 0.04], [1320, 0.08]]
+attack = 0.003
+decay = 8
+release = 0.035
+volume = 44
+priority = 3
+
+[sfx.lance]
+wave = "saw"
+freq = [1320, 110]
+length = 0.28
+attack = 0.003
+decay = 6
+release = 0.08
+volume = 58
+# A dense wave may still be playing an explosion when the lance releases.
+# Launch replaces explosions; a later hit at equal priority still takes over.
+priority = 5
+
+# Starts after the Micrix intro; A-C music, D remains reserved for SFX.
+[sfx.bonus_drop]
+wave = "sine"
+steps = [[440, 0.04], [660, 0.04], [880, 0.08]]
+attack = 0.003
+decay = 4
+release = 0.03
+volume = 44
+priority = 4
+
+[sfx.bonus_pickup]
+wave = "triangle"
+steps = [[660, 0.04], [880, 0.04], [1320, 0.10]]
+attack = 0.002
+decay = 3
+release = 0.035
+volume = 54
+priority = 7
+
+[music.theme]
+source = "theme.mml"
+volume = 42
+
+[music.sector1]
+source = "sector1.mml"
+volume = 42
+
+[music.sector2]
+source = "sector2.mml"
+volume = 42
+
+[music.sector3]
+source = "sector3.mml"
+volume = 42
+
+[music.sector4]
+source = "sector4.mml"
+volume = 42

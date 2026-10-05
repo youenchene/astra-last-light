@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+KIT="${AGK_KIT:-$HOME/Code/amiga/amiga-game-kit}"
+if [[ ! -x "$KIT/tools/agk" ]]; then
+  printf 'Set AGK_KIT to an installed amiga-game-kit checkout.\n' >&2
+  exit 1
+fi
+COMMAND="${1:-help}"
+if [[ $# -gt 0 ]]; then shift; fi
+case "$COMMAND" in
+  run|test) exec python3.12 "$ROOT/tools/agk-launch.py" "$COMMAND" "$ROOT/game" "$@" ;;
+  record) exec python3.12 "$ROOT/tools/agk-launch.py" "$COMMAND" "$@" ;;
+  build|unit|art|sound|play) exec "$KIT/tools/agk" "$COMMAND" "$ROOT/game" "$@" ;;
+  *) exec "$KIT/tools/agk" "$COMMAND" "$@" ;;
+esac

@@ -1,0 +1,5 @@
+# Stable ACE intro baseline only. Gameplay and transitions still have known
+# frame drops; combat.agk records their telemetry rather than hiding them.
+wait 100
+expect-no-dropped-frames
+expect-max-load 60

@@ -1,0 +1,8 @@
+# The complete 2.192-second original sample begins at startup. Capture its
+# sustained content before Micrix, with no game theme or substitute sweep.
+mark ace
+wait 100
+mark played
+expect-serial "AGK sfx ace_original"
+expect-sound ace played
+expect-no-serial "AGK sfx intro_rise|AGK music|allocation failure|ERR|STACK SMASHED"

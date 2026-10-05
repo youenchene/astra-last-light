@@ -1,0 +1,12 @@
+{
+  "original_logic_c_sha256": "6661581bb86f6c2a226597396f6c20283bc33d3f1781bfa6f25c73f6d73aef05",
+  "original_logic_h_sha256": "2ada644bd7f93430400dc1bbb0331eff78d3f458c1364b3e194d9a4fef1a8ce3",
+  "policy": "Stationary no-fire pilot after start; fixture invulnerability only; includes every spawn before original boss cutoff",
+  "one_live_formation": true,
+  "sectors": [
+    {"sector":1,"original_duration_ticks":1800,"waves":6,"quota":18,"spawn_ticks":[25,345,665,985,1198,1518]},
+    {"sector":2,"original_duration_ticks":2000,"waves":7,"quota":21,"spawn_ticks":[25,345,665,985,1198,1518,1838]},
+    {"sector":3,"original_duration_ticks":2200,"waves":8,"quota":24,"spawn_ticks":[25,345,665,985,1198,1518,1838,2158]},
+    {"sector":4,"original_duration_ticks":2400,"waves":8,"quota":24,"spawn_ticks":[25,345,665,985,1198,1518,1838,2158]}
+  ]
+}
