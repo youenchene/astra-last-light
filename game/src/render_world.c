@@ -49,6 +49,7 @@ static UWORD s_uwOriginalStarColor;
 /* Cache horizontal scaling only; vertical repetitions share their source row.
  * This removes 9072 bytes of redundant resident storage at cold-load time. */
 static ULONG s_pGlyphMasks[3][36][7];
+static ULONG s_bossLabel[7];
 static UBYTE s_hasScroll;
 /* Physical pixel provenance, deliberately outside the copied command history.
  * Partial plate/caption repair cannot damage the stable title exterior. */
@@ -57,6 +58,7 @@ static UBYTE s_titleStable[2];
  * Each tick advances only the back target (8 rows / two glyphs total). */
 typedef struct {
 	ULONG score;
+	char scoreText[9];
 	UWORD hp, row, cursor, repairRow, stars[STAR_COUNT];
 	UBYTE valid, preparing, stage, command, paused, bossHud, starTick, galaxyBaseCleared;
 	UBYTE lives, charge, weapon, speed, shield, shotLevel, top, bottom, chargeInk;
@@ -118,6 +120,12 @@ static void fontMasksCreate(void) {
 				s_pGlyphMasks[size][glyph][row] = mask;
 			}
 	}
+	/* Fixed x166 label: pack the existing font, retaining its six-pixel advance. */
+	for(UBYTE row = 0; row < 7; ++row)
+		s_bossLabel[row] = (s_pGlyphMasks[0]['B' - 'A'][row] >> 6) |
+			(s_pGlyphMasks[0]['O' - 'A'][row] >> 12) |
+			(s_pGlyphMasks[0]['S' - 'A'][row] >> 18) |
+			(s_pGlyphMasks[0]['S' - 'A'][row] >> 24);
 }
 
 /* Startup only: rasterize cached glyph masks without touching blitter/DMA.
@@ -304,18 +312,20 @@ static void numberDraw(UWORD x, UWORD y, ULONG value, UBYTE digits) {
 }
 
 static void scoreDraw(ULONG score, UBYTE dirty) {
+	char after[9], glyph[2] = {0, 0};
+	galaxyTraceMark(7);
+	numberText(after, score, 8);
+	galaxyTraceMark(8);
 	if(dirty) {
 		blitRect(s_pScreen, 162, 6, 48, 7, 1);
-		numberDraw(162, 6, score, 8);
-		return;
+		textDraw(162, 6, after, 1, 6);
 	}
-	char before[9], after[9], glyph[2] = {0, 0};
-	numberText(before, s_ulScore, 8);
-	numberText(after, score, 8);
 	/* Updating all eight digits here can delay player-shot BOBs past the beam.
-	 * Only changed glyphs need clearing; their spacing and colors stay intact. */
+	 * Keep the actual digits with their physical bitmap, including composition. */
 	for(UBYTE i = 0; i < 8; ++i) {
-		if(before[i] == after[i]) continue;
+		if(HISTORY.scoreText[i] == after[i]) continue;
+		HISTORY.scoreText[i] = after[i];
+		if(dirty) continue;
 		UWORD x = 162 + i * 6;
 		blitRect(s_pScreen, x, 6, 6, 7, 1);
 		glyph[0] = after[i];
@@ -596,6 +606,17 @@ static void panelQueue(tPhase phase) {
 	}
 }
 
+static void bossLabelDraw(void) {
+	/* The caller has cleared to ink1. Ink11 differs only in planes1/3.
+	 * x160 is longword-aligned on both interleaved bitmaps; preserve exterior bits. */
+	blitWait();
+	UWORD offset = 18 * 160 + 20;
+	for(UBYTE row = 0; row < 7; ++row, offset += 160) {
+		*(ULONG *)&s_pScreen->Planes[1][offset] |= s_bossLabel[row];
+		*(ULONG *)&s_pScreen->Planes[3][offset] |= s_bossLabel[row];
+	}
+}
+
 static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	if(dirty || s_ubWeapon != pState->weaponLevel) {
 		blitRect(s_pScreen, 50, 249, 6, 7, 0);
@@ -636,7 +657,7 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 		UBYTE labelChanged = dirty || !s_uwHp || !pState->boss.hp || HISTORY.bossHud != bossHud;
 		if(labelChanged) blitRect(s_pScreen, 166, 18, 146, 7, 1);
 		if(pState->phase == BOSS && pState->boss.maxHp) {
-			if(labelChanged) textDraw(166, 18, "BOSS", 1, 11);
+			if(labelChanged) bossLabelDraw();
 			UWORD width = (UWORD)(pState->boss.hp * 112u) / pState->boss.maxHp;
 			blitRect(s_pScreen, 198, 19, 112, 4, 2);
 			if(width) blitRect(s_pScreen, 198, 19, width, 4, 11);
@@ -743,7 +764,8 @@ void renderWorldBegin(const tGameState *pState) {
 	queueNumber(98, 249, pState->speedLevel, 1);
 	queueNumber(158, 249, pState->shield, 1);
 	queueNumber(206, 249, pState->shotLevel + 1, 1);
-	queueNumber(162, 6, pState->score, 8);
+	numberText(HISTORY.scoreText, pState->score, 8);
+	queueText(162, 6, HISTORY.scoreText, 1, 6);
 	queueNumber(254, 6, pState->lives, 1);
 	queueRect(44, 19, 100, 4, 2);
 	if(pState->charge) queueRect(44, 19,

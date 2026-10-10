@@ -31,6 +31,7 @@ static UBYTE s_buffer;
 static void starsReset(void) {}
 static void panelQueue(tPhase phase) {(void)phase;}
 static void scoreDraw(ULONG n, UBYTE dirty) {(void)n;(void)dirty;}
+static void bossLabelDraw(void) {}
 static void blitRect(tBitMap *b,UWORD x,UWORD y,UWORD w,UWORD h,UBYTE c) {
     for(unsigned yy=y; yy<y+h; ++yy) memset(&b->pixels[yy][x],c,w);
 }

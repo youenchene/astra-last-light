@@ -290,6 +290,7 @@ void genericProcess(void) {
 	if(keyUse(KEY_F8)) {
 		astraPerfFinish(s_sState.frame);
 		combatPerfFlush(&s_sState);
+		galaxyTraceReport();
 		s_perfComplete = 1;
 		return;
 	}

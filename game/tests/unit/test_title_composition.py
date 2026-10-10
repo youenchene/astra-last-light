@@ -30,9 +30,10 @@ class TitleCompositionTests(unittest.TestCase):
 
     def test_physical_provenance_and_bounded_repair(self):
         source = (ROOT / "game/src/render_world.c").read_text()
+        source = source.replace('__attribute__((noinline)) ', '')
         declarations = source[source.index("static UBYTE s_ubLevel"):source.index("/* All display writes")]
         functions = "\n".join(function(source, name) for name in (
-            "queueText", "queueRect", "queueCentered", "panelQueue", "combatBackground",
+            "numberText", "queueText", "queueRect", "queueCentered", "panelQueue", "combatBackground",
             "renderWorldBind", "renderWorldInvalidate", "renderWorldBegin", "renderWorldStep"))
         prelude = r'''
 #include <assert.h>

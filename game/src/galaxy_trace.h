@@ -9,7 +9,7 @@ void galaxyTraceDecodeEnd(void);
 void galaxyTraceFrame(const tGameState *state);
 extern unsigned char galaxyTraceTarget;
 void galaxyTraceMarkTarget(unsigned char mark);
-#define galaxyTraceMark(mark) do { if(galaxyTraceTarget) galaxyTraceMarkTarget(mark); } while(0)
+#define galaxyTraceMark(mark) do { if((mark) >= 3 && (mark) != 6 && galaxyTraceTarget) galaxyTraceMarkTarget(mark); } while(0)
 void galaxyTraceReport(void);
 #else
 #define galaxyTraceBegin(state) ((void)0)

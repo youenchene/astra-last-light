@@ -3,11 +3,11 @@
 Baseline: parent commit `52a37a1`. Target remains PAL A500 7 MHz OCS,
 512 KiB CHIP + 512 KiB slow, zero drops and <=90% peak. AROS is supplementary.
 
-**Current it10: complete-window accounting fixed and HUD optimization accepted.**
-Both profiles retain all final partial-window frames. Against identically metered
-it9j, campaign improves8→6 drops A500 and6→4 AROS; ordinary BOB improves3→2 and2→1.
-No scoped peak regresses. Global0-drop/90% acceptance remains **FAIL**.
-See [complete-window results](#it10--complete-window-accounting-and-accepted-hud-step).
+**Current it11b: physical score-digit cache and packed BOSS label accepted.**
+Complete campaign improves6/116%→5/115% A500 and4/107%→3/107% AROS versus it10.
+Ordinary BOB remains2/107% A500; AROS improves1/101%→1/100%. No scoped peak
+regresses. Global0-drop/90% acceptance remains **FAIL**.
+See [it11 complete results](#it11--physical-score-cache-and-packed-boss-label).
 All older tables without an explicit completion marker cover **emitted windows
 only**, not complete replays; they remain historical evidence, not full-run gates.
 
@@ -22,10 +22,10 @@ measured iteration: [raw-counter tables](combat-performance-tables.md).
 
 ## Recap: where frame time is spent and which hardware is involved
 
-**Latest accepted HUD step is it10c, revalidated with complete accounting.**
-A500 complete campaign is6/116%, ordinary BOB2/107%; AROS4/107%,1/101%.
-The targeted hardware-time table in the earlier it10 investigation remains
-attribution evidence; the complete OFF table below controls acceptance.
+**Latest accepted HUD step is it11b, with unchanged complete accounting.**
+A500 complete campaign is5/115%, ordinary BOB2/107%; AROS3/107%,1/100%.
+The it11 target-only hardware table below is attribution evidence; its complete
+OFF table controls acceptance. The older dense48-case matrix is historical.
 
 **Latest accepted Step D is it9j:** fixed galaxies + 36 moving stars. Campaign
 drops improve **8→7 A500, 7→6 AROS**; ordinary BOB improves **3→0, 2→0**. Global
@@ -270,6 +270,147 @@ accepted step; no installed kit, other worktree, GUI or paid service was changed
 BOB1/101%. Next bounded diagnosis remains the simultaneous effects/score bursts,
 boss HUD recreation overlapping firing work, and the now-counted ordinary
 wave-spawn/pickup tail. Global50fps is not achieved.
+
+### it11 — physical score cache and packed BOSS label
+
+Accepted it11b against `aa02d4b`, on isolated `perf/combat-loop`. The existing
+build-local AGK accounting transform is unchanged: whole iterations, ordinary
+report overhead, final full/partial windows and final-frame missed vblanks remain
+included. The installed AGK source hash is verified unchanged. No timing evidence
+from the older incomplete-window runs is used for acceptance.
+
+#### Two bounded candidates and complete OFF results
+
+1. **it11a:** retain nine score-text bytes per physical bitmap, initialized with
+   the composition command and copied with that bitmap's frozen history. Dirty
+   updates convert only the new score; the old digits come from actual history.
+   Only changed glyphs/rectangles draw. Superseded as a standalone result: peak
+   improves one point, but no drop is removed.
+2. **it11b (selected):** retain it11a and pack the four fixed BOSS glyphs into
+   seven32-bit masks at startup using the existing font. After the existing ink1
+   clear, seven pairs of aligned OR.L writes set planes1/3 for ink11. Exterior
+   bits are preserved. This removes the general glyph loop for this label only.
+
+No failed/rejected runtime candidate is omitted: both measured trials are below;
+it11a is retained as part of it11b. Incremental decimal carry and narrower bar
+rectangles were inspected but not implemented or measured. Health and charge
+still clear/refill their existing bars; score already had glyph-level dirtiness.
+
+Entries are **dropped vblanks / peak load%**; each sequence is it10→it11a→it11b.
+
+| Scenario | Actual frames / final window | A500 | AROS |
+|---|---:|---:|---:|
+| Pause continuity | 1417 /17 | 0/77→0/76→**0/76** | 0/75→0/74→**0/74** |
+| Clean transitions | 1000 /50 | 0/76→0/76→**0/76** | 0/75→0/74→**0/74** |
+| GAMEOVER/title | 3054 /4 | 0/83→0/83→**0/83** | 0/81→0/81→**0/81** |
+| Manga | 1159 /9 | 0/78→0/78→**0/78** | 0/76→0/76→**0/76** |
+| Ordinary BOB | 1247 /47 | 2/107→2/107→**2/107** | 1/101→1/100→**1/100** |
+| Injected campaign | 9172 /22 | 6/116→6/115→**5/115** | 4/107→4/107→**3/107** |
+
+Original replays and completion boundaries are unchanged; boundary logic-frame
+IDs remain1170/753/2807/911/1000/8925. Both trials match the accepted it10 baseline
+at **182 complete images and908 gameplay-state records**, without masks or ignored
+state fields. All ordinary source/lifecycle checks and all13 campaign scenes pass.
+The baseline is the retained identically metered it10 final pair, not an older
+unpatched executable.
+
+Weighted quantized mean load is not universally lower. it10→it11b A500 ordinary
+BOB32.6231→32.5453%, campaign34.6502→34.5685%; AROS31.3921→31.3119% and
+33.3583→33.2087%. A500 manga22.7688→22.8119% is a small increase. No claim of a
+universal mean-time improvement or global50fps acceptance is made.
+
+#### Exact targeted events and hardware attribution
+
+The guarded trace retains only six campaign frames and four ordinary BOB frames,
+with10 slots, zero omitted records and no timestamp reads on other frames. It
+samples HUD begin/end, BOB end and score conversion begin/end; it does not run the
+dense profiler or print during gameplay. F8 flushes it after the complete meter
+boundary. `it10_counts` is the legacy trace-call counter (9175/1250), **not** the
+completed-frame denominator (9172/1247).
+
+The selected campaign IDs are751/2817/4879/6927 (six-kill bursts),7704 (S4 boss
+tick86 with regular-report/firing workload),7780 (S4 second-bitmap post-respawn
+BOSS-label redraw). The preliminary retained trace also sampled5550; the final
+trace replaces that first-boss draw with7704, which belongs to the other remaining
+drop window. Ordinary events cover816 (kill),954 (wave-spawn tail),977 (pickup),
+981 (kill). These are target-call elapsed times, not exact OFF per-frame timers.
+
+Each timing cell is **A500 / AROS raster lines**, it11b with targeted diagnostics ON.
+HUD includes formatter time. BOB includes CPU setup, waits, masked DMA and bus
+contention. Do not sum overlapping columns.
+
+| Frame / event | Target elapsed | Score formatter | HUD | BOB submission |
+|---|---:|---:|---:|---:|
+| 751 S1 six effects/score | 336 /307 | 4 /3 | 27 /26 | 95 /70 |
+| 2817 S2 six effects/score | 372 /343 | 3 /3 | 41 /39 | 109 /70 |
+| 4879 S3 six effects/score | 367 /343 | 3 /3 | 41 /40 | 113 /90 |
+| 6927 S4 six effects/score | 366 /341 | 3 /3 | 41 /40 | 110 /87 |
+| 7704 S4 BOSS tick86 | 313 /295 | — | 5 /5 | 60 /50 |
+| 7780 S4 BOSS label after respawn | 298 /288 | — | 29 /29 | 60 /49 |
+| 816 ordinary kill | 304 /290 | 15 /3 | 42 /40 | 47 /39 |
+| 954 ordinary wave-spawn tail | 338 /317 | 3 /3 | 26 /25 | 63 /49 |
+| 977 ordinary pickup | 271 /260 | — | 20 /20 | 33 /27 |
+| 981 ordinary kill | 296 /289 | 4 /3 | 45 /44 | 38 /31 |
+
+**A500 targeted recap:** four-burst formatter mean/max3.25/4 lines
+(1.04%/1.28% of313), HUD37.5/41 (11.98%/13.10%), BOB106.75/113
+(34.11%/36.10%). The selected BOSS HUD calls mean/max17/29 (5.43%/9.27%),
+BOB60/60 (19.17%). These are event samples, not steady-state dense averages.
+The earlier it10 S4 label HUD was68–69 lines; its probes differ, so that comparison
+is attribution, not a matched OFF delta. The new OFF drop reduction is authoritative.
+
+Instrumentation is still material: OFF→ON A500 campaign5/115→5/120, BOB2/107→2/112;
+AROS campaign3/107→3/111, BOB1/100→1/105. Same complete frame counts. No fixed
+overhead is subtracted. `galaxyTraceBegin` follows AGK Begin, so target elapsed
+excludes the regular AGK report that the whole-frame meter correctly includes.
+Clock-call time, DMA alignment and Paula interrupts also perturb samples; the
+15-line ordinary formatter sample is elapsed time, not evidence of15 CPU-only
+lines. Window totals cannot prove the exact OFF duration of every named event.
+
+Actual68000 audit: `numberText` retains MULU.W reciprocal arithmetic for narrow
+values and bounded shifts/subtractions for full-width values; no division helper
+is imported by world/BOB/effect objects. The BOSS path is inlined to14 aligned
+OR.L writes after `blitWait()`. Boss HP retains its existing word division.
+Pinned ACE header/source and installed BOB technique were inspected: background
+saves precede masked draws, with N−2 restore histories. Moving stars mean a
+stationary effect cannot safely skip save/restore/draw. No BOB early return,
+effect suppression, scheduling delay, collision/audio/timeline change was added.
+
+#### Validation, memory, artifacts and remaining gap
+
+- C1/1 and Python108/108 PASS. Tests exercise non-alternating physical score
+  histories, composition reset, decimal/uint32 wrap, unchanged-digit no-writes,
+  and packed BOSS output versus the original writer across whole framebuffers
+  with varying exterior bits. Existing source-glyph checks remain intact.
+- The first host run exposed an extraction-harness compile error: newly called
+  `numberText` was absent from `test_title_composition`'s extracted C. Reported
+  before correction, retained in `.tmp/it11-first-failure.txt`; the harness now
+  extracts the real formatter. No native functional failure or weakened assertion.
+- Target static storage increases48 bytes: score histories204→224 bytes plus
+  28-byte label. No allocation or additional bitmap. Production executable501636
+  bytes (+60 versus it10); A500 startup free CHIP/total41104/50488, AROS
+  152248/1361224. These startup readings are not a formal worst-case RAM proof.
+- Final OFF ADF boot/source validation passes all four sectors on both profiles:
+  **352256 exact galaxy pixels/profile** plus frozen-pause checks. `cmp` proves
+  the restored executable equals the measured it11b ordinary executable.
+- All four ASTRA flags OFF. Executable SHA256
+  `b105cfd770f07089252652179023771f8f93908066e705c1fb226d9e3e0b9c06`;
+  final ADF `12b0443be19928af5be4f4051aa853d5185370be3b83f2cfe8d6cca86b0f17ad`.
+  A maintained trace-runner check regenerated the disk metadata after source-pixel
+  validation; the executable remained identical. This final disk was then booted
+  on both profiles with complete BOB replays, source-restoration validation and
+  ten byte-identical captures (`off-boot/report.json`).
+
+Evidence in `game/build/`: `perf-loop5-it11{a,b}-{prod,campaign}` (including both
+`comparison.json` files), `perf-loop5-it11-targeted{,-final}`, and
+`perf-loop5-it11-final/{validation.log,68000.txt,galaxy/,off-boot/}`. The previous it8 pending
+docs, C tests and admission harness remain unstaged and unchanged.
+
+**Remaining complete-window gap:** A500 campaign5 drops and25 peak-load points
+above90; ordinary BOB2 drops and17 points. AROS campaign3/107%, BOB1/100%.
+The six-effect BOB bursts dominate the measured selected HUD/BOB costs; the
+S4 tick86 report/firing window and ordinary spawn/kill tail remain unresolved.
+Two bounded candidates are measured; this accepted increment is not viability.
 
 ### it10 — HUD trials and new measurement blocker
 

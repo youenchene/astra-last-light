@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 import subprocess
+from perf_boundary import scenario_with_boundary
 
 ROOT=Path(__file__).resolve().parents[1]
 FLAGS=('CAMPAIGN_PROBE','PRESENTATION_TIMING','COMBAT_TIMING','COMBAT_STRESS')
@@ -15,12 +16,9 @@ def main():
     parser.add_argument('--ordinary-bob',action='store_true')
     args=parser.parse_args()
     args.out.mkdir(parents=True,exist_ok=False)
-    scenario=ROOT/'game/tests/native/campaign.agk'
-    if args.ordinary_bob:
-        scenario=args.out.resolve()/'bob-trace.agk'
-        scenario.write_text((ROOT/'game/tests/bob_restore.agk').read_text()+
-                            '\nkey 0x59\nwait-serial "AGK galaxy_diag_omitted=0" 100\n'
-                            'expect-serial "AGK galaxy_diag_omitted=0"\n')
+    scenario=scenario_with_boundary(ROOT,
+        'game/tests/bob_restore.agk' if args.ordinary_bob else 'game/tests/native/campaign.agk',
+        args.out.resolve()/'scenarios')
 
     def run(*parts):
         with (args.out/'commands.log').open('a') as log:

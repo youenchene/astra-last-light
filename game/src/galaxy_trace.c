@@ -5,17 +5,17 @@
 #include <agk/debug.h>
 #include <proto/exec.h>
 extern const unsigned char galaxyBytes[];
-/* Diagnostic only: retain slow frames and selected it9j event frames, with
- * explicit counts/overflow. Timing perturbs DMA/IRQ alignment: acceptance is OFF. */
+/* Diagnostic only: six campaign burst frames or four ordinary BOB events.
+ * No clocks on other frames; acceptance always uses diagnostics OFF. */
 typedef struct {
-    UWORD total, decode, frame, stage, marks[7], tick, pf;
+    UWORD total, decode, frame, stage, marks[9], tick, pf;
     UBYTE phase, level, busy, patch, events, effects;
 } tGalaxyTrace;
-static tGalaxyTrace s_trace[64];
+static tGalaxyTrace s_trace[10];
 static UWORD s_count, s_omitted, s_decode;
 static ULONG s_start, s_decodeStart;
 static UBYTE s_patch, s_reported;
-static UWORD s_marks[7];
+static UWORD s_marks[9];
 unsigned char galaxyTraceTarget;
 static UWORD s_frames, s_targets;
 
@@ -35,27 +35,33 @@ static ULONG clockLines(void) {
     return before*313+line;
 }
 void galaxyTraceBegin(const tGameState *state) {
-    s_start=clockLines(); s_decode=0; s_patch=0;
-    /* Canonical it9j frame IDs: F pickups, six-kill bursts, first boss draws,
-     * first-sector deaths, S4 post-respawn, ordinary BOB stage116. No prep or
-     * simulation timing changes are permitted when using these selectors. */
+    ++s_frames;
     switch((UWORD)(state->frame+1)) {
-    case 713: case 721: case 725: case 751: case 801: case 816:
-    case 1416: case 1585: case 2817: case 3487: case 4879: case 5550:
-    case 6927: case 7597: case 7780: galaxyTraceTarget=1; break;
+#ifdef ASTRA_CAMPAIGN_PROBE
+    case 751: case 2817: case 4879: case 6927: case 7704: case 7780:
+#else
+    case 816: case 954: case 977: case 981:
+#endif
+        galaxyTraceTarget=1; break;
     default: galaxyTraceTarget=0;
     }
-    ++s_frames; s_targets+=galaxyTraceTarget;
-    for(UBYTE i=0;i<7;++i) s_marks[i]=0;
+    if(!galaxyTraceTarget) return;
+    ++s_targets;
+    s_start=clockLines(); s_decode=0; s_patch=0;
+    for(UBYTE i=0;i<9;++i) s_marks[i]=0;
 }
 void galaxyTraceMarkTarget(unsigned char mark) { s_marks[mark]=clockLines()-s_start; }
-void galaxyTraceDecodeBegin(unsigned char patch) { s_decodeStart=clockLines(); s_patch=patch; }
-void galaxyTraceDecodeEnd(void) { s_decode+=clockLines()-s_decodeStart; }
+void galaxyTraceDecodeBegin(unsigned char patch) {
+    if(galaxyTraceTarget) { s_decodeStart=clockLines(); s_patch=patch; }
+}
+void galaxyTraceDecodeEnd(void) {
+    if(galaxyTraceTarget) s_decode+=clockLines()-s_decodeStart;
+}
 void galaxyTraceFrame(const tGameState *state) {
+    if(s_reported || !galaxyTraceTarget) return;
     UWORD total=clockLines()-s_start;
-    if(s_reported) return;
-    if(total>=280 || galaxyTraceTarget) {
-        if(s_count<64) {
+    {
+        if(s_count<10) {
             tGalaxyTrace *r=&s_trace[s_count++];
             r->total=total; r->decode=s_decode; r->frame=state->frame;
             r->stage=state->stageFrame; r->phase=state->phase; r->level=state->level;
@@ -63,11 +69,10 @@ void galaxyTraceFrame(const tGameState *state) {
             r->events=state->events; r->tick=state->boss.tick; r->pf=state->phaseFrame;
             r->effects=0;
             for(UBYTE i=0;i<EFFECT_COUNT;++i) r->effects+=state->effects[i].active;
-            for(UBYTE i=0;i<7;++i) r->marks[i]=s_marks[i];
+            for(UBYTE i=0;i<9;++i) r->marks[i]=s_marks[i];
         }
         else ++s_omitted;
     }
-    if(state->phase==WIN && state->sceneReady) galaxyTraceReport();
 }
 void galaxyTraceReport(void) {
     if(s_reported) return;
@@ -83,6 +88,8 @@ void galaxyTraceReport(void) {
         agkState("audio_end",r->marks[2]); agkState("hud_begin",r->marks[3]);
         agkState("hud_end",r->marks[4]); agkState("bobs_end",r->marks[5]);
         agkState("render_end",r->marks[6]); agkEnd();
+        agkState("it11_frame",r->frame);
+        agkState("format_begin",r->marks[7]); agkState("format_end",r->marks[8]); agkEnd();
     }
     agkState("galaxy_diag_omitted",s_omitted); agkEnd();
     agkState("it10_counts",s_frames); agkState("targets",s_targets);
