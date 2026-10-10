@@ -9,11 +9,12 @@ from collections import Counter
 from importlib.util import module_from_spec, spec_from_file_location
 
 ROOT = Path(__file__).resolve().parents[1]
-STAR_COUNT = 48  # game/src/render_world.c: STARS_PER_LAYER * STAR_LAYERS
+STAR_COUNT = 48  # Original seed slots; skip i%4==0 to retain exactly 36 movers.
 MIN_PARALLAX_SAMPLES = 4
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
 from agk.image import Image
+from galaxy_oracle import background as galaxy_background, palette as galaxy_palette
 
 spec = spec_from_file_location("sector_presentation", ROOT / "tools/verify-sector-presentation.py")
 assert spec is not None and spec.loader is not None
@@ -84,34 +85,58 @@ for profile in args.profiles:
             print("Rows:", Counter(y for x,y in changed).most_common())
         assert not mismatches, f"{profile}: {name} is not a clean {shift}px leftward scroll ({mismatches} mismatches)"
     background = a.pixel(250,58)
-    nonspace = sum(a.pixel(x,y) != background for y in range(56,122) for x in range(184,312))
-    assert nonspace < 200, f"{profile}: static picture remains in gameplay ({nonspace} pixels)"
+    galaxy = galaxy_background(0)
+    live = galaxy_palette(0)
     star_color = (187, 221, 255)
     colors = {a.pixel(x,y) for y in range(126,150) for x in range(32,64)} - {background, star_color}
     assert len(colors) >= 10, f"{profile}: hero has only {len(colors)} visible colors"
     right_half = sum(a.pixel(x,y) not in (background, star_color) for y in range(126,150) for x in range(48,64))
     assert right_half >= 32, f"{profile}: hero does not extend visibly beyond16px"
-    stars = sum(a.pixel(x,y) == star_color for y in range(56,216) for x in range(320)
+    stars = sum(a.pixel(x,y) == live[galaxy[y-56][x] ^ 4] for y in range(56,216) for x in range(320)
         if not (32 <= x < 64 and 126 <= y < 150))
-    expected_pixels = STAR_COUNT // 4 * (1 + 1 + 2 + 2)
+    expected_pixels = STAR_COUNT // 4 * (1 + 2 + 2)
     assert expected_pixels * 5 // 6 <= stars <= expected_pixels * 7 // 6, \
         f"{profile}: unexpected star population: {stars} pixels, expected about {expected_pixels}"
-    checked = [0] * 4
+    checked = [0] * 3
     for index in range(STAR_COUNT):
+        if not (index & 3): continue  # farthest original layer is now fixed art
         y = 56 + index * 159 // (STAR_COUNT - 1)
         if 126 <= y < 150: continue  # hero may occlude a star
-        positions = [x for x in range(320) if a.pixel(x,y) == star_color]
+        positions = [x for x in range(320) if a.pixel(x,y) == live[galaxy[y-56][x] ^ 4]]
         width = 1 if (index & 3) < 2 else 2
         assert len(positions) == width, f"{profile}: malformed star at row{y}"
         start = positions[0]
         expected = (start - 16 // (8 >> (index & 3))) % 316
         if start >= 240 or expected >= 240: continue  # new formation enters at right edge
-        actual = {x for x in range(240) if b.pixel(x,y) == star_color}
+        actual = {x for x in range(240) if b.pixel(x,y) == live[galaxy[y-56][x] ^ 4]}
         assert actual == set(range(expected, expected + width)), f"{profile}: wrong parallax on layer{index & 3}, y{y}"
-        checked[index & 3] += 1
+        checked[(index & 3)-1] += 1
     assert all(n >= MIN_PARALLAX_SAMPLES for n in checked), f"{profile}: not enough independent parallax samples: {checked}"
+    # Every unobscured corridor pixel is either its exact fixed source pixel or
+    # its XOR star partner, and only the 36 retained star rows may use a partner.
+    star_rows = {56+i*159//47 for i in range(48) if i%4}
+    for image, right in ((a,320),(b,240)):
+        for y in range(56,216):
+            for x in range(right):
+                if 32 <= x <64 and 126 <=y <150: continue
+                allowed = {live[galaxy[y-56][x]]}
+                if y in star_rows: allowed.add(live[galaxy[y-56][x]^4])
+                assert image.pixel(x,y) in allowed, f"{profile}: wrong fixed galaxy at {(x,y)}"
     title = Image.load_png(str(Path(args.base) / profile / "boot/title.screen.png"))
     title_bg = title.pixel(0,60)
+    glyphs = []
+    for line in (ROOT / "game/art/font.txt").read_text().splitlines():
+        if line == "frame": glyphs.append([])
+        elif glyphs and line and set(line) <= {".", "X"}: glyphs[-1].append(line)
+    caption = "ORBITAL GRAVEYARD"
+    left = (320 - len(caption)*6 + 1)//2
+    caption_pixels = {(left+i*6+x,224+y) for i,c in enumerate(caption) if c != " "
+                      for y,row in enumerate(glyphs[ord(c)-ord("A")])
+                      for x,p in enumerate(row) if p == "X"}
     for top in (29,220):
-        assert all(title.pixel(x,y) == title_bg for y in range(top,top+24) for x in range(320)), f"{profile}: title still has decor"
-    print(f"PASS {profile}: borders both4px left, four slow parallax rates {checked}, 32px hero/{len(colors)} colors, clean title")
+        assert all(title.pixel(x,y) == (source_palette[5] if (x,y) in caption_pixels else title_bg)
+                   for y in range(top,top+24) for x in range(320)
+                   if not (96 <= x <224 and 26 <=y <122)), f"{profile}: title still has decor outside its centered plate"
+    _, _, plate = presentation.source_indices("graveyard", source_palette, title=True)
+    assert all(title.pixel(96+x,26+y) == source_palette[plate[y*128+x]] for y in range(96) for x in range(128))
+    print(f"PASS {profile}: borders both4px left, fixed PNG galaxy + three parallax rates {checked}, 32px hero/{len(colors)} colors, clean title")

@@ -99,7 +99,7 @@ def verify_pixels(image, art, index, x, y, background=None):
     for dy, row in enumerate(rows):
         for dx, symbol in enumerate(row):
             if symbol in (".", "0"):
-                if background is not None and image.pixel(x + dx, y + dy) not in background:
+                if background is not None and image.pixel(x + dx, y + dy) != background(x + dx, y + dy):
                     bad.append((x + dx, y + dy))
                 continue
             count += 1
@@ -168,15 +168,17 @@ def check_images(directory, text):
         require(any(early.pixel(x, y) != early.pixel(0, 29)
                     for y in range(29, 53) for x in range(320)),
                 f"scene {scene}: gameplay scenery missing")
-    background = {(0, 0, 17), (187, 221, 255)}
-    checked["F_badge"] = verify_pixels(images["F_badge"], "bonuses", 4, 80, 126, background)
+    from galaxy_oracle import pixel as background_pixel
+    checked["F_badge"] = verify_pixels(images["F_badge"], "bonuses", 4, 80, 126,
+                                      lambda x,y: background_pixel(0,11,x,y))
     for pattern, offsets in ((2, (-6, 6)), (3, (-8, 0, 8))):
         shots = [r for r in records(text, "qa_F_shot=") if r["qa_F_shot"] == pattern]
         require(len(shots) == pattern, f"F{pattern}: wrong volley size")
         require([r["y"] for r in shots] == [136 + dy for dy in offsets], "F volley offsets")
         require(all(r["kind"] == 0 and r["damage"] == 1 for r in shots), "F must not change power")
         for r in shots:
-            checked[f"F{pattern}_shot{r['slot']}"] = verify_pixels(images[f"F{pattern}"], "pshot", 0, r["x"], r["y"], background)
+            checked[f"F{pattern}_shot{r['slot']}"] = verify_pixels(images[f"F{pattern}"], "pshot", 0, r["x"], r["y"],
+                lambda x,y: background_pixel(0,15 if pattern == 2 else 25,x,y))
     for tag, art in (("boss", "campaign_boss"), ("flash", "campaign_flash")):
         for r in records(text, f"qa_{tag}="):
             level = r[f"qa_{tag}"]

@@ -3,21 +3,25 @@
 #include "art.h"
 #include "render.h"
 #include "presentation_rows.h"
+#include "galaxy_rows.h"
 #include "../art/title-plates.h"
 #include <ace/managers/blit.h>
 #include <ace/utils/custom.h>
 #include <ace/utils/fetchmode.h>
 
-/* Star index i belongs to parallax layer i & (STAR_LAYERS - 1); layer 0 is the
- * farthest (period 16) and layers >= STAR_WIDE_LAYER draw two-pixel trails.
- * Interleaving layers keeps the ascending rows in beam order. */
+/* Preserve all 48 original LFSR steps/rows, discarding layer 0 (period 16).
+ * Compact triples retain layers 1/2/3; two latter layers have wide trails. */
 #define STAR_LAYER_SHIFT 2
 #define STAR_LAYERS (1 << STAR_LAYER_SHIFT)
-#define STAR_WIDE_LAYER 2
 #define STARS_PER_LAYER 12
-#define STAR_COUNT (STARS_PER_LAYER * STAR_LAYERS)
+#define STAR_SEED_COUNT (STARS_PER_LAYER * STAR_LAYERS)
+#define STAR_COUNT (STARS_PER_LAYER * 3)
 #define STAR_LAYER(index) ((index) & (STAR_LAYERS - 1))
-#define STAR_WIDE(index) (STAR_LAYER(index) >= STAR_WIDE_LAYER)
+static const UBYTE s_starWide[STAR_COUNT] = {
+	0,1,1, 0,1,1, 0,1,1, 0,1,1, 0,1,1, 0,1,1,
+	0,1,1, 0,1,1, 0,1,1, 0,1,1, 0,1,1, 0,1,1
+};
+#define STAR_WIDE(index) s_starWide[index]
 #define DECOR_HEIGHT 24
 #define DECOR_TOP 29
 #define DECOR_BOTTOM 220
@@ -52,8 +56,8 @@ static UBYTE s_titleStable[2];
  * Each tick advances only the back target (8 rows / two glyphs total). */
 typedef struct {
 	ULONG score;
-	UWORD hp, row, cursor, stars[STAR_COUNT];
-	UBYTE valid, preparing, stage, command, paused, bossHud;
+	UWORD hp, row, cursor, repairRow, stars[STAR_COUNT];
+	UBYTE valid, preparing, stage, command, paused, bossHud, starTick, galaxyBaseCleared;
 	UBYTE lives, charge, weapon, speed, shield, shotLevel, top, bottom, chargeInk;
 } tWorldBuffer;
 static tWorldBuffer s_history[2];
@@ -463,15 +467,18 @@ static void starsReset(void) {
 	s_topScroll = s_bottomScroll = 0;
 	UWORD starSeed = 0xace1;
 	UWORD y = PLAY_TOP, remainder = 0;
-	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
+	UBYTE kept = 0;
+	for(UBYTE i = 0; i < STAR_SEED_COUNT; ++i) {
 		starSeed = (starSeed >> 1) ^ ((starSeed & 1) ? 0xb400 : 0);
-		s_pStarX[i] = starSeed % 316;
-		/* Unique ascending rows keep CPU writes in beam order. */
-		s_pStarRow[i] = (y << 7) + (y << 5);
+		if(STAR_LAYER(i)) {
+			s_pStarX[kept] = starSeed % 316;
+			/* Unique ascending rows keep CPU writes in beam order. */
+			s_pStarRow[kept++] = (y << 7) + (y << 5);
+		}
 		/* Spread rows evenly over PLAY_TOP..PLAY_BOTTOM-1 without division. */
 		++y;
-		remainder += (PLAY_BOTTOM - PLAY_TOP - 1) - (STAR_COUNT - 1);
-		while(remainder >= STAR_COUNT - 1) { ++y; remainder -= STAR_COUNT - 1; }
+		remainder += (PLAY_BOTTOM - PLAY_TOP - 1) - (STAR_SEED_COUNT - 1);
+		while(remainder >= STAR_SEED_COUNT - 1) { ++y; remainder -= STAR_SEED_COUNT - 1; }
 	}
 }
 
@@ -479,26 +486,54 @@ static void starToggle(UBYTE index, UWORD x) {
 	UWORD shape = STAR_WIDE(index) ? 0xc000 : 0x8000;
 	UWORD mask = shape >> (x & 7);
 	UWORD offset = s_pStarRow[index] + (x >> 3);
-	/* The gameplay corridor is empty behind these bright trails; XOR erases
-	 * their previous positions without a saved bitmap or full-screen blit. */
+	/* Background inks 0..3 have bright XOR partners 4..7. Toggling restores
+	 * the exact static galaxy pixels without decoding in steady gameplay. */
 	s_pScreen->Planes[2][offset] ^= mask >> 8;
 	if(mask & 255) s_pScreen->Planes[2][offset + 1] ^= mask & 255;
 }
 
-/* Only the stars due this tick are visited: layer L (index 4k+L) moves when
+/* Only the stars due this tick are visited: compact layer L (index 3k+L) moves when
  * (tick + k) is a multiple of its period. Two-pixel batches at twice the
- * former period preserve all four average speeds while halving CPU updates. */
+ * former period preserve the three retained average speeds. */
 static void starsProcess(void) {
 	s_starsDirty[0] = s_starsDirty[1] = 1;
-	static const UBYTE periods[STAR_LAYERS] = {16, 8, 4, 2};
-	for(UBYTE layer = 0; layer < STAR_LAYERS; ++layer) {
+	static const UBYTE periods[3] = {8, 4, 2};
+	for(UBYTE layer = 0; layer < 3; ++layer) {
 		UBYTE period = periods[layer];
 		for(UBYTE k = (UBYTE)(-s_ubDecorTick) & (period - 1); k < STARS_PER_LAYER; k += period) {
-			UBYTE index = (k << STAR_LAYER_SHIFT) | layer;
+			UBYTE index = k * 3 + layer;
 			UWORD x = s_pStarX[index];
 			s_pStarX[index] = x < 2 ? x + 314 : x - 2;
 		}
 	}
+}
+
+static inline __attribute__((always_inline)) void starCatchUp(UBYTE i, UWORD shape, UWORD stepShape) {
+	UWORD before = HISTORY.stars[i], after = s_pStarX[i];
+	if(before == after) return;
+	if(before >= 2 && before - 2 == after) {
+		UWORD mask = stepShape >> (after & 7);
+		UBYTE *pixel = s_pScreen->Planes[2] + s_pStarRow[i] + (after >> 3);
+		pixel[0] ^= mask >> 8;
+		if(mask & 255) pixel[1] ^= mask & 255;
+	}
+	else {
+		UWORD mask = shape >> (before & 7);
+		UBYTE *pixel = s_pScreen->Planes[2] + s_pStarRow[i] + (before >> 3);
+		pixel[0] ^= mask >> 8;
+		if(mask & 255) pixel[1] ^= mask & 255;
+		mask = shape >> (after & 7);
+		pixel = s_pScreen->Planes[2] + s_pStarRow[i] + (after >> 3);
+		pixel[0] ^= mask >> 8;
+		if(mask & 255) pixel[1] ^= mask & 255;
+	}
+	HISTORY.stars[i] = after;
+}
+
+static inline __attribute__((always_inline)) void starsCatchUpLayer(UBYTE tick,
+	UBYTE layer, UBYTE period, UWORD shape, UWORD stepShape) {
+	for(UBYTE k = (UBYTE)(-tick) & (period - 1); k < STARS_PER_LAYER; k += period)
+		starCatchUp(k * 3 + layer, shape, stepShape);
 }
 
 void renderWorldAnimate(const tGameState *pState) {
@@ -512,17 +547,13 @@ void renderWorldAnimate(const tGameState *pState) {
 	/* Catch up N-2 pixels even when simulation has just frozen. */
 	blitWait();
 	if(!s_starsDirty[s_buffer]) return;
-	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
-		UWORD before = HISTORY.stars[i], after = s_pStarX[i];
-		if(before == after) continue;
-		if(before >= 2 && before - 2 == after) {
-			UWORD mask = (STAR_WIDE(i) ? 0xf000 : 0xa000) >> (after & 7);
-			UBYTE *pixel = s_pScreen->Planes[2] + s_pStarRow[i] + (after >> 3);
-			pixel[0] ^= mask >> 8;
-			if(mask & 255) pixel[1] ^= mask & 255;
-		}
-		else { starToggle(i, before); starToggle(i, after); }
-		HISTORY.stars[i] = after;
+	/* Normal N-2 catch-up visits only stars due in the two intervening ticks.
+	 * The period/stagger sequence includes the byte-clock wrap exactly. */
+	while(HISTORY.starTick != s_ubDecorTick) {
+		++HISTORY.starTick;
+		starsCatchUpLayer(HISTORY.starTick, 0, 8, 0x8000, 0xa000);
+		starsCatchUpLayer(HISTORY.starTick, 1, 4, 0xc000, 0xf000);
+		starsCatchUpLayer(HISTORY.starTick, 2, 2, 0xc000, 0xf000);
 	}
 	s_starsDirty[s_buffer] = 0;
 }
@@ -641,9 +672,17 @@ UBYTE renderWorldTargetReady(void) { return s_isValid; }
 
 void renderWorldResumeCombat(tPhase phase) { s_ePhase = phase; }
 
-void renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows) {
-	blitRect(s_pScreen, x, y, width, rows, 0);
+UBYTE renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows) {
+	if(!HISTORY.repairRow) {
+		blitRect(s_pScreen, x, y, width, rows, 0);
+		HISTORY.galaxyBaseCleared = 1;
+	}
 	blitWait();
+	HISTORY.repairRow = galaxyStep(s_pScreen->Planes, s_pScreen->BytesPerRow,
+		s_ubLevel, x, y, width, rows, HISTORY.repairRow, HISTORY.galaxyBaseCleared);
+	if(HISTORY.repairRow < rows) return 0;
+	HISTORY.repairRow = 0;
+	HISTORY.galaxyBaseCleared = 0;
 	UWORD first = (y << 7) + (y << 5), end = first + rows * 160;
 	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
 		if(s_pStarRow[i] < first || s_pStarRow[i] >= end) continue;
@@ -652,9 +691,10 @@ void renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows) {
 		for(UBYTE pixel = 0; pixel < size; ++pixel) {
 			UWORD sx = starX + pixel;
 			if(sx >= x && sx < x + width)
-				s_pScreen->Planes[2][s_pStarRow[i] + (sx >> 3)] |= 0x80 >> (sx & 7);
+				s_pScreen->Planes[2][s_pStarRow[i] + (sx >> 3)] ^= 0x80 >> (sx & 7);
 		}
 	}
+	return 1;
 }
 
 void renderWorldBegin(const tGameState *pState) {
@@ -667,6 +707,8 @@ void renderWorldBegin(const tGameState *pState) {
 	if(s_ePhase != TITLE) s_titleStable[0] = s_titleStable[1] = 0;
 	s_isValid = 0; s_preparing = 1;
 	HISTORY.paused = 0;
+	HISTORY.repairRow = 0;
+	HISTORY.galaxyBaseCleared = 0;
 	s_prepareStage = 0; s_prepareRow = 0;
 	s_commandCount = s_command = 0; s_commandCursor = 0;
 	s_pVPort->pPalette[0] = s_ePhase == WIN ? 0 : space[level];
@@ -727,6 +769,7 @@ void renderWorldStep(void) {
 		blitRect(s_pScreen, 0, s_prepareRow, WORLD_W, 8, 0);
 		s_prepareRow += 8;
 		if(s_prepareRow == WORLD_H) {
+			HISTORY.galaxyBaseCleared = 1;
 			/* WIN clears each physical target, then bypasses decor, HUD, commands
 			 * and stars entirely. Its dedicated scene owns only art and margins. */
 			if(s_ePhase == WIN) { blitWait(); s_isValid = 1; s_preparing = 0; }
@@ -748,8 +791,16 @@ void renderWorldStep(void) {
 			s_prepareRow += 8;
 			if(s_prepareRow == 2 * DECOR_HEIGHT) {
 				s_ubTopScroll = s_topScroll; s_ubBottomScroll = s_bottomScroll;
-				s_prepareStage = 4; s_prepareRow = 0;
+				s_prepareStage = sceneryBackground(s_ePhase) ? 5 : 4; s_prepareRow = 0;
 			}
+		}
+	}
+	else if(s_prepareStage == 5) {
+		blitWait();
+		s_prepareRow = galaxyStep(s_pScreen->Planes, s_pScreen->BytesPerRow,
+			s_ubLevel, 0, 56, WORLD_W, 160, s_prepareRow, HISTORY.galaxyBaseCleared);
+		if(s_prepareRow == 160) {
+			s_prepareStage = 4; s_prepareRow = 0; HISTORY.galaxyBaseCleared = 0;
 		}
 	}
 	else if(s_prepareStage == 4) {
@@ -784,11 +835,12 @@ void renderWorldStep(void) {
 	else {
 		if(sceneryBackground(s_ePhase)) {
 			blitWait();
-			for(UBYTE i = 0; i < 8; ++i, ++s_prepareRow) {
+			for(UBYTE i = 0; i < 8 && s_prepareRow < STAR_COUNT; ++i, ++s_prepareRow) {
 				starToggle(s_prepareRow, s_pStarX[s_prepareRow]);
 				HISTORY.stars[s_prepareRow] = s_pStarX[s_prepareRow];
 			}
 			if(s_prepareRow < STAR_COUNT) return;
+			HISTORY.starTick = s_ubDecorTick;
 		}
 		blitWait();
 		s_isValid = 1; s_preparing = 0;

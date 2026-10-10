@@ -14,6 +14,12 @@ measured iteration: [raw-counter tables](combat-performance-tables.md).
 
 ## Recap: where frame time is spent and which hardware is involved
 
+**Latest accepted Step D is it9j:** fixed galaxies + 36 moving stars. Campaign
+drops improve **8→7 A500, 7→6 AROS**; ordinary BOB improves **3→0, 2→0**. Global
+0-drop/90% acceptance remains open. The it7 reference recap below is historical;
+the latest raw-cost/hardware recap, latency and memory ledger are in
+[it9](#it9--fixed-galaxy-step-d-accepted-at-it9j).
+
 A500 sector 1, timing-ON fenced matrix, stable windows over the left/centre/right
 bands. Each cell is the **mean per frame / max of one call** in elapsed PAL raster
 lines (audio and explicit waits sum 2 and 3 calls per frame in the mean), with the
@@ -109,6 +115,322 @@ it6 review and caveats:
   commits did not refresh them. No golden was updated in this step: a refresh would also
   accept that unreviewed earlier drift. It needs its own scoped review.
 - Evidence: `game/build/perf-loop5-it6-{on,prod,campaign}`; logs alongside.
+
+### it9 — fixed galaxy Step D: accepted at it9j
+
+**Final measured decision: accept it9j for the approved visuals and no-regression
+gain against it7.** Campaign is **7 drops/116% A500, 6/110% AROS**, compared with
+it7's 8/116%, 7/112%. Ordinary BOB is **0/95%, 0/90%**, versus 3/114%, 2/107%.
+All other ordinary scenarios remain zero-drop and below 90%. The original it9g
+rejection and evidence below remain historical; the user approved continuing the
+implementation loop rather than rejecting the galaxy visual itself.
+
+#### Continuation attribution and accepted correction
+
+The fail-closed `attribute-campaign-drops.py` comparison was run **before** the
+sparse rewrite: it9g's additional A500 drops cluster in sector-2/4 boss-opening
+repair windows, not full-image world composition. AROS adds three drops there
+while removing one earlier PLAY drop. Whole 50-frame windows are coarse and can
+contain multiple phases; they were kept mixed, not relabelled by final state.
+Retained comparisons: `it9{g,h,j}-drop-attribution.json` under `game/build`.
+
+1. **it9h sparse painting:** retain the exact quantization and all four images;
+   index deduplicated nonzero spans per row. Ordinary-data payload falls
+   **16682→10508 bytes**. Full/patch painting requires an explicit per-bitmap
+   cleared-base flag and writes no zero spans. Scanned row metadata and off-patch
+   spans count against the 64-op budget, including a refused row lookup; writes
+   are bounded at 320 bytes, rows at eight. Source-derived full and masked patch
+   oracles pass on all planes. Campaign improves to **10/116%, 8/113%** but still
+   regresses, so sparse painting alone is not claimed to fix deadline crossings.
+2. **Bounded diagnostic trace:** under existing `ASTRA_PRESENTATION_TIMING`, keep
+   the first 32 ≥280-line frames and decoder cost, and emit only at acknowledged
+   WIN. No per-frame serial output; overflow is explicit and was zero. In it9h,
+   the sector-2 final patch/publication frames take **360/346 lines**, including
+   **43 decoder lines**. Sector-1 first publication is 326 lines with 34 decoding.
+   The final patch and first large BOB/HUD/sprite draw occur in the same frame.
+3. **it9i/j separate work steps:** finish the last patch, retaining the complete
+   old visible frame. On the next iteration, mark the repaired background ready,
+   add foreground BOBs/HUD/sprites and publish one complete image. No timed idle,
+   hidden window, removed work or simulation-rate change. The host regression
+   executes the actual scene-close functions for both independently progressing
+   bitmap histories and forbids repair calls in the foreground-ready step.
+   it9j additionally charges metadata preflight before deciding to admit a row.
+   The final trace has **no ≥280-line frame with galaxy decoding**, with no
+   records omitted. OFF native runs, not this intrusive trace, establish acceptance.
+
+`check-galaxy-trace.py` reproduces the diagnostic run and restores all flags OFF
+in `finally`. Both it9i and it9j independently reproduce the OFF results below.
+The prior candidate is preserved at `.tmp/it9g-preserved/it9g-code.patch`, with an
+ownership manifest and source snapshot; prior it8 work is not folded into Step D.
+
+#### Final profiler-OFF results (drops / peak%)
+
+| Profile | Scenario | it7 | accepted it9j |
+|---|---|---|---|
+| A500 | Pause / clean transitions | 0/79, 0/79 | 0/80, 0/80 |
+| A500 | GAMEOVER / manga | 0/85, 0/80 | 0/83, 0/81 |
+| A500 | Ordinary BOB | 3/114 | **0/95** |
+| A500 | Injected campaign | 8/116 | **7/116** |
+| AROS | Pause / clean transitions | 0/76, 0/76 | 0/77, 0/77 |
+| AROS | GAMEOVER / manga | 0/82, 0/78 | 0/81, 0/79 |
+| AROS | Ordinary BOB | 2/107 | **0/90** |
+| AROS | Injected campaign | 7/112 | **6/110** |
+
+The +1 pp ordinary peaks are retained explicitly; all remain under the budget.
+This accepts the requested no-extra-drops step and ordinary BOB gain, not a
+blanket claim that every peak decreases or the full 50fps problem is solved.
+Final OFF attribution has no extra drops in the boss-opening repair windows.
+Remaining dropped windows are PLAY firing/effects and death/resume transitions.
+
+#### Latest raw-cost/hardware recap — it7 → it9j
+
+A500 sector-1 dense across the same left/centre/right bands. Mean per frame / max
+single call in elapsed raster lines. Candidate percentages use 313-line/20 ms PAL.
+Audio sums two foreground calls, waits three. Inclusive stages overlap; DMA bus
+contention and IRQs are included. Timing ON is attribution only.
+
+| Stage / hardware | PLAY it7 → it9j mean/max | it9j % mean/max | BOSS it7 → it9j mean/max | it9j % mean/max |
+|---|---|---|---|---|
+| Restore/world — CPU, Blitter, Agnus contention | 67.07/93 → 64.20/92 | 20.51/29.39 | 54.49/88 → 54.55/89 | 17.43/28.43 |
+| Logic — CPU + bus/IRQ stalls | 134.01/467 → 134.06/471 | 42.83/150.48 | 69.06/205 → 69.88/205 | 22.33/65.50 |
+| Audio foreground — CPU, not isolated Paula IRQ | 4.82/5 → 4.90/6 | 1.57/1.92 | 4.95/9 → 4.68/8 | 1.50/2.56 |
+| Render inclusive — hardware below | 293.28/340 → 293.20/329 | 93.67/105.11 | 305.11/342 → 305.13/343 | 97.49/109.58 |
+| BOBs — CPU setup, Blitter/internal waits | 167.41/201 → 167.42/201 | 53.49/64.22 | 204.52/239 → 204.68/242 | 65.39/77.32 |
+| Sprite prep — CPU CHIP writes, not sprite DMA | 96.42/136 → 96.52/137 | 30.84/43.77 | 82.03/127 → 81.85/113 | 26.15/36.10 |
+| Copper build — CPU CHIP writes | 13.79/30 → 13.85/34 | 4.42/10.86 | 3.57/9 → 3.60/9 | 1.15/2.88 |
+| Publication — CPU palette/pointers | 10.86/18 → 10.79/17 | 3.45/5.43 | 10.61/27 → 10.77/34 | 3.44/10.86 |
+| Explicit wait — overlapping Blitter completion | 5.27/9 → 5.34/12 | 1.71/3.83 | 5.19/12 → 5.17/25 | 1.65/7.99 |
+| Injection — diagnostic CPU | 80.29/112 → 79.94/112 | 25.54/35.78 | 75.30/108 → 75.38/103 | 24.08/32.91 |
+
+Matrix ON whole metrics: **6489/355→6307/353 A500**, **5501/324→5483/325 AROS**.
+The AROS peak rises one point in this deliberately injected timing-ON stress;
+acceptance uses OFF ordinary/campaign results. All 48 cases and 96 fenced events
+per profile pass. Galaxy decode is absent from steady PLAY/BOSS. Dense PLAY
+restore/world saves 2.87 lines; dense BOSS is essentially unchanged. No broad
+steady CPU benefit is inferred from repair scheduling.
+
+Raw ready-PLAY OFF windows: ordinary BOB A500 **73.00→67.33% mean** (150 frames
+each), AROS **68.33→64.00%** (150 each). Campaign PLAY A500 **56.56→57.63%**,
+AROS **54.22→55.13%** (450→400 frames). Reporting boundaries move with preparation,
+so these are not identical simulation windows. All emitted windows, including
+mixed/preparation windows, remain in the acceptance reports.
+
+#### Final latency, resident memory, code and tests
+
+- First-target cold composition (including existing story work) is **150/151/151/151
+  ticks** by sector: **3.00–3.02 s**, both targets **6.00–6.04 s**. This improves
+  rejected it9g's 6.16–6.60 s; S1 it7 remains faster at 5.24 s. There is no claim
+  of equal cold latency: the new image adds **0.76 s** across the two S1 targets.
+  Disk/OS loading and deliberate scene dwell are excluded. TITLE remains 104
+  ticks/bitmap. S1 patch-close is **18 ticks/bitmap**, only one more than it7's
+  17: **0.72 s** both versus 0.68 s. The extra tick does foreground work.
+- Production executable **500380 bytes**, versus it7 487536 (**+12844**) and
+  it9g 506060 (**−5680**). A500 free CHIP/total **41104/51416**, versus
+  it7 51616/64072 (**−10512/−12656**) and it9g 34928/45736. AROS is
+  **152248/1362152**, total −12656 versus it7. Startup readings are not formal
+  high-water bounds. No RAM profile, allocation, framebuffer or timeout increase.
+- The diagnostic A500 boot reports `code_flags=5` (PUBLIC|FAST, baseline slow
+  RAM), `data_flags=3` (PUBLIC|CHIP), code address 12683812 and data address 100768.
+  Thus the observed diagnostic code did **not** move into CHIP; ordinary asset
+  data did spill into CHIP. This is direct evidence for that build, not a formal
+  loader-placement proof for every environment. The sparse representation reduces
+  that pressure by 6176 observed CHIP bytes versus it9g.
+- Actual OFF 68000 audit (`perf-loop5-it9j-68000.txt`) has no 32-bit multiply/divide
+  helpers in world/galaxy modules. Sparse writes compile to byte `MOVE`/masked
+  `OR`; repeated spans may use compiler-generated `memset`. The row-stride
+  calculation is a word multiply, not a `___mulsi3` call. No hidden CHIP image or
+  full-screen copy is introduced. The retained ordinary bank is 10508 bytes.
+- Host C **1/1**, Python **103/103** PASS; the final metadata-bound adjustment also
+  passes all five focused galaxy/closure tests. Both profiles pass all ordinary
+  lifecycle/source checks; all four native galaxies, paused backgrounds and
+  repaired openings pass **352256 exact pixels/profile**. All **13 scene pairs**
+  additionally pass **686080 source-exact pixels/profile**. Scrolling, Nebula bands,
+  original TITLE plate/caption and BOB restoration pass on the final restored OFF
+  ADF on both profiles. Full intentional-background captures were visually inspected.
+- All four flags are OFF. Final executable SHA256
+  `ae992e83537191ce340752f92b81469cf4d6eeb46ccd63e2356c7983cdd1904c` matches
+  the tested ordinary production binary. Diagnostic trace functions/storage emit
+  no production runtime code: OFF identity is unchanged after trace additions.
+  Main worktree, pending it8 tests/harness/docs, paid APIs and GUI were untouched.
+
+The persisted diagnostic runner was also executed as `perf-loop5-it9j-trace-runner`;
+its final OFF ADF was freshly boot/source validated on both profiles in
+`perf-loop5-it9j-final`. Final ADF SHA256:
+`a648d146cb5da3f297ab2d5093ec302cd19253f74e6770bb4f2f5652687c42bf`.
+
+Evidence prefixes: `game/build/perf-loop5-it9j-{prod,campaign,on,galaxy,scrolling,trace}`;
+summary `perf-loop5-it9j-summary.json`, raw stage tables `it9j-stage-tables.md`.
+**Remaining A500 gap: campaign 7 drops and 26 peak-load points; ordinary BOB zero
+drops but 5 peak-load points.** AROS campaign still has 6 drops/110%. These remaining
+limits, real-hardware verification, ordinary full-campaign clear and formal memory
+bounds are not concealed by accepting Step D.
+
+#### Historical it9g investigation (superseded by the acceptance above)
+
+User-approved visual scope: four selected RD masters, fixed farthest layer and
+36 remaining moving stars. No new paid generation, planet, firing/trajectory,
+logic, wave, HP or audio changes. This is an **uncommitted candidate**, not the
+selected runtime. HEAD remains `de9b415`; the pre-existing it8 docs, rule tests
+and admission harness are preserved. No accepted-step commit was made because
+the explicit no-extra-overruns condition fails.
+
+#### Implementation and source validation
+
+- Durable originals/prompts/seeds/task IDs/hashes/costs live in `game/art/galaxy`.
+  Original batch USD 2.16, additional integration USD 0.00. Four selected jobs
+  account for USD 0.72 within that existing batch, not a new charge.
+- 256×128→320×160 floor-coordinate nearest neighbour; RGB gain 3/4, Nebula 1/2;
+  effective sector ink 0 and live ink 4 are respected. Background inks 0–3 have
+  bright plane-2 XOR partners 4–7. Global palette is unchanged. All four source
+  masters and native derivatives were inspected; Citadel's distant round motif
+  is retained. Foundry's warm source details become existing cool low inks.
+- Independent row-plane RLE in ordinary data, 16,682 payload bytes. No heap,
+  staging bitmap, framebuffer backreferences or steady-frame galaxy decoding.
+  Zero planes are skipped only because the caller clears all planes first.
+  Generated row costs admit ≤320 written bytes / ≤64 decode ops / ≤8 rows.
+  Patch edges preserve outside bits; patch completion XORs `HISTORY.stars` after
+  this bitmap's BOB cleanup. Partial cursors and dirty histories stay per bitmap.
+- Preserve every step of the original 48-position LFSR/Y sequence; discard only
+  `i%4==0`, compact 36 stars and clamp the last eight-star composition batch.
+  Remaining periods/widths/staggers are unchanged. Latest trial visits only due
+  star groups since each bitmap's last rendered byte-clock tick; host coverage
+  crosses pause/resume, N−2 catch-up and 255→0 wrap.
+- Independent PNG oracle tests all four full images, unaligned/clipped patch
+  rectangles, all-plane exterior preservation, two differently progressing
+  targets and actual production star functions. It independently counts RLE ops
+  and emitted bytes rather than trusting generated cost metadata.
+- Native ordinary source oracle: **352,256 exact corridor pixels per profile**
+  across all four sectors at completed ticks 10/26, plus pause stability.
+  First capture checks full width except the exact hero rectangle; second checks
+  x<240 because the first six-enemy formation occupies the right edge. This is
+  source validation, not a masked full-image equivalence claim. Opening closure
+  precedes these captures, so each sector's repaired window is also checked.
+- Scrolling validator now asserts coordinate-exact fixed PNG pixels and XOR
+  partners instead of rejecting any static picture; three parallax groups pass
+  with 8/8/6 samples. The old title assertion is corrected to source-exact title
+  plate + font caption, not a blanket exclusion. Both 15,360-pixel Nebula-band
+  checks still pass. BOB validator checks all 768 restored pixels and 256 drop
+  pixels against the PNG/exact tick, including transparent artwork pixels.
+- Campaign F-badge/shot transparency uses the exact fixture background at
+  completed ticks 11/15/25. Opaque art checks remain unchanged. Both profiles
+  pass all campaign scenes/deaths/flashes/visibility, including zero hidden
+  bullets; ordinary pause, clean transitions, GAMEOVER, manga and BOB checks pass.
+
+#### Trial table (drops / peak%, profiler OFF)
+
+Ordinary columns are pause / transitions / GAMEOVER / manga / BOB. Native output
+directories are `game/build/perf-loop5-it9{suffix}-{prod,campaign,on,galaxy}`;
+the initial unsuffixed run is `it9`. Rejected attempts and logs remain available.
+
+| Trial | Decoder / stars | Ordinary A500 | Campaign A500; AROS | Decision |
+|---|---|---|---|---|
+| it7 baseline | No galaxy, 48 movers | 0/79, 0/79, 0/85, 0/80, 3/114 | 8/116; 7/112 | Committed reference |
+| it9 | Charge all four planes, two rows/call | 0/80, 0/80, 0/83, 0/81, BOB old-oracle failure | Not run | Too slow: 209 preparation work steps/bitmap, about 8.4 s both targets |
+| it9b | Skip zero planes in byte charge | 0/92, 0/94, 0/86, 0/85, 1/106 | Not run | Preparation peaks regress |
+| it9c | Four-row cap + direct full-row writes | 0/90, 0/98, 0/89, 0/89, 4/106 | Not run | Rejected |
+| it9d | Generated costs + token-clipped masked patch path | 0/80, 0/80, 0/81, 0/81, 4/106 | 14/119; not run | Rejected; old F transparency oracle halted A500 validation |
+| it9e | Constant-shape star triples | 0/80, 0/80, 0/81, 0/81, 4/106 | Not run | No ordinary improvement |
+| it9f | Optimized decoder returns to eight-row cap | 0/80, 0/80, 0/81, 0/81, 1/106 | 12/120; 9/111 | Functional PASS both; campaign regression |
+| it9g | Per-bitmap due-star catch-up | 0/80, 0/80, 0/81, 0/81, 1/106 | 12/120; 9/111 | **Not accepted**; same OFF results as it9f |
+
+Latest ordinary AROS: **0/77, 0/77, 0/79, 0/79, 1/99**, versus it7
+0/76, 0/76, 0/82, 0/78, 2/107. Thus BOB improves on both machines but campaign
+adds **4/2 drops**, and A500 campaign peak rises **116→120%**. Ordinary +1 pp
+peaks remain visible, even below 90%; this is not a universal improvement.
+
+Actual timing-ON stress matrix it7→it9g: A500 **6489/355→6346/347**; AROS
+**5501/324→5496/324**. Both complete 48-case inventories and 96 fenced events
+pass. This is intentionally injected density, not ordinary acceptance.
+
+#### it9 hardware-time recap
+
+A500 sector-1 dense, same three X bands as the accepted it7 recap. Mean per frame
+/ maximum call in **elapsed PAL raster lines**; candidate percentages are of 313
+lines/20 ms. Audio sums two foreground calls, waits three. Inclusive rows overlap;
+timing ON adds overhead and includes interrupts/DMA contention. Not pure CPU or
+isolated Copper/Paula/Blitter occupancy.
+
+| Stage / hardware | PLAY it7 → it9g mean/max | it9g % mean/max | BOSS it7 → it9g mean/max | it9g % mean/max |
+|---|---|---|---|---|
+| Restore/world — 68000, Blitter, Agnus bus | 67.07/93 → 64.64/97 | 20.65/30.99 | 54.49/88 → 54.73/80 | 17.49/25.56 |
+| Logic — 68000 + bus/IRQ stalls | 134.01/467 → 133.56/476 | 42.67/152.08 | 69.06/205 → 69.54/200 | 22.22/63.90 |
+| Audio foreground — 68000, not isolated Paula IRQ | 4.82/5 → 4.82/8 | 1.54/2.56 | 4.95/9 → 4.61/7 | 1.47/2.24 |
+| Render inclusive — all render hardware below | 293.28/340 → 293.55/331 | 93.79/105.75 | 305.11/342 → 305.89/349 | 97.73/111.50 |
+| BOBs — Blitter + 68000 setup/internal waits | 167.41/201 → 166.99/200 | 53.35/63.90 | 204.52/239 → 204.85/245 | 65.45/78.27 |
+| Sprites — CPU CHIP writes, not sprite DMA | 96.42/136 → 96.76/128 | 30.91/40.89 | 82.03/127 → 82.07/121 | 26.22/38.66 |
+| Copper build — CPU CHIP writes | 13.79/30 → 14.18/42 | 4.53/13.42 | 3.57/9 → 3.59/14 | 1.15/4.47 |
+| Publication — palette/pointers | 10.86/18 → 10.84/34 | 3.46/10.86 | 10.61/27 → 10.63/16 | 3.40/5.11 |
+| Explicit wait — overlapping Blitter completion | 5.27/9 → 5.28/30 | 1.69/9.58 | 5.19/12 → 5.16/7 | 1.65/2.24 |
+| Fixture injection — diagnostic CPU | 80.29/112 → 79.92/113 | 25.53/36.10 | 75.30/108 → 75.00/105 | 23.96/33.55 |
+
+Raw stable PLAY windows, profiler OFF (mean of emitted quantized load%, peak%, drops):
+
+| Profile / scenario | it7 frames; mean/peak/drops | it9g frames; mean/peak/drops |
+|---|---|---|
+| A500 ordinary BOB | 150; 73.00/114/3 | 200; 66.50/106/1 |
+| AROS ordinary BOB | 150; 68.33/107/2 | 200; 63.00/99/1 |
+| A500 injected campaign PLAY | 450; 56.56/115/4 | 400; 57.50/117/5 |
+| AROS injected campaign PLAY | 450; 54.22/106/4 | 400; 55.38/108/3 |
+
+These are ready-PLAY-only whole windows, not equal simulation intervals: changed
+preparation moves the fixed 50-frame reporting boundaries. They cannot establish
+a like-for-like percentage speedup. Every emitted window remains in the original
+reports; whole-campaign acceptance above does not discard preparations or mixed
+windows. Raw stage means show only **2.43 lines** saved in dense PLAY restore/world,
+not a solution to the dominant BOB/render cost.
+
+#### Latency, memory and final validation
+
+No new artificial wait, timeout or hardware change. `cut_work` is one less than
+composition iterations. At 50 Hz, sector-1 opening goes from **131→160 ticks per
+bitmap**: first target **2.62→3.20 s**, both targets **5.24→6.40 s**. Acknowledgement
+is after publication, not before. Candidate sectors 1/2/3/4 take **160/165/154/163
+ticks per bitmap**, so all both-target preparations stay **6.16–6.60 s**, below
+seven seconds. This includes existing story composition, excludes deliberate
+scene dwell and OS/disk loading. TITLE remains 104 ticks per bitmap. S1 opening
+closure grows **17→31 ticks per bitmap** (0.68→1.24 s both targets). The galaxy
+adds 30 S1 full-compose calls/bitmap while one star batch disappears. Decoder is
+never called on ready steady PLAY/BOSS frames.
+
+| Production measurement | it7 | it9g | Delta |
+|---|---:|---:|---:|
+| Executable bytes | 487536 | 506060 | +18524 |
+| A500 free CHIP | 51616 | 34928 | −16688 |
+| A500 total free | 64072 | 45736 | −18336 |
+| AROS free CHIP | 152248 | 152248 | 0 |
+| AROS total free | 1374808 | 1356472 | −18336 |
+
+The read-only payload is ordinary data but spills into CHIP on baseline A500.
+No full CHIP galaxy allocation is introduced. Startup telemetry is not a formal
+worst-case/high-water memory proof; AROS extra RAM cannot establish A500 fit.
+
+Host C **1/1 PASS**, Python **101/101 PASS**, build and `git diff --check` PASS.
+Four diagnostic flags are OFF. The restored OFF production is boot/source checked
+on both profiles (`perf-loop5-it9g-scrolling`); it is a **functional candidate**,
+not performance-approved shipping output. Source-derived all-sector checks are
+`perf-loop5-it9g-galaxy`; ordinary/campaign/ON evidence is under the same prefix.
+`perf-loop5-it9g-summary.json` and `it9-stage-tables.md` retain derived values;
+`report-galaxy-performance.py` regenerates the summary from raw evidence.
+Actual 68000 audits are `perf-loop5-it9g-{68000,galaxy-68000}.txt`.
+
+Failures were kept visible: missing local Pillow was avoided through the stdlib
+PNG/RGB-extraction pipeline; the Amiga data attribute is guarded for host Mach-O;
+the title harness rejects galaxy calls in TITLE; BOB module loading uses its local
+oracle path. The initial tick-11 native expectation was corrected to completed
+scanout tick 10 (tick 26 for the second capture), with exact full-source agreement,
+not a tolerance search in the validator. Old flat-background tests were replaced
+with coordinate-exact expectations. No shared golden was refreshed. The it9d
+matrix tool timed out in its final rebuild: OFF was immediately rebuilt explicitly;
+the final it9g runner completed both profiles and its `finally` restoration.
+
+**Remaining gate:** candidate A500 campaign still needs **12 drops removed and
+30 percentage points** of peak load removed to reach 0/90; ordinary BOB needs
+**1 drop and 16 points**. This is worse than it7's campaign gap (8 drops/26 points),
+so the candidate is **not commit-ready** despite requested visuals working and
+ordinary BOB gains. The exact cause of the changed campaign deadline crossings
+is not established; changed preparation/report/audio alignment is a hypothesis,
+not permission to dismiss the regression. Real-hardware timing, full ordinary
+campaign clear and formal memory bounds remain unproven.
 
 ## Optimization loop 3 (HEAD `3aae85b`): per-iteration table
 

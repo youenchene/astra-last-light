@@ -32,7 +32,8 @@ void renderWorldBegin(const tGameState *pState);
 void renderWorldStep(void);
 /* Opening exit repairs only the opaque window, using this bitmap's frozen
  * star positions. Call after its BOB restore; <=8 corridor rows per step. */
-void renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows);
+/* Repeat the same rectangle until complete; cursor belongs to bound bitmap. */
+UBYTE renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows);
 void renderWorldResumeCombat(tPhase phase);
 UBYTE renderWorldReady(void);
 UBYTE renderWorldTargetReady(void);

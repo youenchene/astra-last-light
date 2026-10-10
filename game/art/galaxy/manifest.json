@@ -1,0 +1,148 @@
+{
+  "provider": "Retro Diffusion",
+  "original_batch_cost_usd": "2.16",
+  "additional_cost_usd": "0.00",
+  "jobs": [
+    {
+      "id": "s1-graveyard-c",
+      "sector": 1,
+      "sector_key": "graveyard",
+      "sector_title": "Orbital Graveyard",
+      "request": {
+        "prompt": "cold steel blue and grey tint, one tiny faint ringed planet far away, drifting specks of distant wreck debris, desolate graveyard mood, wide panoramic deep space backdrop, mostly pitch black empty void, very distant tiny faint spiral galaxies, small sparse star clusters, pinpoint stars, thin faint cosmic dust, dark low contrast calm background, strange eerie alien cosmos, small sparse luminous details only, no planets in foreground, no spaceships, no text, no large bright shapes",
+        "width": 256,
+        "height": 128,
+        "style": "rd_pro__default",
+        "n": 1,
+        "seed": 8113,
+        "remove_bg": false
+      },
+      "status": "complete",
+      "quote": {
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T13:45:07.769168+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost (free)"
+      },
+      "request_sha256": "0d5dbf1c37e2afd3489cd45c626daf44968de6408b85ce913931ec57df5c5d5d",
+      "idempotency_key": "6bf947ea-0465-5aba-a927-386f7b81ed80",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T13:45:12.197825+00:00",
+      "task_id": "53ef9b42-1d0b-4620-bbf3-dff3b34d5314",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T13:46:02.559062+00:00",
+      "image": "masters/s1-graveyard-c.png",
+      "width": 256,
+      "height": 128,
+      "image_sha256": "13e17b3f6c80be0737a8775b813cc583c7fdef6eeb776d7395e6b434e0d45d33",
+      "provenance": "Retro Diffusion API original master, unmodified",
+      "rgb_sha256": "d7fd328701cd9f01af3817ba449254c0e561ddc4ade147b971e43e7156832f01"
+    },
+    {
+      "id": "s2-nebula-b",
+      "sector": 2,
+      "sector_key": "nebula",
+      "sector_title": "Veil Nebula",
+      "request": {
+        "prompt": "faint violet and cyan crystalline nebula wisps, distant galaxies like shards of glass, dim rose highlights, wide panoramic deep space backdrop, mostly pitch black empty void, very distant tiny faint spiral galaxies, small sparse star clusters, pinpoint stars, thin faint cosmic dust, dark low contrast calm background, strange eerie alien cosmos, small sparse luminous details only, no planets in foreground, no spaceships, no text, no large bright shapes",
+        "width": 256,
+        "height": 128,
+        "style": "rd_pro__default",
+        "n": 1,
+        "seed": 8212,
+        "remove_bg": false
+      },
+      "status": "complete",
+      "quote": {
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T13:45:08.126587+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost (free)"
+      },
+      "request_sha256": "714093526a8945a8a48e3fe4f411f1ede6d069d83866b2f9f724bafb52285967",
+      "idempotency_key": "40de80f5-1d9d-5a5a-a7fa-b1098db62a8c",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T13:45:14.819216+00:00",
+      "task_id": "c53eb509-00ee-4df4-b630-56b2de5a19f4",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T13:46:03.044198+00:00",
+      "image": "masters/s2-nebula-b.png",
+      "width": 256,
+      "height": 128,
+      "image_sha256": "ac8cbb2ed1655d13c058acb57b3aea6d237373ffc155f3167b084386be9c768f",
+      "provenance": "Retro Diffusion API original master, unmodified",
+      "rgb_sha256": "fa57efcdea79b30db1b63ddd4292683b1a4a1ea17213d68fd7c8db2d88901561"
+    },
+    {
+      "id": "s3-foundry-b",
+      "sector": 3,
+      "sector_key": "foundry",
+      "sector_title": "Imperial Foundry",
+      "request": {
+        "prompt": "faint ember orange and copper haze, distant smoldering galaxies, dim glowing industrial dust lanes, ominous furnace glow far away, wide panoramic deep space backdrop, mostly pitch black empty void, very distant tiny faint spiral galaxies, small sparse star clusters, pinpoint stars, thin faint cosmic dust, dark low contrast calm background, strange eerie alien cosmos, small sparse luminous details only, no planets in foreground, no spaceships, no text, no large bright shapes",
+        "width": 256,
+        "height": 128,
+        "style": "rd_pro__default",
+        "n": 1,
+        "seed": 8312,
+        "remove_bg": false
+      },
+      "status": "complete",
+      "quote": {
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T13:45:08.771182+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost (free)"
+      },
+      "request_sha256": "5a162f68599d21ff39f7c9b5721c697e2a4d9f4512416a6613f607708477ee1b",
+      "idempotency_key": "ca4369d3-633a-5586-a9ac-9334c53cd5b9",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T13:45:18.717623+00:00",
+      "task_id": "249ed3d4-566d-468f-b489-e802309ee8f9",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T13:46:24.457868+00:00",
+      "image": "masters/s3-foundry-b.png",
+      "width": 256,
+      "height": 128,
+      "image_sha256": "d5630f9a29234a0ceb8e8ea09995b6e0ec6df002ca16c964a1b8430500eb8d9c",
+      "provenance": "Retro Diffusion API original master, unmodified",
+      "rgb_sha256": "6519cec97931567c6d4f0be1cdd46b1dbaf3e1e1f4224206e3c132a5912440b1"
+    },
+    {
+      "id": "s4-citadel-a",
+      "sector": 4,
+      "sector_key": "citadel",
+      "sector_title": "Stellar Citadel",
+      "request": {
+        "prompt": "cold gold and pale ice blue distant galaxies, faint star clusters arranged like a cathedral rose window, solemn sacred starfield, wide panoramic deep space backdrop, mostly pitch black empty void, very distant tiny faint spiral galaxies, small sparse star clusters, pinpoint stars, thin faint cosmic dust, dark low contrast calm background, strange eerie alien cosmos, small sparse luminous details only, no planets in foreground, no spaceships, no text, no large bright shapes",
+        "width": 256,
+        "height": 128,
+        "style": "rd_pro__default",
+        "n": 1,
+        "seed": 8411,
+        "remove_bg": false
+      },
+      "status": "complete",
+      "quote": {
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T13:45:09.130594+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost (free)"
+      },
+      "request_sha256": "6149a108c57440576b3e08b3c1952f0e9b000ada60bb9506edc4e08be2db0b8d",
+      "idempotency_key": "7be4ee9e-2054-5ffb-97d8-346e495dd37f",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T13:45:21.414095+00:00",
+      "task_id": "67be5452-66e9-4825-b67b-dec3b7b2ce7e",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T13:46:24.907073+00:00",
+      "image": "masters/s4-citadel-a.png",
+      "width": 256,
+      "height": 128,
+      "image_sha256": "2a8e78f2d99ce068589eeb69bf0498eb0e558cac8c7886306c5a972981f139f9",
+      "provenance": "Retro Diffusion API original master, unmodified",
+      "rgb_sha256": "0af255697c3c1a546d5a455ea7ab9e572912e5d0d392146163df02e3ef6410a5"
+    }
+  ],
+  "derivative": "256x128 -> 320x160 floor-coordinate nearest; RGB gain 3/4 (Nebula 1/2); squared RGB distance to effective inks 0..3; no palette changes"
+}

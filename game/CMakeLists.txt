@@ -94,6 +94,10 @@ add_custom_target(presentation_check
 		${CMAKE_CURRENT_SOURCE_DIR}/art/presentation-rows.h
 	VERBATIM)
 add_dependencies(astra presentation_check)
+add_custom_target(galaxy_check
+	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-galaxy.py --check
+	VERBATIM)
+add_dependencies(astra galaxy_check)
 option(ASTRA_PRESENTATION_TIMING "NON-SHIPPING decoder raster timing" OFF)
 option(ASTRA_COMBAT_TIMING "NON-SHIPPING aggregated combat raster timing" OFF)
 option(ASTRA_COMBAT_STRESS "NON-SHIPPING deterministic combat matrix" OFF)

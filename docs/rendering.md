@@ -1,5 +1,33 @@
 # Rendering, publication and memory
 
+## Accepted it9j fixed galaxies — global performance gate remains open
+
+The `perf/combat-loop` Step D implementation preserves four selected RD masters,
+painting their derivatives at y56–215. Then 36 retained moving stars XOR plane 2
+over low inks 0–3.
+Sparse nonzero spans have no framebuffer references, allocation or full CHIP staging.
+Full/patch calls are bounded at 320 writes, 64 row/span operations and eight rows; a physical
+bitmap owns each cursor. Opening close restores BOB history before clearing a
+patch once, painting it and XORing that bitmap's historical stars. A per-bitmap
+clear flag is an explicit painting precondition. The last patch and the first
+heavy foreground/BOB draw are separate work steps before publication. Steady PLAY
+does **zero galaxy decoding**. TITLE/WIN, HUD geometry and decor remain unchanged.
+
+The source/palette contract is in [galaxy provenance](../game/art/galaxy/README.md).
+Both-profile pixel/lifecycle checks pass. Campaign it7→it9j is **8/116%→7/116%**
+A500 and **7/112%→6/110%** AROS (drops/peak load). Ordinary BOB reaches **0/95%**
+A500 and **0/90%** AROS. Global 0-drop/90% acceptance remains open.
+Measured first-target preparation is **3.00–3.02 seconds** by sector; both-target
+preparation is **6.00–6.04 seconds**, including the existing story image composition.
+S1 grows from 5.24 to 6.00 seconds for both targets. This excludes disk loading and
+deliberate scene dwell. S1 closure is 0.72 seconds both targets versus it7's 0.68.
+A500 free CHIP/total is **41,104/51,416 bytes**, versus it7's
+51,616/64,072. No new CHIP allocation does **not** mean zero CHIP residency cost:
+the **10,508-byte** ordinary-data bank spills into CHIP. A diagnostic A500 boot
+reports code as PUBLIC|FAST (the baseline slow bank) and galaxy data as PUBLIC|CHIP.
+Full details, rejected trials and unchanged hardware gates:
+[combat performance, it9](combat-performance.md#it9--fixed-galaxy-step-d-accepted-at-it9j).
+
 Latest story implementation: [selected RD 140×84 images and 320×192 WIN](selected-rd-story-images.md).
 Five shared compressed images decode directly into the back bitmap; WIN clears
 both targets and omits world/HUD/decor/sprites. Functional checks pass on both

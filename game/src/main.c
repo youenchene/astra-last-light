@@ -17,6 +17,7 @@
 #include "campaign_audio.h"
 #include "title_confirm.h"
 #include "combat_perf.h"
+#include "galaxy_trace.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
 #include "../tests/native/campaign_probe.h"
 #endif
@@ -96,6 +97,7 @@ void genericCreate(void) {
 	introCreate(s_pBuffer, s_pVPort);
 	s_isIntro = 1;
 	/* Exec memory queries belong before hardware takeover, never in gameplay. */
+	galaxyTraceMemory((const void *)genericCreate);
 	agkState("chip_free", memGetFreeChipSize());
 	agkState("ram_free", memGetFreeSize());
 	agkEnd();
@@ -263,6 +265,7 @@ static void publishFrame(void) {
 
 void genericProcess(void) {
 	agkPerfBegin();
+	galaxyTraceBegin();
 	if(!s_isLoaded) { agkPerfEnd(); gameExit(); return; }
 	renderBindBack(s_pBuffer->pBack);
 	acknowledgeFrame();
@@ -383,6 +386,7 @@ void genericProcess(void) {
 	/* If performance reporting itself crosses the next vblank, that already
 	 * acknowledges this list: do not accidentally wait for a second blank. */
 	ULONG publishedAt = timerGet();
+	galaxyTraceFrame(&s_sState);
 	agkPerfEnd();
 	/* The newly published copper list becomes active at vblank. Start the
 	 * next logic tick only after that acknowledgement, not at line 300 while
