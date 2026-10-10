@@ -28,6 +28,9 @@ static UBYTE s_ubLevel, s_buffer;
 static tPhase s_ePhase;
 static UBYTE s_ubDecorTick, s_topScroll, s_bottomScroll;
 static UWORD s_pStarX[STAR_COUNT], s_pStarRow[STAR_COUNT];
+/* A frozen world still catches up both N-2 histories once. Thereafter its
+ * unchanged 96-entry star arrays need no per-frame comparison. */
+static UBYTE s_starsDirty[2];
 static UWORD s_uwOriginalStarColor;
 /* Cache horizontal scaling only; vertical repetitions share their source row.
  * This removes 9072 bytes of redundant resident storage at cold-load time. */
@@ -446,6 +449,7 @@ static void decorRows(UWORD scroll, UWORD band, UWORD destY, UWORD row, UWORD ro
 }
 
 static void starsReset(void) {
+	s_starsDirty[0] = s_starsDirty[1] = 1;
 	s_ubDecorTick = 0;
 	s_topScroll = s_bottomScroll = 0;
 	UWORD starSeed = 0xace1;
@@ -476,6 +480,7 @@ static void starToggle(UBYTE index, UWORD x) {
  * (tick + k) is a multiple of its period. Two-pixel batches at twice the
  * former period preserve all four average speeds while halving CPU updates. */
 static void starsProcess(void) {
+	s_starsDirty[0] = s_starsDirty[1] = 1;
 	static const UBYTE periods[4] = {16, 8, 4, 2};
 	for(UBYTE layer = 0; layer < 4; ++layer) {
 		UBYTE period = periods[layer];
@@ -497,6 +502,7 @@ void renderWorldAnimate(const tGameState *pState) {
 	}
 	/* Catch up N-2 pixels even when simulation has just frozen. */
 	blitWait();
+	if(!s_starsDirty[s_buffer]) return;
 	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
 		UWORD before = HISTORY.stars[i], after = s_pStarX[i];
 		if(before == after) continue;
@@ -509,6 +515,7 @@ void renderWorldAnimate(const tGameState *pState) {
 		else { starToggle(i, before); starToggle(i, after); }
 		HISTORY.stars[i] = after;
 	}
+	s_starsDirty[s_buffer] = 0;
 }
 
 static void panelQueue(tPhase phase) {

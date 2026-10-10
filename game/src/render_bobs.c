@@ -4,6 +4,7 @@
 #include "render_effects.h"
 #include "render_scenes.h"
 #include "art.h"
+#include "combat_perf.h"
 #include <ace/managers/bob.h>
 
 #define BOB_WIDTH 16
@@ -84,7 +85,9 @@ void renderBobsBegin(void) {
 	 * Restore this bitmap's N-2 background, never the other bitmap's queue. */
 	bobSetCurrentBuffer(s_pScreen);
 	bobBegin(s_pScreen);
+	combatPerfBegin(CP_WAIT);
 	blitWait();
+	combatPerfEnd(CP_WAIT);
 	s_isFrameOpen = 1;
 }
 
@@ -130,6 +133,7 @@ static void drawShots(tGameState *pState, UBYTE show) {
 }
 
 void renderBobsDraw(tGameState *pState) {
+	combatPerfBegin(CP_BOBS);
 	if(pState) {
 		UBYTE show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS ||
 			pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO);
@@ -140,10 +144,13 @@ void renderBobsDraw(tGameState *pState) {
 		drawPickups(pState, show);
 		drawShots(pState, show);
 	}
-	if(!s_isFrameOpen) return;
+	if(!s_isFrameOpen) { combatPerfEnd(CP_BOBS); return; }
 	bobEnd();
+	combatPerfBegin(CP_WAIT);
 	blitWait();
+	combatPerfEnd(CP_WAIT);
 	s_isFrameOpen = 0;
+	combatPerfEnd(CP_BOBS);
 }
 
 void renderBobsDiscard(void) {

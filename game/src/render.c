@@ -6,6 +6,7 @@
 #include "render_world.h"
 #include "render_scenes.h"
 #include "art.h"
+#include "combat_perf.h"
 #include <ace/managers/blit.h>
 #include <ace/managers/memory.h>
 #include <ace/utils/sprite.h>
@@ -183,11 +184,15 @@ void renderFrame(tGameState *pState) {
 	UBYTE liveOpening = (pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO) && renderBothReady();
 	tGameState *display = !s_targetReady || (s_inScene && !liveOpening && !s_closingOpening)
 		? &s_blankState : pState;
+	combatPerfBegin(CP_COPPER);
 	renderWorldCopper(pState, s_targetReady);
+	combatPerfEnd(CP_COPPER);
 	if(s_targetReady) renderWorldPause(pState);
+	combatPerfBegin(CP_SPRITES);
 	renderHeroDraw(s_targetReady ? pState : &s_blankState);
 	renderEnemiesDraw(display);
 	renderBulletsDraw(display);
+	combatPerfEnd(CP_SPRITES);
 }
 
 UBYTE renderTargetReady(void) { return s_targetReady; }

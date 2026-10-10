@@ -16,6 +16,18 @@ static ULONG s_pPixels[2][HOSTILE_H];
 static UBYTE s_pOrder[BULLET_CHANNELS][BULLET_SPRITE_CAPACITY];
 static UBYTE s_pCount[BULLET_CHANNELS];
 static UBYTE s_mask;
+/* 68000 register-count shifts cost more as pool indices grow. Survivor
+ * membership uses fixed lookups; the linear gather carries a single bit. */
+static const ULONG s_membership[32] = {
+	0x00000001UL, 0x00000002UL, 0x00000004UL, 0x00000008UL,
+	0x00000010UL, 0x00000020UL, 0x00000040UL, 0x00000080UL,
+	0x00000100UL, 0x00000200UL, 0x00000400UL, 0x00000800UL,
+	0x00001000UL, 0x00002000UL, 0x00004000UL, 0x00008000UL,
+	0x00010000UL, 0x00020000UL, 0x00040000UL, 0x00080000UL,
+	0x00100000UL, 0x00200000UL, 0x00400000UL, 0x00800000UL,
+	0x01000000UL, 0x02000000UL, 0x04000000UL, 0x08000000UL,
+	0x10000000UL, 0x20000000UL, 0x40000000UL, 0x80000000UL
+};
 
 #if HOSTILE_COUNT > 32
 #error Hostile membership masks require at most 32 pool slots
@@ -86,7 +98,8 @@ UBYTE renderBulletsCreate(const tView *pView, ULONG *pBlank) {
  * Reused pool slots simply re-sort by their new Y. */
 static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show) {
 	ULONG drawn[BULLET_CHANNELS] = {0, 0, 0, 0};
-	for(UBYTE index = 0; index < HOSTILE_COUNT; ++index) {
+	ULONG membership = 1;
+	for(UBYTE index = 0; index < HOSTILE_COUNT; ++index, membership <<= 1) {
 		tEntity *pEntity = &pHostile[index];
 		pEntity->visible = 0;
 		if(!show || !pEntity->active || pEntity->x <= -HOSTILE_W ||
@@ -94,14 +107,14 @@ static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show) {
 			pEntity->y > PLAY_BOTTOM - HOSTILE_H) continue;
 		if(pEntity->channel < BULLET_FIRST_CHANNEL || pEntity->channel > 7 ||
 			!(mask & (1U << pEntity->channel))) continue;
-		drawn[pEntity->channel - BULLET_FIRST_CHANNEL] |= 1UL << index;
+		drawn[pEntity->channel - BULLET_FIRST_CHANNEL] |= membership;
 	}
 	for(UBYTE channel = 0; channel < BULLET_CHANNELS; ++channel) {
 		UBYTE *pOrder = s_pOrder[channel];
 		UBYTE count = 0;
 		ULONG pending = drawn[channel];
 		for(UBYTE i = 0; i < s_pCount[channel]; ++i) {
-			ULONG bit = 1UL << pOrder[i];
+			ULONG bit = s_membership[pOrder[i]];
 			if(!(pending & bit)) continue;
 			pending &= ~bit;
 			pOrder[count++] = pOrder[i];

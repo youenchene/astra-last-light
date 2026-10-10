@@ -16,6 +16,7 @@
 #include "intro.h"
 #include "campaign_audio.h"
 #include "title_confirm.h"
+#include "combat_perf.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
 #include "../tests/native/campaign_probe.h"
 #endif
@@ -190,6 +191,8 @@ static void reportCut(const char *tag) {
 static void acknowledgeFrame(void) {
 	if(!s_submitted) return;
 	s_submitted = 0;
+	combatStressAcknowledged(s_pBuffer->pFront != s_firstBitmap,
+		s_pView->pCopList->pFrontBfr != s_firstCopper, timerGet());
 	if(s_confirmSubmitted) {
 		s_confirmSubmitted = 0;
 		titleConfirmPresented(&s_confirm);
@@ -255,6 +258,7 @@ static void publishFrame(void) {
 	s_pBuffer->ubDirtyCounter = 1;
 	viewProcessManagers(s_pView);
 	copProcessBlocks();
+	combatStressSubmitted(s_cutBitmap, s_cutCopper, timerGet());
 }
 
 void genericProcess(void) {
@@ -264,6 +268,20 @@ void genericProcess(void) {
 	acknowledgeFrame();
 	keyProcess();
 	joyProcess();
+#ifdef ASTRA_COMBAT_STRESS
+	/* The harness releases only after copying the acknowledged complete image.
+	 * Keep all held ticks in whole-frame metrics; never reuse its DMA buffers. */
+	if(combatStressCaptureHeld()) {
+		if(keyUse(KEY_F10)) combatStressRelease();
+		ULONG heldAt = timerGet();
+		agkPerfEnd();
+		while(timerGet() == heldAt) { }
+		return;
+	}
+#endif
+	combatPerfBegin(CP_INJECT);
+	combatStressBefore(&s_sState);
+	combatPerfEnd(CP_INJECT);
 	UBYTE escapePressed = keyUse(KEY_ESCAPE);
 	if(escapePressed && (!s_isIntroDone || s_sState.phase == TITLE)) {
 		s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
@@ -274,9 +292,12 @@ void genericProcess(void) {
 	/* Consume intro/title edges too, so a held P cannot leak into live play. */
 	UBYTE pausePressed = keyUse(KEY_P);
 	if(s_isIntroDone && pausePressed) logicTogglePause(&s_sState);
+	combatPerfBegin(CP_RESTORE);
 	if(s_isIntroDone) renderAnimate(&s_sState);
+	combatPerfEnd(CP_RESTORE);
 	/* Select music for the acknowledged visible frame, never the hidden work.
 	 * This runs at the start of that display tick, within perf measurement. */
+	combatPerfBegin(CP_AUDIO);
 	if(s_visibleValid) {
 		campaignAudioUpdate(s_visibleLevel, s_visiblePhase, s_mutePending);
 		s_mutePending = 0;
@@ -286,6 +307,7 @@ void genericProcess(void) {
 			agkState("vblank", timerGet()); agkEnd();
 		}
 	}
+	combatPerfEnd(CP_AUDIO);
 	tInput input = readInput();
 
 	if(!s_isIntroDone && !introProcess(input.fire)) {
@@ -305,6 +327,7 @@ void genericProcess(void) {
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeBeforeUpdate(&s_sState);
 #endif
+		combatPerfBegin(CP_LOGIC);
 		UBYTE confirming = 0;
 		if(escapePressed) {
 			s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
@@ -315,6 +338,7 @@ void genericProcess(void) {
 			confirming = titleConfirmFilter(&s_confirm, &s_sState, &input);
 			logicUpdate(&s_sState, &input);
 		}
+		combatPerfEnd(CP_LOGIC);
 		if(confirming) {
 			agkState("title_confirm_input", 1);
 			agkState("vblank", timerGet()); agkEnd();
@@ -322,8 +346,13 @@ void genericProcess(void) {
 		ULONG acceptedAt = timerGet();
 		UWORD previousRevision = renderRevision();
 		/* Confirm has its own sound; retain warp for later sector transitions. */
+		combatPerfBegin(CP_AUDIO);
 		soundEvents(oldPhase == TITLE ? s_sState.events & ~EVENT_LEVEL : s_sState.events);
+		combatPerfEnd(CP_AUDIO);
+		combatPerfBegin(CP_RENDER);
 		renderFrame(&s_sState);
+		combatPerfEnd(CP_RENDER);
+		combatStressAfter(&s_sState);
 		if(oldPhase == TITLE && (oldLevel != s_sState.level || s_sState.phase != TITLE)) {
 			agkState("title_input", renderRevision());
 			agkState("phase", s_sState.phase); agkState("level", s_sState.level + 1);
@@ -344,8 +373,13 @@ void genericProcess(void) {
 			oldPhase != s_sState.phase || oldWave != s_sState.wave || pausePressed ||
 			heartbeat) reportState();
 	}
+	combatPerfBegin(CP_WAIT);
 	blitWait();
+	combatPerfEnd(CP_WAIT);
+	combatPerfBegin(CP_PUBLISH);
 	publishFrame();
+	combatPerfEnd(CP_PUBLISH);
+	combatPerfFrame(&s_sState);
 	/* If performance reporting itself crosses the next vblank, that already
 	 * acknowledges this list: do not accidentally wait for a second blank. */
 	ULONG publishedAt = timerGet();
