@@ -2,6 +2,7 @@
  * cc -std=c99 -Wall -Wextra -Werror -Igame/src tools/plan-bonus-flight.c \
  *    game/src/logic.c -o game/build/plan-bonus-flight
  * Run from repository root; --write regenerates scenarios and checked-in evidence.
+ * --check verifies checked-in input files against the current deterministic plan.
  * Optional: -g -fsanitize=address,undefined -fno-omit-frame-pointer.
  * Only public lifecycle APIs write game state. No emulator is launched.
  */
@@ -11,6 +12,9 @@
 #include <string.h>
 
 #define MAX_TICKS 1700
+/* wait-serial resumes on the next AGK tick. Main reports ready before logic,
+ * so its acknowledgement iteration has already consumed one neutral update. */
+#define READY_UPDATES 1
 typedef struct { int tolerance, aim, home, evade; } Policy;
 typedef struct { int x, y, right, bottom; } Rect;
 typedef struct {
@@ -52,6 +56,7 @@ static void start(tGameState *s) {
 	if(s->phase != PLAY || s->simFrame || s->stageFrame) {
 		fputs("start did not reach untouched combat\n", stderr); exit(EXIT_FAILURE);
 	}
+	for(unsigned tick = 0; tick < READY_UPDATES; ++tick) logicUpdate(s, NULL);
 }
 
 static int firstWaveCleared(const tGameState *s) {
@@ -112,13 +117,15 @@ static void bobBounds(const tGameState *s, Evidence *e, unsigned tick) {
 		if(!b->active || !b->visible || b->kind != BONUS_POWER) continue;
 		/* ACE saves two aligned words for a 16px BOB, including spill word. */
 		include(&e->oldBob, rect(b->x & ~15, b->y, 32, 16));
-		/* BOBs are drawn before logic: capture at t uses state t-1. */
+		/* Render is after logic, but screenshots show the last FINISHED display
+		 * frame, one publication behind the current tick/serial state. */
 		if(tick + 1 == e->capture) e->dropBob = rect(b->x, b->y, 16, 16);
 	}
 }
 
 static int observe(const tGameState *s, Evidence *e, unsigned tick) {
-	if((s->phase != PLAY && s->phase != HERO_DYING) || !s->lives || s->stageFrame > tick) return 0;
+	if((s->phase != PLAY && s->phase != HERO_DYING) || !s->lives ||
+		s->stageFrame > tick + READY_UPDATES) return 0;
 	if(s->phase == HERO_DYING && !e->death) { e->death = tick; e->deathStage = s->stageFrame; }
 	if(e->death && tick >= e->death && tick < e->death + HERO_DEATH_FRAMES &&
 		(s->phase != HERO_DYING || s->phaseFrame != tick - e->death ||
@@ -251,8 +258,9 @@ static void emit(FILE *out, const tInput *inputs, unsigned count, const Evidence
 		"# Host verified; emulator/pixel verification pending.\n"
 		"# First-wave first kill=%u, final kill=%u (six members); drop capture=%u; pickup=%u; power capture=%u.\n",
 		e->kill1, e->drop, e->capture, e->pickup, e->power);
-	fprintf(out, "# Final combat-relative video tick=%u%s\n", count, restore ? "; restoration ROI in game/tests/bonus-flight.json" : "");
-	fputs("wait-serial \"AGK title_ready\" 600\npress fire 1\nwait-serial \"AGK combat_ready\" 600\n", out);
+	fprintf(out, "# Final scenario input tick=%u; ready acknowledgement consumes %u neutral update%s\n",
+		count, READY_UPDATES, restore ? "; restoration ROI in game/tests/bonus-flight.json" : "");
+	fputs("wait-serial \"AGK title_ready\" 600\npress fire 1\nwait-serial \"AGK combat_ready\" 1000\n", out);
 	for(unsigned begin = 0; begin < count;) {
 		unsigned end = begin + 1;
 		while(end < count && sameInput(inputs[begin], inputs[end])) ++end;
@@ -316,7 +324,7 @@ static int checkScenario(const char *path, const tInput *inputs, unsigned count,
 			continue;
 		}
 		if(prelude < 3) {
-			const char *expected[] = {"wait-serial \"AGK title_ready\" 600\n", "press fire 1\n", "wait-serial \"AGK combat_ready\" 600\n"};
+			const char *expected[] = {"wait-serial \"AGK title_ready\" 600\n", "press fire 1\n", "wait-serial \"AGK combat_ready\" 1000\n"};
 			if(line[0] == '#') continue;
 			if(strcmp(line, expected[prelude++])) { fclose(in); return 0; }
 			continue;
@@ -337,9 +345,9 @@ static int checkScenario(const char *path, const tInput *inputs, unsigned count,
 static void metadata(const Evidence *e, unsigned restored) {
 	FILE *out = fopen("game/tests/bonus-flight.json", "w");
 	if(!out) { perror("bonus-flight.json"); exit(EXIT_FAILURE); }
-	fprintf(out, "{\"clock\":\"logic video ticks since combat_ready, not elapsed PAL vblanks\",\"death_capture_phase_frames\":[10,30],\"death_duration\":40,\"drop_stage\":%u,\"pickup_stage\":%u,\"asteroid_stage\":%u,\"death_tick\":%u,\"death_stage\":%u,\"kill1\":%u,\"drop\":%u,\"drop_capture\":%u,\"pickup\":%u,\"power_capture\":%u,"
+	fprintf(out, "{\"clock\":\"scenario input ticks after combat_ready; ready_updates precede input, not arbitrary wait\",\"ready_updates\":%u,\"death_capture_phase_frames\":[9,29],\"death_duration\":40,\"drop_stage\":%u,\"pickup_stage\":%u,\"asteroid_stage\":%u,\"death_tick\":%u,\"death_stage\":%u,\"kill1\":%u,\"drop\":%u,\"drop_capture\":%u,\"pickup\":%u,\"power_capture\":%u,"
 		"\"restore_capture\":%u,\"asteroid_capture\":%u,\"roi\":[%d,%d,%d,%d],\"drop_bob\":[%d,%d,%d,%d]}\n",
-		e->dropStage, e->pickupStage, e->asteroidStage, e->death, e->deathStage,
+		READY_UPDATES, e->dropStage, e->pickupStage, e->asteroidStage, e->death, e->deathStage,
 		e->kill1, e->drop, e->capture, e->pickup, e->power, restored, e->asteroid,
 		e->oldBob.x, e->oldBob.y, e->oldBob.right, e->oldBob.bottom,
 		e->dropBob.x, e->dropBob.y, e->dropBob.right, e->dropBob.bottom);
@@ -349,8 +357,8 @@ static void metadata(const Evidence *e, unsigned restored) {
 int main(int argc, char **argv) {
 	tInput inputs[MAX_TICKS], restore[MAX_TICKS];
 	Evidence e;
-	if(argc > 2 || (argc == 2 && strcmp(argv[1], "--write"))) {
-		fputs("usage: plan-bonus-flight [--write]\n", stderr); return EXIT_FAILURE;
+	if(argc > 2 || (argc == 2 && strcmp(argv[1], "--write") && strcmp(argv[1], "--check"))) {
+		fputs("usage: plan-bonus-flight [--write|--check]\n", stderr); return EXIT_FAILURE;
 	}
 	for(int home = 16; home <= 208; home += 4)
 	for(int aim = -16; aim <= 12; ++aim)
@@ -369,13 +377,17 @@ int main(int argc, char **argv) {
 		printf("# RESTORE ROI [%d,%d,%d,%d) DROP BOB [%d,%d,%d,%d)\n",
 			e.oldBob.x, e.oldBob.y, e.oldBob.right, e.oldBob.bottom,
 			e.dropBob.x, e.dropBob.y, e.dropBob.right, e.dropBob.bottom);
+		printf("# STAGES death=%u drop=%u pickup=%u; death input tick=%u ready_updates=%u\n",
+			e.deathStage, e.dropStage, e.pickupStage, e.death, READY_UPDATES);
 		if(argc == 2) {
+			if(!strcmp(argv[1], "--write")) {
 			writeScenario("game/tests/bonus.agk", inputs, e.power, &e, 0);
 			writeScenario("game/tests/asteroids.agk", inputs, e.count, &e, 0);
 			writeScenario("game/demo/showcase.agk", inputs, e.count, &e, 0);
 			writeScenario("game/demo/asteroids.agk", inputs, e.count, &e, 0);
 			writeScenario("game/tests/bob_restore.agk", restore, restored, &e, 1);
 			metadata(&e, restored);
+			}
 			if(!checkScenario("game/tests/bonus.agk", inputs, e.power, &e) ||
 				!checkScenario("game/tests/asteroids.agk", inputs, e.count, &e) ||
 				!checkScenario("game/demo/showcase.agk", inputs, e.count, &e) ||

@@ -51,8 +51,8 @@ sound = (root / 'game/build/sound/sound-safe.c').read_text()
 original = (root / 'game/build/sound/sound.c').read_text()
 data = r'static const UBYTE \w+\[\d+\][^=]*=\s*\{[^}]+\};'
 assert re.findall(data, sound) == re.findall(data, original)
-assert len(re.findall(data, original)) == 20  # ten SFX, five MOD headers + PCM
-print('PASS: all 20 generated SFX/MOD data arrays byte-for-byte unchanged', flush=True)
+assert len(re.findall(data, original)) == 21  # eleven SFX, five MOD headers + PCM
+print('PASS: all 21 generated SFX/MOD data arrays byte-for-byte unchanged', flush=True)
 
 common = r'''
 #include <assert.h>
@@ -95,7 +95,7 @@ static void release(void *p, size_t n) {
 #define blitWait() ((void)0)
 '''
 audio = common + r'''
-#define SOUND_SFX_COUNT 10
+#define SOUND_SFX_COUNT 11
 #define SOUND_MUSIC_COUNT 5
 #define PTPLAYER_MOD_SAMPLE_COUNT 31
 #define systemIsPal() 1
@@ -109,20 +109,20 @@ typedef struct {
     UBYTE *pPatterns; ULONG ulPatternsSize; UBYTE isOwningSamples;
     UWORD *pSampleStarts[31];
 } tPtplayerMod;
-static struct { const UBYTE *pData; UWORD uwBytes; } s_pSfxDefs[10];
+static struct { const UBYTE *pData; UWORD uwBytes; } s_pSfxDefs[SOUND_SFX_COUNT];
 static struct { const UBYTE *pMod; ULONG ulHeadBytes; const UBYTE *pSamples; ULONG ulSampleBytes; } s_pMusicDefs[5];
-static tPtplayerSfx s_pSfx[10];
+static tPtplayerSfx s_pSfx[SOUND_SFX_COUNT];
 static tPtplayerMod s_pMods[5];
-static UBYTE *s_pChip[15];
-static ULONG s_pChipSize[15];
+static UBYTE *s_pChip[SOUND_SFX_COUNT + SOUND_MUSIC_COUNT];
+static ULONG s_pChipSize[SOUND_SFX_COUNT + SOUND_MUSIC_COUNT];
 void soundDestroy(void);
 '''
 audio += ''.join(function(sound, n) for n in ['copyToChip', 'astraSoundCreate', 'soundDestroy'])
 audio += r'''
 static void empty(void) {
     assert(!live && !playing && !uses);
-    for(int i=0;i<15;++i) assert(!s_pChip[i] && !s_pChipSize[i]);
-    for(int i=0;i<10;++i) assert(!s_pSfx[i].pData && !s_pSfx[i].uwWordLength);
+    for(int i=0;i<SOUND_SFX_COUNT+SOUND_MUSIC_COUNT;++i) assert(!s_pChip[i] && !s_pChipSize[i]);
+    for(int i=0;i<SOUND_SFX_COUNT;++i) assert(!s_pSfx[i].pData && !s_pSfx[i].uwWordLength);
     for(int i=0;i<5;++i) {
         assert(!s_pMods[i].pPatterns);
         for(int j=0;j<31;++j) assert(!s_pMods[i].pSampleStarts[j]);
@@ -132,19 +132,19 @@ int main(void) {
     UBYTE samples[62]; memset(samples, 0x5a, sizeof(samples));
     tPtplayerMod header={0};
     for(int i=0;i<31;++i) header.pSampleHeaders[i].uwLength=1;
-    for(int i=0;i<10;++i) s_pSfxDefs[i]=(typeof(s_pSfxDefs[0])){samples,62};
+    for(int i=0;i<SOUND_SFX_COUNT;++i) s_pSfxDefs[i]=(typeof(s_pSfxDefs[0])){samples,62};
     for(int i=0;i<5;++i) s_pMusicDefs[i]=(typeof(s_pMusicDefs[0])){(UBYTE*)&header,1084,samples,62};
-    for(fail_at=1;fail_at<=15;++fail_at) {
+    for(fail_at=1;fail_at<=SOUND_SFX_COUNT+SOUND_MUSIC_COUNT;++fail_at) {
         calls=0; assert(!astraSoundCreate()); assert(calls==fail_at); empty();
         /* Retry after partial cleanup must succeed. */
         int saved=fail_at; fail_at=0; calls=0;
-        assert(astraSoundCreate() && calls==15 && live==15);
-        for(int i=0;i<15;++i) assert(!memcmp(s_pChip[i],samples,62));
+        assert(astraSoundCreate() && calls==16 && live==16);
+        for(int i=0;i<16;++i) assert(!memcmp(s_pChip[i],samples,62));
         for(int i=0;i<5;++i) for(int j=0;j<31;++j)
-            assert(s_pMods[i].pSampleStarts[j]==(UWORD*)(s_pChip[10+i]+j*2));
+            assert(s_pMods[i].pSampleStarts[j]==(UWORD*)(s_pChip[SOUND_SFX_COUNT+i]+j*2));
         soundDestroy(); empty(); fail_at=saved;
     }
-    puts("PASS sound: 15 allocation failure positions, 15 successful retries, stop-before-free, exact sizes, empty partial state");
+    puts("PASS sound: 16 allocation failure positions, 16 successful retries, stop-before-free, exact sizes, empty partial state");
 }
 '''
 bitmap = (ace / 'src/ace/utils/bitmap.c').read_text()

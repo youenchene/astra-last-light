@@ -2,6 +2,7 @@
 #include "render_internal.h"
 #include "render_boss.h"
 #include "render_effects.h"
+#include "render_scenes.h"
 #include "art.h"
 #include <ace/managers/bob.h>
 
@@ -117,6 +118,8 @@ static void drawShots(tGameState *pState, UBYTE show) {
 		pShot->visible = 0;
 		if(!show || pShot->kind > SHOT_CHARGED ||
 			!fits(pShot, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
+		if((pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO) && renderScenesOccludes(pShot->x, pShot->y,
+			BOB_WIDTH, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
 		if(!charged) { push(&s_pShotBobs[i], pShot); pShot->visible = 1; continue; }
 		if(lances >= LANCE_BOBS) continue;
 		tBob *pBob = &s_pLanceBobs[lances++];
@@ -128,7 +131,8 @@ static void drawShots(tGameState *pState, UBYTE show) {
 
 void renderBobsDraw(tGameState *pState) {
 	if(pState) {
-		UBYTE show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS);
+		UBYTE show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS ||
+			pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO);
 		renderBossQueue(pState, s_isFrameOpen);
 		/* Upper-lane blasts must reach the beam before lower reward objects.
 		 * Shots and badges remain readable in front of cosmetic explosions. */

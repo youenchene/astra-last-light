@@ -23,7 +23,7 @@ recovered by its existing task ID, not submitted and charged again.
 | `rd_boss16.png` | 32×32 | 6706 | Preserved legacy boss segment; unused sector-strip slot |
 | `rd_asteroid16.png` | 32×32 | 6707 | Cratered bronze/gray asteroid |
 | `rd_decor0.png` | 64×64 | 6710 | Wrecked steel hull, pipes, orange lights |
-| `rd_decor1.png` | 64×64 | 6711 | Preserved violet/cyan crystal borders; disabled in sector 2 gameplay |
+| `rd_decor1.png` | 64×64 | 6711 | Violet/cyan crystal borders; corridor-connected backdrop uses space ink 0 |
 | `rd_decor2.png` | 64×64 | 6712 | Industrial girders, vents and furnace plating |
 | `rd_decor3.png` | 64×64 | 6713 | Silver citadel armor and ion-lit reactors |
 
@@ -51,6 +51,13 @@ removed pixels because the generated transparency was already usable.
 - `decor.txt`: top 24 and bottom 24 rows of each 64×64 master, yielding eight
   64×24 frames. Two corridor-facing rows are cleared, and the final column
   matches the first to clean the horizontal seam.
+  For sector 2 only, after those steps, a four-neighbor flood starts at the
+  corridor-facing edge (top crop's last row, bottom crop's first row), traverses
+  indices 0/1 with horizontal wrap, and maps reachable index 1 (`#112`) to 0.
+  This clears 293 top / 251 bottom backdrop pixels while retaining 53 top / 105
+  bottom disconnected index-1 shading pixels. All other indices, other sectors
+  and PNG masters remain unchanged. Counts and processing are recorded in
+  `rd-rich-import.json`; runtime ink 0 is the sector's space color `#102`.
 - `bullets.txt`: four 16×10 pixel-only frames, quantized to 2bpp white/pink/cyan
   for independent channels 6 and 7. Only the hostile frame is now used by sprite
   DMA. Its rounded 6×8 orb doubles the former width and height.
@@ -101,13 +108,16 @@ the PNG masters and converted text sources are already present. The local import
 invokes `tools/make-sector-enemies.py` as its final step; sector derivatives and
 the F badge require no new paid generation.
 
-The common Graveyard backdrop is the active title plate. Other source backdrops
-remain preserved but uncompiled. Gameplay uses moving top/bottom strips and stars,
-except Veil Nebula (sector 2), which suppresses both bitmap and copper decor paths
-and leaves background ink 0 (`#102`) in the bands. The crystal PNG and decor strip
-are preserved, as are the unchanged HUD and play bounds.
+The four original title PNGs are converted by `tools/make-title-plates.py` into
+read-only `title-plates.h` data, selected by sector and copied eight rows at a
+time through one CHIP staging bitmap. `--check` verifies deterministic output;
+`--compare-art` can compare Graveyard against pre-removal generated `art.c`.
+Gameplay uses moving top/bottom strips and stars in every sector. Veil Nebula's
+crystals render through both bitmap and copper paths, with only the derived
+corridor-connected backdrop mapped to space ink 0 (`#102`). HUD and play bounds
+remain unchanged.
 
 The runtime-only art manifest omits unused compiled sections `player`, `fleet`,
-`shot`, `scene`, `actors16`, `nebula`, `foundry`, `citadel` and `campaign_flash`.
+`shot`, `scene`, `actors16`, `graveyard`, `nebula`, `foundry`, `citadel` and `campaign_flash`.
 All source art remains available; removing those sections is not deleting masters
 or removing active runtime boss-flash rendering.

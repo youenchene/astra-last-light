@@ -27,7 +27,9 @@
 #define HERO_DEATH_FRAMES 40
 #define BOSS_DEATH_FRAMES 75
 #define BOSS_FLASH_FRAMES 6
+#define BOSS_QUIET_FRAMES 50
 #define SCENE_FRAMES 150
+#define GAMEOVER_FRAMES 150
 #define SCENE_SKIP_FRAMES 25
 #define SHOT_W 8
 #define SHOT_H 4
@@ -41,7 +43,6 @@
 #define HOSTILE_VX -3
 #define FAN_SPACING 22
 #define FAN_STAGGER 6
-#define ENEMY_FIRE_INTERVAL 32
 /* Player shots and pickups are BOBs; ACE saves one extra aligned word. */
 #define BOB_MAX_X (WORLD_W - 17)
 #define ENEMY_COUNT 18
@@ -91,6 +92,7 @@ typedef struct {
 	/* One-based tracking slot; zero means untracked. Never reused while live. */
 	uint8_t waveId;
 	uint8_t waveMember; /* Fixed lane 0..5 for the entire life; asteroids never fire. */
+	uint8_t fireCountdown; /* Combat ticks, independent of movement/age. */
 } tEntity;
 
 typedef struct {
@@ -111,6 +113,8 @@ typedef struct {
 typedef struct {
 	int16_t x, y;
 	uint32_t frame, score, simFrame;
+	uint32_t enemyMotionFrame;
+	uint8_t enemyAccumulator, titleInputBlocked;
 	int8_t moveRemainderX, moveRemainderY;
 	uint8_t level, lives;
 	tPhase phase;
@@ -118,6 +122,7 @@ typedef struct {
 	uint8_t sceneId, sceneReady, sceneArmed;
 	/* Renderer preparation stalls simulation, never the video/effect clock. */
 	uint8_t presentationBusy;
+	uint8_t manualPause, pauseFireBlocked, heroBlink;
 	uint16_t sceneEpoch;
 	tEntity enemies[ENEMY_COUNT], shots[SHOT_COUNT], hostile[HOSTILE_COUNT];
 	tEntity pickups[BONUS_COUNT];
@@ -128,6 +133,7 @@ typedef struct {
 	/* stageFrame is wrapping elapsed telemetry, never a boss gate.
 	 * wave counts successful complete formations in this sector. */
 	uint16_t stageFrame, phaseFrame, waveTimer, wave;
+	uint8_t bossQuietTicks;
 	uint16_t invulnerable;
 	tBoss boss;
 	tEffect effects[EFFECT_COUNT];
@@ -139,7 +145,8 @@ extern const uint16_t g_stageFrames[LEVEL_COUNT];
 extern const uint16_t g_stageWaveQuota[LEVEL_COUNT];
 
 /* One update = 1/50s; no allocations/hardware/randomness. Init enters TITLE.
- * Fresh fire press starts/restarts from TITLE/GAMEOVER via SECTOR_INTRO.
+ * Fresh fire press starts from TITLE via SECTOR_INTRO. GAMEOVER returns to
+ * TITLE after 150 ready ticks (fresh-press skip after 25); held input is consumed.
  * WIN requires the acknowledged scene skip guard. Holding only charges; release
  * after 1..49 combat ticks fires a normal volley, after 50 a centered 6-damage
  * 16x10 lance at 4px/tick. Neutral with zero charge never fires.
@@ -152,7 +159,9 @@ extern const uint16_t g_stageWaveQuota[LEVEL_COUNT];
  * for all enemies and their tracker to retire. Every formation has six
  * homogeneous members, including six passive asteroids every fifth wave.
  * Fixed lanes span y56..216 with at least two blank scanlines between bodies.
- * Boss entry waits for 18/21/24/24 complete spawns AND final retirement;
+ * Boss entry waits for 18/21/24/27 complete spawns AND final retirement,
+ * then 50 full combat ticks with both projectile pools empty. New shots reset
+ * the quiet interval; preparation and death pause it. Combat continues in PLAY;
  * elapsed time cannot force entry. Allocation is preflighted atomically.
  * Partial/escaped waves cannot award bonuses. Pickups expire after 400 ticks or
  * leaving the screen; a full pool replaces the oldest. Upgrade caps are 2,
@@ -161,13 +170,19 @@ extern const uint16_t g_stageWaveQuota[LEVEL_COUNT];
  * Hero bounds x 0..288, y 56..192; speed = (3 + speedLevel)/2.
  * Central 8x8 hurtbox; pickups use the full body. Each hostile is one 6x8
  * bullet moving at half its stored velocity (vx -3, vy -2..2).
- * Ships fire chevron fans every 32 ticks after age 40 + member*8: 3 rays
- * (gunners 5), FAN_SPACING apart vertically, outer rays FAN_STAGGER behind
+ * Enemy motion/age and boss tick use 16/17/18/20 steps per 20 combat ticks.
+ * Independent firing countdowns use combat ticks: ships 96/76/64/52 after
+ * 50 + member*10; bosses 64/52/44/36 after 50. Ship fans (other/gunner) are
+ * 3/5,5/5,5/7,7/7; boss fans 5/7/7/9 with the final lane alternative retained.
+ * Rays are FAN_SPACING apart vertically, outer rays FAN_STAGGER behind
  * per step, so 14px gaps always open. Asteroids are passive. Rays outside
  * the corridor, or that could not stay visible on owned channels, are not fired.
  * events reset every tick. Return 1 for refresh, 0 on unchanged GAMEOVER/TITLE
  * screens. NULL input = neutral; NULL state is safely ignored. */
 void logicInit(tGameState *pState);
+/* Reset gameplay, preserving lifetime clocks/epoch and consuming held title input.
+ * Replaces this tick's update so EVENT_LEVEL survives through rendering/audio. */
+void logicReturnToTitle(tGameState *pState, const tInput *pInput);
 uint8_t logicUpdate(tGameState *pState, const tInput *pInput);
 
 /* Acknowledge only after the scene for this epoch has actually been displayed.
@@ -181,6 +196,8 @@ uint8_t logicUpdate(tGameState *pState, const tInput *pInput);
  * Renderers may clear boss.visible to suppress next-tick damage/contact. */
 void logicScenePresented(tGameState *pState, uint16_t epoch);
 void logicSetPresentationBusy(tGameState *pState, uint8_t busy);
+/* Caller supplies a P key edge. Fire must be released after resume before reuse. */
+void logicTogglePause(tGameState *pState);
 uint8_t logicCombatActive(const tGameState *pState);
 uint8_t logicWorldScrolling(const tGameState *pState);
 /* Hardware channel bitmask, independent of bullet kind/palette. */

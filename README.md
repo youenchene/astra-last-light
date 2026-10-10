@@ -42,7 +42,8 @@ bash tools/agk play
 | Left / right on title | Select starting sector (campaign defaults to 1) |
 | Fresh fire press during an intro | Skip that intro only |
 | Release, then press fire in a campaign scene | Skip after 25 acknowledged display ticks |
-| Fire after game over or victory | Restart from sector 1 |
+| Game over | Automatically return to title after 150 ready ticks; release/fresh fire can dismiss after 25 |
+| Fire after victory | Restart from sector 1 |
 | Escape | Return to AmigaOS |
 
 ### Four sectors
@@ -50,15 +51,16 @@ bash tools/agk play
 | Sector | Setting | Waves before boss | Boss behavior |
 |---|---|---:|---|
 | Orbital Graveyard | Scrolling wrecked hull plating and running lights | 18 | Salvage Claw: aimed fans, slow vertical patrol |
-| Veil Nebula | Open dark-violet starfield, no top/bottom decor | 21 | Manta: five-ray chevrons |
+| Veil Nebula | Scrolling crystal borders against a dark-violet starfield | 21 | Manta: five-ray chevrons |
 | Imperial Foundry | Scrolling girders, pipes and furnace vents | 24 | Furnace Carrier: dense aimed fans and slow lunges |
-| Stellar Citadel | Silver armor and luminous reactor borders | 24 | Reactor Crown: aimed fans and lane barrages |
+| Stellar Citadel | Silver armor and luminous reactor borders | 27 | Reactor Crown: aimed fans and lane barrages |
 
 Three lives, brief respawn immunity, score, charge gauge, boss health bar,
 sector-clear transitions, final victory, and restart are implemented. Each sector
 has a distinct **64×48 masked BOB boss**, with a **six-tick white damage flash**.
-Their health is **108 / 144 / 192 / 240**, three times the earlier values:
-**18 / 24 / 32 / 40 landed charged shots** at six damage each.
+Their health is **108 / 168 / 216 / 240**:
+**18 / 28 / 36 / 40 landed charged shots** at six damage each. The latest HP
+increase affects only sector 2 and 3 bosses; ordinary enemy HP is unchanged.
 
 Eight explosion slots provide six small enemy/asteroid effects plus reserved
 hero and boss effects. Hero death pauses simulation for **40 ticks**, boss death
@@ -67,6 +69,10 @@ scenes cover sector entry, boss arrival, boss defeat and victory, using five
 distinct locally authored manga-style panels with scanner/glint animation.
 Scenes dwell for **150 ticks after display acknowledgement**; victory remains
 until a fresh fire press. Composition time is separate from that dwell.
+After the last 40-tick hero explosion, GAME OVER waits for composition, then
+returns to the default title after 150 ready ticks. Score, lives and upgrades
+reset; held fire/direction cannot carry through into a new game. Release fire
+after the returned title is ready, then press again to start. Mute is preserved.
 
 Waves contain **six members of one enemy type**, including **six asteroids** on
 asteroid waves, beginning half a second into
@@ -75,8 +81,9 @@ due formation waits until every previous enemy has retired. Charged
 shots have a bright animated **16×10** silhouette, travel more slowly than normal
 shots, and have their own launch sound. The HUD flashes **READY / RELEASE FIRE**.
 Timings are nominal at **50 game ticks/second**; missed frames stretch real-time durations.
-The boss starts after the exact sector quota and final retirement. Quotas triple
-the measured no-fire reference (6/7/8/8), not an arbitrary duration. See
+The boss starts after the exact sector quota and final retirement. Quotas are
+18/21/24/27: the first three triple the measured no-fire reference (6/7/8/8),
+and the fourth adds three waves for increasing difficulty. See
 [campaign expansion status and reference](docs/campaign-expansion.md) for delivered
 behavior and the remaining acceptance gates.
 
@@ -84,11 +91,25 @@ Scouts, weavers, gunners, darts and asteroids follow a distinct five-wave cycle
 per sector, with six passive asteroids every fifth wave; see the
 [cycle table](docs/campaign-expansion.md#sector-cycles-and-player-fire). Only one homogeneous
 formation is active, with movement confined to vertically separated lanes. Enemy movement and
-boss paths run at half the previous speed. Ships fire staggered **three-ray
-chevrons, or five for gunners, every 32 ticks**. Each hostile is now **6×8 pixels**,
+boss paths use **16/17/18/20 movement steps per 20 combat ticks** by sector
+(80%/85%/90%/100% of the half-speed base). Independent firing countdowns advance
+every combat tick, including skipped movement ticks:
+
+| Sector | Ordinary rays (other/gunner) | Ordinary period | Boss fan rays | Boss period | Boss HP |
+|---|---:|---:|---:|---:|---:|
+| 1 | 3/5 | 96 | 5 | 64 | 108 |
+| 2 | 5/5 | 76 | 7 | 52 | 168 |
+| 3 | 5/7 | 64 | 7 | 44 | 216 |
+| 4 | 7/7 | 52 | 9 | 36 | 240 |
+
+Periods are combat ticks. Initial delays are 50 + 10 × formation member for
+ordinary ships and 50 for bosses. Sector 4 retains its alternate boss lane barrage.
+Hero, projectile, pickup and world speeds retain their previous rates. Initial
+stagger is independent of motion; trajectory admission means these
+cadences do not promise exact accepted bullet totals. Each hostile is **6×8 pixels**,
 twice the previous width and height. Origins are 22px apart vertically and outer
 rays trail by 6px per step, leaving at least 14px gaps within a fan. The hero's
-damage core remains 8×8. Bosses use five/seven-ray chevrons or 32px lanes.
+damage core remains 8×8. Bosses use five/seven/nine-ray chevrons or 32px lanes.
 Out-of-corridor rays are skipped instead of stacked at the edge. Asteroids remain passive.
 Holding fire only charges: no shot fires on press or while held. Normal releases
 are capped at one volley per eight combat ticks; an early release is discarded.
@@ -103,13 +124,15 @@ before upgrades, with half-pixel accumulation for precise controls. Its central
 **8×8 hurtbox** makes dense bullet patterns fairer; pickups use the full body.
 
 **There is no static galaxy picture during gameplay or boss fights.** Top and
-bottom 24-pixel decor bands in sectors 1, 3 and 4 share **the same 0.25-pixel/tick leftward speed**,
+bottom 24-pixel decor bands in all four sectors share **the same 0.25-pixel/tick leftward speed**,
 using copper-controlled hardware fine scrolling. Decor and stars freeze during
 boss fights and death pauses. Neither band is drawn or animated on the title.
-The title uses one common Graveyard background; all sector labels, gameplay
-presentation and manga panels remain distinct, and the original source plates are retained.
-Sector 2 (Veil Nebula) disables both bitmap decor composition and copper band
-switches, leaving ink 0 (`#102`) in those bands; HUD and play/collision bounds stay unchanged.
+Left/right title selection displays the corresponding original Graveyard, Nebula,
+Foundry or Citadel illustration. Four read-only sources share one 6,144-byte CHIP
+staging bitmap, copied in bounded eight-row steps during composition.
+Sector 2 (Veil Nebula) retains both crystal bands. Only corridor-connected dark
+background is cleared to ink 0 (`#102`), preserving enclosed shadows and all other
+crystal inks; HUD and play/collision bounds stay unchanged.
 
 **96 parallax stars** move in four layers at **1/8, 1/4, 1/2 and 1 pixel/tick**,
 with phase-staggered updates and randomized deterministic placement. They use
@@ -132,14 +155,14 @@ lingering bullets or previous pickups do not block a reward.
 
 | Badge | Boost | Cap |
 |---|---|---|
-| **P** | Firepower: normal shots deal 1 → 2 → 3 damage | Two upgrade levels |
+| **D** | Damage: normal shots deal 1 → 2 → 3 damage | Two upgrade levels |
 | **F** | Fire pattern: single → double → triple normal volley | Two upgrade levels |
 | **S** | Speed: movement increases 1.5 → 2 → 2.5 pixels/tick | Two upgrade levels |
 | **R** | Resistance: shield absorbs a hit instead of losing a life | Two charges |
 | **L** | Extra life | Five lives |
 
-Drops cycle P → F → S → R → L. Fly into the badge to collect it. The footer's
-**W / S / R** counters show damage, speed and shield levels; **F1/F2/F3** shows
+Drops cycle D → F → S → R → L. Fly into the badge to collect it. The footer's
+**DAMAGE / SPEED / SHIELD** counters show upgrade levels (DAMAGE stays 0–2); **FIRE** shows
 the independent normal-shot count. Upgrades persist
 between sectors; losing a life reduces damage, fire-pattern and speed by one level. A shield
 hit consumes one charge and grants brief immunity. New games reset upgrades.
@@ -227,6 +250,8 @@ bash tools/agk build     # generates art + SFX and game/build/astra.adf
 bash tools/agk unit      # portable C behavior tests
 bash tools/agk test      # A500 + AROS, shared image baselines
 python3.12 tools/verify-scrolling.py  # real leftward movement + hero color checks
+python3.12 tools/verify-sector-presentation.py  # original titles + exact Nebula crystal/background pixels
+python3.12 tools/make-title-plates.py --check
 python3 tools/verify-rich-art.py     # remapped 4bpp/2bpp pixels and BOB masks
 python3 tools/check-music-channels.py
 python3 tools/check-ace-audio.py
@@ -290,9 +315,13 @@ the [campaign status](docs/campaign-expansion.md).
 
 ## Validation and remaining work
 
-- **Latest ordinary production suite: 36/36 shared-golden tests PASS**
+The evidence below predates the new GAMEOVER lifecycle and per-sector motion,
+independent firing and boss-HP balance. Revalidate native replays and screenshots against this source;
+historical passes do not establish acceptance of the balance changes.
+
+- **Latest ordinary production suite: 38/38 shared-golden tests PASS**
   across A500 and AROS, including intros/audio, combat, scrolling and a genuine
-  joystick wave-clear/pickup replay. All **36 complete captures are byte-identical
+  joystick wave-clear/pickup replay. All **42 complete captures are byte-identical
   between profiles**.
 - **Injected native campaign fixture: functional PASS on both profiles**, with
   all **40 captures per profile**, 13 acknowledged scenes, F badge/F2/F3, all bosses/flashes,
@@ -308,8 +337,12 @@ the [campaign status](docs/campaign-expansion.md).
 - `python3 tools/check-allocation-safety.py` **PASS** under ASAN/UBSAN: all **15
   audio allocation positions**, BOB/bitmap faults and exact preservation of all
   20 generated SFX/MOD data arrays. Native OOM has **not** been fault-injected.
-- Latest production A500 boot: **40,440 free chip bytes / 48,312 total free bytes**;
-  initial executable **456,792 bytes** after unused compiled art was removed.
+- Source-derived presentation checks pass on both profiles: **8,928 unobscured
+  pixels per title**, four distinct originals, both selection wraps, and all
+  **15,360 Nebula band pixels**. Only six new title goldens and the corrected
+  sector-2 golden were accepted after inspection.
+- Latest production A500 boot: **24,056 free chip bytes / 30,112 total free bytes**;
+  initial executable **474,992 bytes** with four read-only title sources.
   This is actual startup telemetry, not a formal worst-case free-memory/high-water
   proof. See [memory accounting](docs/rendering.md#memory-ledger).
 - Full ordinary native campaign completion, real-hardware validation and final

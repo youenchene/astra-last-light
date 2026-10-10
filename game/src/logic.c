@@ -5,10 +5,15 @@ const char *const g_stageNames[LEVEL_COUNT] = {
 	"Orbital Graveyard", "Veil Nebula", "Imperial Foundry", "Stellar Citadel"
 };
 const uint16_t g_stageFrames[LEVEL_COUNT] = {1800, 2000, 2200, 2400};
-const uint16_t g_stageWaveQuota[LEVEL_COUNT] = {18, 21, 24, 24};
+const uint16_t g_stageWaveQuota[LEVEL_COUNT] = {18, 21, 24, 27};
+static const uint8_t s_enemyFireInterval[LEVEL_COUNT] = {96, 76, 64, 52};
+static const uint8_t s_bossFireInterval[LEVEL_COUNT] = {64, 52, 44, 36};
+static const uint8_t s_motionSteps[LEVEL_COUNT] = {16, 17, 18, 20};
+static const uint8_t s_enemyRays[LEVEL_COUNT][2] = {{3, 5}, {5, 5}, {5, 7}, {7, 7}};
+static const uint8_t s_bossRays[LEVEL_COUNT] = {5, 7, 7, 9};
 /* Top-left ranges [low, low+9]: adjacent bodies retain two blank lines. */
 static const int16_t s_laneLow[FORMATION_SIZE] = {56, 83, 110, 137, 164, 191};
-static const uint16_t s_bossHealth[LEVEL_COUNT] = {108, 144, 192, 240};
+static const uint16_t s_bossHealth[LEVEL_COUNT] = {216, 336, 432, 480};
 static const uint16_t s_waveDelay[LEVEL_COUNT] = {150, 140, 130, 120};
 
 static int16_t halfStep(int8_t velocity, uint32_t frame) {
@@ -59,7 +64,7 @@ uint8_t logicCombatActive(const tGameState *s) {
 }
 
 uint8_t logicWorldScrolling(const tGameState *s) {
-	return s && s->phase == PLAY;
+	return s && s->phase == PLAY && !s->manualPause;
 }
 
 uint8_t logicHostileChannelMask(const tGameState *s) {
@@ -77,6 +82,9 @@ static void enterScene(tGameState *s, tPhase phase, uint8_t id) {
 	s->phase = phase; s->phaseFrame = 0;
 	s->sceneId = id; ++s->sceneEpoch;
 	s->sceneReady = 0; s->sceneArmed = 0;
+	if((phase == SECTOR_INTRO || phase == BOSS_INTRO) && s->x > 152 - PLAYER_W) {
+		s->x = 152 - PLAYER_W; s->moveRemainderX = 0;
+	}
 	s->charge = 0; s->fireCooldown = 0;
 	s->events |= EVENT_LEVEL;
 }
@@ -123,10 +131,12 @@ static void startStage(tGameState *s) {
 	enterScene(s, SECTOR_INTRO, 3 * s->level);
 	s->stageFrame = 0; s->phaseFrame = 0;
 	s->waveTimer = 25; s->wave = 0;
+	s->bossQuietTicks = 0;
 	s->x = 32; s->y = 126;
 	s->charge = 0; s->fireCooldown = 0;
 	s->moveRemainderX = 0; s->moveRemainderY = 0;
 	s->invulnerable = RESPAWN_FRAMES;
+	s->heroBlink = 0; /* Entry grace is not damage feedback. */
 	s->events |= EVENT_LEVEL;
 }
 
@@ -176,6 +186,10 @@ static void updateHero(tGameState *s, const tInput *input) {
 	uint8_t speed = PLAYER_SPEED + s->speedLevel;
 	s->x = moveHeroAxis(s->x, input->dx, speed, &s->moveRemainderX, 0, WORLD_W - PLAYER_W);
 	s->y = moveHeroAxis(s->y, input->dy, speed, &s->moveRemainderY, PLAY_TOP, PLAY_BOTTOM - PLAYER_H);
+	/* Safe opening flight lane keeps the entire ship outside the opaque story. */
+	if((s->phase == SECTOR_INTRO || s->phase == BOSS_INTRO) && s->x > 152 - PLAYER_W) {
+		s->x = 152 - PLAYER_W; s->moveRemainderX = 0;
+	}
 	if(s->invulnerable) --s->invulnerable;
 	if(s->fireCooldown) --s->fireCooldown;
 	if(input->fire) {
@@ -220,6 +234,7 @@ static void spawnWave(tGameState *s) {
 			kind == ENEMY_GUNNER || kind == ENEMY_ASTEROID ? 3 : 1,
 			kind == ENEMY_DART ? -3 : -2, 0);
 		e->waveMember = member;
+		e->fireCountdown = 50 + 10 * member;
 		e->waveId = slot + 1; ++track->spawned; ++track->remaining;
 	}
 	++s->wave;
@@ -379,23 +394,24 @@ static int16_t clampFormationY(const tGameState *s, const tEntity *e) {
 	return clamp(e->y, PLAY_TOP, PLAY_BOTTOM - ENEMY_H);
 }
 
-static void updateEnemies(tGameState *s) {
+static void updateEnemies(tGameState *s, uint8_t motionStep) {
 	uint8_t i;
 	for(i = 0; i < ENEMY_COUNT; ++i) {
 		tEntity *e = &s->enemies[i];
 		if(!e->active || e->kind == ENEMY_BOSS) continue;
-		++e->age;
-		e->x += halfStep(e->vx, s->simFrame);
-		if(e->kind == ENEMY_WEAVER) e->y += halfStep((e->age & 32) ? -1 : 1, s->simFrame);
-		if(e->kind == ENEMY_DART && e->age < 64) e->y += halfStep(direction(s->y - e->y), s->simFrame);
-		e->y = clampFormationY(s, e);
-		uint16_t fireStart = 40 + e->waveMember * 8;
-		uint16_t fireAge = e->age - fireStart;
-		if(e->kind != ENEMY_ASTEROID &&
-			e->visible && e->x > 40 && e->x < 280 &&
-			e->age >= fireStart && !(fireAge & (ENEMY_FIRE_INTERVAL - 1))) {
-			fireFan(s, e->x, e->y + (ENEMY_H - HOSTILE_H) / 2, e->kind == ENEMY_GUNNER ? 5 : 3,
-				direction(s->y + PLAYER_H / 2 - e->y));
+		if(motionStep) {
+			++e->age;
+			e->x += halfStep(e->vx, s->enemyMotionFrame);
+			if(e->kind == ENEMY_WEAVER) e->y += halfStep((e->age & 32) ? -1 : 1, s->enemyMotionFrame);
+			if(e->kind == ENEMY_DART && e->age < 64) e->y += halfStep(direction(s->y - e->y), s->enemyMotionFrame);
+			e->y = clampFormationY(s, e);
+		}
+		if(e->fireCountdown) --e->fireCountdown;
+		if(e->kind != ENEMY_ASTEROID && !e->fireCountdown) {
+			e->fireCountdown = s_enemyFireInterval[s->level];
+			if(e->visible && e->x > 40 && e->x < 280)
+				fireFan(s, e->x, e->y + (ENEMY_H - HOSTILE_H) / 2, s_enemyRays[s->level][e->kind == ENEMY_GUNNER],
+					direction(s->y + PLAYER_H / 2 - e->y));
 		}
 		if(e->x <= -ENEMY_W) retireEnemy(s, e, 0);
 	}
@@ -406,8 +422,27 @@ static void startBoss(tGameState *s) {
 	memset(&s->boss, 0, sizeof(s->boss));
 	s->boss.x = 240; s->boss.y = 104;
 	s->boss.hp = s_bossHealth[s->level]; s->boss.maxHp = s->boss.hp;
-	s->boss.cooldown = 40; s->boss.kind = s->level; s->boss.active = 1;
+	s->boss.cooldown = 50; s->boss.kind = s->level; s->boss.active = 1;
 	enterScene(s, BOSS_INTRO, 3 * s->level + 1);
+}
+
+static uint8_t bossCorridorQuiet(const tGameState *s) {
+	if(s->wave < g_stageWaveQuota[s->level] || enemiesAlive(s)) return 0;
+	for(uint8_t i = 0; i < SHOT_COUNT; ++i)
+		if(s->shots[i].active) return 0;
+	for(uint8_t i = 0; i < HOSTILE_COUNT; ++i)
+		if(s->hostile[i].active) return 0;
+	return 1;
+}
+
+static void updateBossGate(tGameState *s, uint8_t wasQuiet) {
+	/* Count complete empty combat intervals, not the last projectile's exit or
+	 * final enemy's retirement tick. A release at the screen edge still resets. */
+	if(!wasQuiet || !bossCorridorQuiet(s) || (s->events & EVENT_SHOT)) {
+		s->bossQuietTicks = 0;
+		return;
+	}
+	if(++s->bossQuietTicks == BOSS_QUIET_FRAMES) startBoss(s);
 }
 
 static void bossVolley(tGameState *s) {
@@ -416,28 +451,25 @@ static void bossVolley(tGameState *s) {
 	int8_t aim = direction(s->y + PLAYER_H / 2 - y - HOSTILE_H / 2);
 	switch(s->level) {
 	case 0: /* Gravekeeper: aimed chevron, broad vertical patrol. */
-		fireFan(s, x, y, 5, aim);
-		s->boss.cooldown = 24;
+		fireFan(s, x, y, s_bossRays[s->level], aim);
 		break;
-	case 1: /* Veil Wraith: level five-ray chevron while weaving. */
-		fireFan(s, x, y, 5, 0);
-		s->boss.cooldown = 26;
+	case 1: /* Veil Wraith: level chevron while weaving. */
+		fireFan(s, x, y, s_bossRays[s->level], 0);
 		break;
 	case 2: /* Forge Ram: aimed seven-ray chevron and periodic lunges. */
-		fireFan(s, x, y, 7, aim);
-		s->boss.cooldown = 22;
+		fireFan(s, x, y, s_bossRays[s->level], aim);
 		break;
 	default: /* Citadel Heart: alternating aimed chevron and lane barrage. */
-		if(s->boss.tick & 64) fireFan(s, x, y, 7, aim);
+		if(s->boss.tick & 64) fireFan(s, x, y, s_bossRays[s->level], aim);
 		else {
 			/* 32px lanes leave 24px corridors; alternate volleys shift by 16. */
 			for(int16_t laneY = PLAY_TOP + 4 + ((s->boss.tick & 32) ? 16 : 0);
 				laneY + HOSTILE_H <= PLAY_BOTTOM; laneY += 32)
 				fireHostile(s, x, laneY, 0);
 		}
-		s->boss.cooldown = 20;
 		break;
 	}
+	s->boss.cooldown = s_bossFireInterval[s->level];
 }
 
 static void updateBoss(tGameState *s) {
@@ -462,8 +494,6 @@ static void updateBoss(tGameState *s) {
 	}
 	s->boss.x = clamp(s->boss.x, 0, BOSS_MAX_X);
 	s->boss.y = clamp(s->boss.y, PLAY_TOP, PLAY_BOTTOM - BOSS_H);
-	if(s->boss.cooldown) --s->boss.cooldown;
-	if(!s->boss.cooldown) bossVolley(s);
 }
 
 static void moveProjectiles(tEntity *pool, uint8_t count, uint8_t playerShots, uint32_t frame) {
@@ -531,7 +561,7 @@ static void collideShots(tGameState *s) {
 static void hurtHero(tGameState *s) {
 	if(s->invulnerable || !s->lives) return;
 	if(s->shield) {
-		--s->shield; s->invulnerable = 30; s->events |= EVENT_HIT; return;
+		--s->shield; s->invulnerable = 30; s->heroBlink = 1; s->events |= EVENT_HIT; return;
 	}
 	--s->lives;
 	if(s->weaponLevel) --s->weaponLevel;
@@ -618,18 +648,46 @@ static void scheduleSprites(tGameState *s) {
 		s->pickups[i].visible = s->pickups[i].active && onScreen(&s->pickups[i], 16);
 }
 
-static void restart(tGameState *s, uint8_t level) {
+static void resetGame(tGameState *s) {
 	/* Epochs and clocks survive restarts so delayed presentation acknowledgements
 	 * cannot accidentally acknowledge a new game. */
 	uint16_t epoch = s->sceneEpoch;
 	uint32_t frame = s->frame, simFrame = s->simFrame;
+	uint32_t enemyMotionFrame = s->enemyMotionFrame;
+	uint8_t enemyAccumulator = s->enemyAccumulator;
 	logicInit(s);
 	s->sceneEpoch = epoch; s->frame = frame; s->simFrame = simFrame;
+	s->enemyMotionFrame = enemyMotionFrame; s->enemyAccumulator = enemyAccumulator;
+}
+
+static void restart(tGameState *s, uint8_t level) {
+	resetGame(s);
 	s->level = level; s->fireWasDown = 1; startStage(s);
 }
 
+void logicReturnToTitle(tGameState *s, const tInput *input) {
+	static const tInput neutral = {0, 0, 0};
+	if(!s) return;
+	if(!input) input = &neutral;
+	resetGame(s);
+	s->titleInputBlocked = 1;
+	s->presentationBusy = 1;
+	s->fireWasDown = input->fire != 0;
+	s->titleDirection = direction(input->dx);
+	s->events = EVENT_LEVEL;
+}
+
+static void updateGameover(tGameState *s, const tInput *input, uint8_t pressed) {
+	if(s->presentationBusy) return;
+	if(!input->fire) s->sceneArmed = 1;
+	++s->phaseFrame;
+	if(s->phaseFrame < GAMEOVER_FRAMES &&
+		!(s->sceneArmed && pressed && s->phaseFrame >= SCENE_SKIP_FRAMES)) return;
+	logicReturnToTitle(s, input);
+}
+
 static void updateScene(tGameState *s, const tInput *input, uint8_t pressed) {
-	if(!s->sceneReady) return;
+	if(!s->sceneReady || s->presentationBusy) return;
 	if(!input->fire) s->sceneArmed = 1;
 	if(s->phaseFrame < SCENE_FRAMES) ++s->phaseFrame;
 	uint8_t skip = s->sceneArmed && pressed && s->phaseFrame >= SCENE_SKIP_FRAMES;
@@ -639,6 +697,7 @@ static void updateScene(tGameState *s, const tInput *input, uint8_t pressed) {
 	}
 	if(s->phaseFrame < SCENE_FRAMES && !skip) return;
 	if(s->phase == SECTOR_INTRO || s->phase == BOSS_INTRO) {
+		s->charge = 0;
 		s->phase = s->phase == SECTOR_INTRO ? PLAY : BOSS;
 		s->phaseFrame = 0; s->sceneReady = 0; s->sceneArmed = 0;
 		s->events |= EVENT_LEVEL;
@@ -653,10 +712,14 @@ static void updateDeath(tGameState *s) {
 	if(s->phase == BOSS_DYING) enterScene(s, CLEAR, 3 * s->level + 2);
 	else {
 		s->phaseFrame = 0;
-		if(!s->lives) { clearPools(s); s->boss.active = 0; s->boss.visible = 0; s->phase = GAMEOVER; }
+		if(!s->lives) {
+			clearPools(s); s->boss.active = 0; s->boss.visible = 0;
+			s->phase = GAMEOVER; s->presentationBusy = 1; s->sceneArmed = 0;
+		}
 		else {
 			s->phase = s->resumePhase;
 			s->x = 32; s->y = 126; s->invulnerable = RESPAWN_FRAMES;
+			s->heroBlink = 1;
 		}
 		s->events |= EVENT_LEVEL;
 	}
@@ -666,8 +729,17 @@ void logicSetPresentationBusy(tGameState *s, uint8_t busy) {
 	if(s) s->presentationBusy = busy != 0;
 }
 
+void logicTogglePause(tGameState *s) {
+	if(!s || s->phase == TITLE || s->phase == GAMEOVER) return;
+	s->manualPause ^= 1;
+	s->charge = 0;
+	s->pauseFireBlocked = 1;
+	s->sceneArmed = 0;
+}
+
 uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	static const tInput neutral = {0, 0, 0};
+	tInput filtered;
 	uint8_t pressed;
 	if(!s) return 0;
 	if(!input) input = &neutral;
@@ -676,34 +748,63 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	s->events = 0;
 	++s->frame;
 	updateEffects(s);
+	if(s->manualPause) return 1;
+	if(s->pauseFireBlocked) {
+		/* A held/released pause-era charge cannot become a shot or scene skip. */
+		if(!input->fire) s->pauseFireBlocked = 0;
+		filtered = *input; filtered.fire = 0; input = &filtered;
+		pressed = 0;
+	}
 	if(s->phase == TITLE) {
 		int8_t nextDirection = direction(input->dx);
+		if(s->titleInputBlocked) {
+			s->titleDirection = nextDirection;
+			if(!s->presentationBusy && !input->fire) s->titleInputBlocked = 0;
+			return 0;
+		}
 		if(nextDirection && !s->titleDirection)
 			s->level = (uint8_t)((s->level + nextDirection + LEVEL_COUNT) & 3);
 		s->titleDirection = nextDirection;
 	}
-	if(s->phase == TITLE || s->phase == GAMEOVER) {
+	if(s->phase == GAMEOVER) { updateGameover(s, input, pressed); return 1; }
+	if(s->phase == TITLE) {
 		if(!pressed) return 0;
-		uint8_t firstLevel = s->phase == TITLE ? s->level : 0;
-		restart(s, firstLevel);
+		restart(s, s->level);
 		return 1;
 	}
-	if(isScene(s->phase)) { updateScene(s, input, pressed); return 1; }
+	if(isScene(s->phase)) {
+		updateScene(s, input, pressed);
+		if((s->phase == SECTOR_INTRO || s->phase == BOSS_INTRO) &&
+			s->sceneReady && !s->presentationBusy) {
+			/* Opening is a safe flight area, not combat: no wave, enemy or
+			 * combat clock advances. Keep the respawn grace for actual combat. */
+			uint16_t grace = s->invulnerable;
+			updateHero(s, input);
+			s->invulnerable = grace;
+			moveProjectiles(s->shots, SHOT_COUNT, 1, s->frame);
+		}
+		return 1;
+	}
 	if(s->phase == HERO_DYING || s->phase == BOSS_DYING) { updateDeath(s); return 1; }
 	if(!logicCombatActive(s)) return 0;
 	if(s->presentationBusy) return 1;
-	if(s->phase == PLAY && s->wave >= g_stageWaveQuota[s->level] && !enemiesAlive(s)) {
-		startBoss(s); return 1;
-	}
+	uint8_t wasQuiet = s->phase == PLAY && bossCorridorQuiet(s);
 	++s->simFrame;
+	s->enemyAccumulator += s_motionSteps[s->level];
+	uint8_t enemyStep = s->enemyAccumulator >= 20;
+	if(enemyStep) { s->enemyAccumulator -= 20; ++s->enemyMotionFrame; }
 	updateHero(s, input);
 	if(s->phase == PLAY) {
 		++s->stageFrame;
 		if(s->waveTimer) --s->waveTimer;
 		if(!s->waveTimer && s->wave < g_stageWaveQuota[s->level] && !enemiesAlive(s)) spawnWave(s);
-		updateEnemies(s);
+		updateEnemies(s, enemyStep);
 	}
-	else updateBoss(s);
+	else {
+		if(enemyStep) updateBoss(s);
+		if(s->boss.cooldown) --s->boss.cooldown;
+		if(!s->boss.cooldown) bossVolley(s);
+	}
 	moveProjectiles(s->shots, SHOT_COUNT, 1, s->simFrame);
 	moveProjectiles(s->hostile, HOSTILE_COUNT, 0, s->simFrame);
 	updatePickups(s);
@@ -712,5 +813,7 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	collideShots(s);
 	if(s->phase == PLAY || s->phase == BOSS) collideHero(s);
 	if(logicCombatActive(s)) scheduleSprites(s);
+	/* Collisions/death have precedence; a death tick cannot advance the gate. */
+	if(s->phase == PLAY) updateBossGate(s, wasQuiet);
 	return 1;
 }

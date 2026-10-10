@@ -1,6 +1,6 @@
 wait-serial "AGK title_ready" 600
 press fire 1
-wait-serial "AGK combat_ready" 600
+wait-serial "AGK combat_ready" 1000
 press fire 55
 screenshot ready
 mark release

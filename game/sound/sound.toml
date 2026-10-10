@@ -106,6 +106,16 @@ priority = 7
 source = "theme.mml"
 volume = 42
 
+# Short consonant UI chime, distinct from descending weapon/warp sweeps.
+[sfx.confirm]
+wave = "sine"
+steps = [[784, 0.04], [1176, 0.08]]
+attack = 0.003
+decay = 5
+release = 0.025
+volume = 44
+priority = 6
+
 [music.sector1]
 source = "sector1.mml"
 volume = 42

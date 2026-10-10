@@ -1,17 +1,12 @@
 [art]
 depth = 4
-# Register only runtime assets: legacy prototypes, unused title plates and
+# Register only runtime assets: legacy prototypes, header-backed title plates and
 # campaign_flash remain source/reference files, not duplicate executable data.
 # actors16.txt is the authoring input for sector_enemies/shots/bonuses.
 
 [font]
 source = "font.txt"
 kind = "bitmap"
-
-[graveyard]
-source = "graveyard.png"
-kind = "bitmap"
-depth = 4
 
 [hero32]
 source = "hero32.txt"
@@ -72,6 +67,6 @@ kind = "bob"
 depth = 4
 
 [campaign_manga]
-source = "campaign_manga.txt"
+source = "campaign_manga_compact.txt"
 kind = "bitmap"
 depth = 4

@@ -6,11 +6,19 @@ import re
 from pathlib import Path
 import sys
 from collections import Counter
+from importlib.util import module_from_spec, spec_from_file_location
 
 ROOT = Path(__file__).resolve().parents[1]
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
 from agk.image import Image
+
+spec = spec_from_file_location("sector_presentation", ROOT / "tools/verify-sector-presentation.py")
+assert spec is not None and spec.loader is not None
+presentation = module_from_spec(spec)
+spec.loader.exec_module(presentation)
+source_palette = presentation.palette()
+nebula_bands = presentation.nebula_bands(source_palette)
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--base", default=str(ROOT / "game/build/agk"))
@@ -56,12 +64,8 @@ for profile in args.profiles:
     assert len(re.findall(r"AGK sfx shot\b", tap)) == 1, f"{profile}: tap must emit exactly one normal shot, no idle shots"
     assert len(re.findall(r"AGK sfx charge\b", hold)) == 1, f"{profile}: hold must charge exactly once"
     assert not re.search(r"AGK sfx (shot|lance)\b", hold), f"{profile}: shot during hold"
-    nebula = Image.load_png(str(Path(args.base) / profile / "sector2/nebula.screen.png"))
-    for top in (29, 220):
-        bad = [(x, y) for y in range(top, top + 24) for x in range(320)
-               if nebula.pixel(x, y) != (17, 0, 34)]
-        assert not bad, f"{profile}: sector2 band at {top}: {len(bad)} non-$102 pixels: {bad[:8]}"
-    print(f"PASS {profile}: all 15360 sector2 border pixels are $102")
+    presentation.check_nebula(Path(args.base) / profile / "sector2/nebula.screen.png",
+                              source_palette, nebula_bands)
     folder = Path(args.base) / profile / "scrolling"
     a = Image.load_png(str(folder / "first.screen.png"))
     b = Image.load_png(str(folder / "second.screen.png"))

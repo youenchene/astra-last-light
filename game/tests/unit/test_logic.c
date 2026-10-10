@@ -1,4 +1,5 @@
 #include "../../src/logic.h"
+#include "../../src/hero_presentation.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -17,12 +18,23 @@ static void finishDeath(tGameState *s) {
 	unsigned ticks = s->phase == HERO_DYING ? HERO_DEATH_FRAMES : BOSS_DEATH_FRAMES;
 	for(unsigned tick = 0; tick < ticks; ++tick) logicUpdate(s, &idle);
 }
+static void returnToTitle(tGameState *s) {
+	logicSetPresentationBusy(s, 0);
+	for(unsigned tick = 0; tick < GAMEOVER_FRAMES; ++tick) logicUpdate(s, &idle);
+	CHECK(s->phase == TITLE && s->titleInputBlocked);
+	logicSetPresentationBusy(s, 0);
+	logicUpdate(s, &idle);
+}
 static void start(tGameState *s) {
 	logicInit(s); logicUpdate(s, &fire); finishScene(s); logicUpdate(s, &idle);
 }
-static void arriveBoss(tGameState *s) {
-	logicUpdate(s, &idle);
+static void waitBossIntro(tGameState *s) {
+	for(unsigned tick = 0; tick < 500 && s->phase == PLAY; ++tick)
+		logicUpdate(s, &idle);
 	CHECK(s->phase == BOSS_INTRO);
+}
+static void arriveBoss(tGameState *s) {
+	waitBossIntro(s);
 	finishScene(s);
 }
 static unsigned hostileCount(const tGameState *s);
@@ -30,11 +42,12 @@ static tEntity entity(int16_t x, int16_t y, uint8_t hp) {
 	tEntity e;
 	memset(&e, 0, sizeof(e));
 	e.x = x; e.y = y; e.hp = hp; e.active = 1; e.visible = 1;
+	e.fireCountdown = 50;
 	return e;
 }
 static void testLongerBossFights(void) {
-	const unsigned hp[LEVEL_COUNT] = {108, 144, 192, 240};
-	const unsigned lanceHits[LEVEL_COUNT] = {18, 24, 32, 40};
+	const unsigned hp[LEVEL_COUNT] = {216, 336, 432, 480};
+	const unsigned lanceHits[LEVEL_COUNT] = {36, 56, 72, 80};
 	for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
 		tGameState s;
 		start(&s);
@@ -134,7 +147,7 @@ static void testHitsAndDeath(void) {
 	CHECK(s.phase == GAMEOVER && s.lives == 0);
 	logicUpdate(&s, &fire);
 	CHECK(s.phase == GAMEOVER);
-	logicUpdate(&s, &idle); logicUpdate(&s, &fire);
+	returnToTitle(&s); logicUpdate(&s, &fire);
 	CHECK(s.phase == SECTOR_INTRO && s.lives == 3 && s.score == 0 && s.level == 0);
 }
 static void testCollisionEdgesAndDrops(void) {
@@ -201,7 +214,7 @@ static void testStagesAndBosses(void) {
 	for(level = 0; level < LEVEL_COUNT; ++level) {
 		CHECK(s.level == level && s.phase == PLAY);
 		CHECK(g_stageFrames[level] >= 1750 && g_stageFrames[level] <= 2500);
-		for(tick = 0; s.phase == PLAY && tick < 10000; ++tick) {
+		for(tick = 0; s.phase == PLAY && tick < 15000; ++tick) {
 			s.invulnerable = 2; logicUpdate(&s, &idle); checkSchedule(&s);
 		}
 		CHECK(s.phase == BOSS_INTRO && s.wave == g_stageWaveQuota[level]);
@@ -214,7 +227,8 @@ static void testStagesAndBosses(void) {
 			CHECK(s.boss.visible);
 			for(i = 0; i < ENEMY_COUNT; ++i) CHECK(!s.enemies[i].active);
 		}
-		CHECK(s.boss.tick == 160);
+		const unsigned bossTicks[] = {128, 136, 144, 160};
+		CHECK(s.boss.tick == bossTicks[level]);
 		s.boss.hp = 1;
 		s.shots[0] = entity(s.boss.x, s.boss.y + 8, 1);
 		logicUpdate(&s, &idle);
@@ -294,13 +308,13 @@ static void testDistinctBossPatternsAndHostileLimit(void) {
 	tGameState s;
 	unsigned level, tick, i, count;
 	int16_t x[LEVEL_COUNT], y[LEVEL_COUNT];
-	const unsigned rays[LEVEL_COUNT] = {5, 5, 7, 7};
+	const unsigned rays[LEVEL_COUNT] = {5, 7, 7, 9};
 	CHECK(strcmp(g_stageNames[1], "Veil Nebula") == 0);
 	CHECK(strcmp(g_stageNames[2], "Imperial Foundry") == 0);
 	for(level = 0; level < LEVEL_COUNT; ++level) {
 		start(&s); s.level = (uint8_t)level; s.wave = g_stageWaveQuota[level];
 		arriveBoss(&s);
-		for(tick = 0; tick < 40; ++tick) logicUpdate(&s, &idle);
+		for(tick = 0; tick < 50; ++tick) logicUpdate(&s, &idle);
 		x[level] = s.boss.x; y[level] = s.boss.y;
 		count = 0;
 		for(i = 0; i < HOSTILE_COUNT; ++i) if(s.hostile[i].active) ++count;
@@ -478,9 +492,10 @@ static void testWaveCadenceAndFormations(void) {
 			CHECK(s.waves[0].planned == 6 && s.waves[0].spawned == 6);
 			CHECK(s.waves[0].remaining == 6 && !s.waves[0].failed);
 			for(i = 0; i < FORMATION_SIZE; ++i) {
-				/* This setup spawns on even frame 2: fractional steps wait. */
-				CHECK(s.enemies[i].y == 60 + (int)i * 27);
-				CHECK(s.enemies[i].x == (i % 2 ? 279 : 303));
+				/* Combat tick 2 is the first (odd) enemy motion tick. */
+				int dy = form == ENEMY_WEAVER ? 1 : form == ENEMY_DART ? (i < 3 ? 1 : -1) : 0;
+				CHECK(s.enemies[i].y == 60 + (int)i * 27 + dy);
+				CHECK(s.enemies[i].x == (i % 2 ? 280 : 304) - (form == ENEMY_DART ? 2 : 1));
 				CHECK(s.enemies[i].kind == (form == 4 ? ENEMY_ASTEROID : form) && s.enemies[i].waveMember == i);
 			}
 		}
@@ -694,7 +709,7 @@ static void testBonusesAndPersistence(void) {
 	s.pickups[1] = entity(0, 100, 1); s.pickups[1].vx = -1;
 	logicUpdate(&s, &idle); logicUpdate(&s, &idle);
 	CHECK(!s.pickups[0].active && !s.pickups[1].active);
-	s.phase = GAMEOVER; logicUpdate(&s, &fire);
+	s.phase = GAMEOVER; s.phaseFrame = 0; returnToTitle(&s);
 	CHECK(!s.weaponLevel && !s.shotLevel && !s.speedLevel && !s.shield && !s.bonusCycle);
 	/* Full pickup pool replaces oldest, still requiring a rendered frame. */
 	start(&s); s.waveTimer = 1; logicUpdate(&s, &idle);
@@ -736,6 +751,7 @@ static void testFormationFireAndChargePriority(void) {
 	logicUpdate(&s, &idle);
 	CHECK(!s.hostile[0].active);
 	s.enemies[0].age = 39; s.enemies[0].waveMember = 0;
+	s.enemies[0].fireCountdown = 1;
 	logicUpdate(&s, &idle);
 	CHECK(s.hostile[0].active);
 	s.hostile[0].active = 0;
@@ -743,6 +759,7 @@ static void testFormationFireAndChargePriority(void) {
 	logicUpdate(&s, &idle);
 	CHECK(!s.hostile[0].active);
 	s.enemies[0].age = 79; s.enemies[0].kind = ENEMY_GUNNER; s.enemies[0].waveMember = 5;
+	s.enemies[0].fireCountdown = 0;
 	logicUpdate(&s, &idle);
 	CHECK(s.hostile[0].active);
 	start(&s); s.waveTimer = 60000;
@@ -758,6 +775,28 @@ static unsigned hostileCount(const tGameState *s) {
 	unsigned count = 0;
 	for(unsigned i = 0; i < HOSTILE_COUNT; ++i) count += s->hostile[i].active;
 	return count;
+}
+
+/* Empty-pool fan oracle: attempted rays may be clipped at corridor edges, and
+ * admitted rays still move on this combat tick, even without a body step. */
+static void checkEmptyFan(const tGameState *s, int x, int y, unsigned rays, int aim) {
+	unsigned accepted = 0, attempted = 0;
+	for(int ray = -(int)(rays / 2); ray <= (int)(rays / 2); ++ray) {
+		++attempted;
+		int originY = y + ray * 22;
+		int vy = aim + ray;
+		if(vy < -2) vy = -2;
+		if(vy > 2) vy = 2;
+		int movedY = originY + vy / 2 + ((s->simFrame & 1) ? vy % 2 : 0);
+		if(originY < PLAY_TOP || originY + HOSTILE_H > PLAY_BOTTOM) continue;
+		/* Accepted rays may leave the corridor immediately; preserve slot order. */
+		const tEntity *e = &s->hostile[accepted++];
+		CHECK(e->x == x + (ray < 0 ? -ray : ray) * 6 - 1 - (int)(s->simFrame & 1));
+		CHECK(e->y == movedY && e->vx == -3 && e->vy == vy);
+		CHECK(e->active == (movedY >= PLAY_TOP && movedY + HOSTILE_H <= PLAY_BOTTOM));
+	}
+	CHECK(attempted == rays);
+	for(unsigned i = accepted; i < HOSTILE_COUNT; ++i) CHECK(!s->hostile[i].active);
 }
 
 static void testHalfSpeedMovement(void) {
@@ -860,8 +899,10 @@ static void testRepeatedDenseVolleys(void) {
 			memset(s.hostile, 0, sizeof(s.hostile));
 			s.enemies[0].visible = 1;
 			logicUpdate(&s, &idle);
+			unsigned age = (4 + 4 * tick) / 5;
+			CHECK(s.enemies[0].age == age);
 			unsigned expected = kind == ENEMY_ASTEROID ? 0 :
-				(tick >= 40 && (tick - 40) % ENEMY_FIRE_INTERVAL == 0 ? (kind == ENEMY_GUNNER ? 5 : 3) : 0);
+				(tick >= 50 && (tick - 50) % 96 == 0 ? (kind == ENEMY_GUNNER ? 5 : 3) : 0);
 			CHECK(hostileCount(&s) == expected);
 			for(unsigned i = 0; i < HOSTILE_COUNT; ++i) if(s.hostile[i].active) {
 				CHECK(s.hostile[i].vx == -3 && s.hostile[i].vy >= -2 && s.hostile[i].vy <= 2);
@@ -872,13 +913,17 @@ static void testRepeatedDenseVolleys(void) {
 	for(unsigned member = 0; member < FORMATION_SIZE; ++member) {
 		start(&s); s.waveTimer = 60000;
 		s.enemies[0] = entity(240, 120, 1); s.enemies[0].waveMember = member;
-		s.enemies[0].age = 38 + member * 8;
+		s.enemies[0].fireCountdown = 50 + member * 10;
+		for(unsigned tick = 0; tick < 48 + member * 10; ++tick) {
+			logicUpdate(&s, &idle); CHECK(!hostileCount(&s));
+		}
 		logicUpdate(&s, &idle); CHECK(!hostileCount(&s));
 		logicUpdate(&s, &idle); CHECK(hostileCount(&s) == 3);
 	}
 	/* Fan geometry: chevron stagger and an always-open 14px gap. */
 	start(&s); s.waveTimer = 60000; s.y = 120 - 4;
 	s.enemies[0] = entity(240, 120, 3); s.enemies[0].kind = ENEMY_GUNNER; s.enemies[0].age = 39;
+	s.enemies[0].fireCountdown = 1;
 	s.simFrame = 1;
 	logicUpdate(&s, &idle);
 	CHECK(hostileCount(&s) == 5);
@@ -892,6 +937,7 @@ static void testRepeatedDenseVolleys(void) {
 	for(unsigned freeSlots = 0; freeSlots <= 5; ++freeSlots) {
 		start(&s); s.waveTimer = 60000;
 		s.enemies[0] = entity(240, 120, 1); s.enemies[0].kind = ENEMY_GUNNER; s.enemies[0].age = 39;
+		s.enemies[0].fireCountdown = 1;
 		for(unsigned i = freeSlots; i < HOSTILE_COUNT; ++i) {
 			s.hostile[i] = entity(60, PLAY_TOP + (i / 2) % 14 * 11, 7);
 			s.hostile[i].channel = 6 + (i & 1);
@@ -910,26 +956,33 @@ static void testRepeatedDenseVolleys(void) {
 }
 
 static void testBossHalfPhaseAndCadence(void) {
-	const unsigned cadence[] = {24, 26, 22, 20};
+	const unsigned cadence[] = {64, 52, 44, 36};
+	const unsigned rates[] = {16, 17, 18, 20}, rays[] = {5, 7, 7, 9};
 	tGameState s;
 	for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
 		start(&s); s.level = level; s.wave = g_stageWaveQuota[level];
 		arriveBoss(&s);
+		unsigned accumulator = s.enemyAccumulator;
 		for(unsigned tick = 1; tick <= 1024; ++tick) {
 			int16_t x = s.boss.x, y = s.boss.y;
+			unsigned beforeTick = s.boss.tick;
 			memset(s.hostile, 0, sizeof(s.hostile)); s.invulnerable = 2;
 			logicUpdate(&s, &idle);
-			if(tick > 1 && (tick & 1)) CHECK(s.boss.x == x && s.boss.y == y);
+			unsigned enemyTick = (accumulator + rates[level] * tick) / 20;
+			CHECK(s.boss.tick == enemyTick);
+			if(enemyTick == beforeTick || (enemyTick > 1 && (enemyTick & 1)))
+				CHECK(s.boss.x == x && s.boss.y == y);
 			CHECK(s.boss.x >= 0 && s.boss.x <= BOSS_MAX_X);
 			CHECK(s.boss.y >= PLAY_TOP && s.boss.y + BOSS_H <= PLAY_BOTTOM);
 			unsigned expected = 0;
-			if(tick >= 40 && (tick - 40) % cadence[level] == 0) {
-				if(level == 3 && !(tick & 64)) expected = 5;
+			if(tick >= 50 && (tick - 50) % cadence[level] == 0) {
+				if(level == 3 && !(enemyTick & 64)) expected = 5;
 				else {
-					int radius = level < 2 ? 2 : 3;
+					int radius = rays[level] / 2;
 					int fanY = s.boss.y + (BOSS_H - HOSTILE_H) / 2;
 					int delta = s.y + PLAYER_H / 2 - fanY - HOSTILE_H / 2;
 					int aim = level == 1 ? 0 : (delta < 0 ? -1 : delta > 0);
+					checkEmptyFan(&s, s.boss.x - HOSTILE_W, fanY, rays[level], aim);
 					for(int ray = -radius; ray <= radius; ++ray) {
 						int origin = fanY + ray * FAN_SPACING;
 						int vy = aim + ray;
@@ -961,6 +1014,7 @@ static void testFanCorridorEdges(void) {
 		start(&s); s.waveTimer = 60000; s.simFrame = 1;
 		s.enemies[0] = entity(240, edge ? PLAY_BOTTOM - ENEMY_H : PLAY_TOP, 3);
 		s.enemies[0].kind = ENEMY_GUNNER; s.enemies[0].age = 39;
+		s.enemies[0].fireCountdown = 1;
 		logicUpdate(&s, &idle);
 		CHECK(hostileCount(&s) == 3);
 		for(unsigned i = 0; i < 3; ++i) {
@@ -1001,8 +1055,8 @@ static void testWholeFormationMotion(void) {
 					path == 2 ? 126 : ((ticks & 32) ? PLAY_TOP : PLAY_BOTTOM - PLAYER_H);
 				s.invulnerable = 2;
 				logicUpdate(&s, &idle);
-			} while(++ticks < 400);
-			CHECK(ticks < 400 && !alive && !s.waveTimer);
+			} while(++ticks < 600);
+			CHECK(ticks < 600 && !alive && !s.waveTimer);
 			logicUpdate(&s, &idle);
 			CHECK(s.wave == wave + 2 && s.enemies[0].active);
 		}
@@ -1016,8 +1070,8 @@ static unsigned enemyCount(const tGameState *s) {
 }
 
 static void testExactCampaignQuotas(void) {
-	/* Frozen reference fixture: 6/7/8/8 original waves, tripled. */
-	const unsigned quotas[] = {18, 21, 24, 24};
+	/* First three triple the reference; sector four adds three harder waves. */
+	const unsigned quotas[] = {18, 21, 24, 27};
 	unsigned elapsed[2][LEVEL_COUNT];
 	for(unsigned fast = 0; fast < 2; ++fast) {
 		for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
@@ -1025,7 +1079,7 @@ static void testExactCampaignQuotas(void) {
 			unsigned spawns = 0, drops = 0, tick;
 			start(&s); s.level = level;
 			CHECK(g_stageWaveQuota[level] == quotas[level]);
-			for(tick = 0; tick < 10000 && s.phase == PLAY; ++tick) {
+			for(tick = 0; tick < 15000 && s.phase == PLAY; ++tick) {
 				unsigned previous = s.wave, alive = enemyCount(&s);
 				if(fast) {
 					/* Real collision retirement, all six lanes, without changing cadence. */
@@ -1046,7 +1100,7 @@ static void testExactCampaignQuotas(void) {
 				if(s.phase == BOSS_INTRO) CHECK(previous == quotas[level] && !alive);
 				checkSchedule(&s);
 			}
-			CHECK(tick < 10000 && s.phase == BOSS_INTRO);
+			CHECK(tick < 15000 && s.phase == BOSS_INTRO);
 			CHECK(spawns == quotas[level] && s.wave == quotas[level]);
 			CHECK(drops == (fast ? quotas[level] : 0));
 			CHECK(fast || (!s.score && !s.bonusCycle));
@@ -1071,7 +1125,7 @@ static void testQuotaTimerAndTrackerGuards(void) {
 	logicUpdate(&s, &idle);
 	CHECK(s.phase == PLAY && !enemyCount(&s) && !s.waves[0].remaining);
 	CHECK(s.waves[0].failed && !(s.events & EVENT_BONUS_DROP));
-	logicUpdate(&s, &idle);
+	waitBossIntro(&s);
 	CHECK(s.phase == BOSS_INTRO && s.wave == g_stageWaveQuota[0]);
 	/* Busy trackers cannot be overwritten, even with an empty entity pool. */
 	start(&s); s.waveTimer = 0;
@@ -1102,7 +1156,7 @@ static void testFixedLanesWithMissingMembers(void) {
 				unsigned tick;
 				start(&s); s.wave = kind; s.waveTimer = 0;
 				logicUpdate(&s, &idle);
-				for(tick = 0; tick < 400 && enemyCount(&s); ++tick) {
+				for(tick = 0; tick < 600 && enemyCount(&s); ++tick) {
 					/* Remove each lane in turn, including middle lanes, via combat. */
 					if(tick == 16) {
 						tEntity *e = &s.enemies[lost];
@@ -1124,7 +1178,7 @@ static void testFixedLanesWithMissingMembers(void) {
 					CHECK(!(s.events & EVENT_BONUS_DROP));
 					checkSchedule(&s);
 				}
-				CHECK(tick < 400 && !enemyCount(&s) && !s.waves[0].remaining);
+				CHECK(tick < 600 && !enemyCount(&s) && !s.waves[0].remaining);
 				CHECK(s.waves[0].killed == 1 && s.waves[0].failed);
 			}
 		}
@@ -1297,7 +1351,9 @@ static void testChargeCancellationAndUpgradeLifecycle(void) {
 	start(&s); s.waveTimer = 60000; s.shotLevel = 2;
 	for(unsigned tick = 0; tick < 50; ++tick) logicUpdate(&s, &fire);
 	s.wave = g_stageWaveQuota[0]; logicUpdate(&s, &idle);
-	CHECK(s.phase == BOSS_INTRO && !s.charge && !(s.events & EVENT_SHOT));
+	CHECK(s.phase == PLAY && !s.charge && (s.events & EVENT_LANCE));
+	waitBossIntro(&s);
+	CHECK(!s.charge && !(s.events & EVENT_SHOT));
 	finishScene(&s); logicUpdate(&s, &idle);
 	CHECK(s.shotLevel == 2 && !(s.events & EVENT_SHOT));
 	/* Boss death also discards a held charge before the defeat scene. */
@@ -1421,16 +1477,110 @@ static void testSceneHandshakeAndSkip(void) {
 	logicUpdate(&s, &fire); CHECK(s.phase == PLAY && !s.simFrame && !s.charge);
 	/* Restart preserves epoch and video time; stale completion cannot unlock it. */
 	uint16_t oldEpoch = s.sceneEpoch;
-	s.phase = GAMEOVER; logicUpdate(&s, &idle);
+	s.phase = GAMEOVER; s.phaseFrame = 0; returnToTitle(&s);
 	uint32_t oldFrame = s.frame;
 	logicUpdate(&s, &fire);
 	CHECK(s.sceneEpoch == (uint16_t)(oldEpoch + 1) && s.frame == oldFrame + 1);
 	logicScenePresented(&s, oldEpoch); CHECK(!s.sceneReady);
-	s.phase = GAMEOVER; s.sceneEpoch = UINT16_MAX;
-	logicUpdate(&s, &idle); logicUpdate(&s, &fire);
+	s.phase = GAMEOVER; s.phaseFrame = 0; s.sceneEpoch = UINT16_MAX;
+	returnToTitle(&s); logicUpdate(&s, &fire);
 	CHECK(s.sceneEpoch == 0);
 	logicScenePresented(&s, UINT16_MAX); CHECK(!s.sceneReady);
 	logicScenePresented(&s, 0); CHECK(s.sceneReady);
+}
+
+static void testLiveOpeningAndFrozenLaterStories(void) {
+	tGameState s, snapshot;
+	const tInput flying = {1, 1, 1};
+	logicInit(&s); logicUpdate(&s, &fire);
+	logicSetPresentationBusy(&s, 1);
+	logicScenePresented(&s, s.sceneEpoch);
+	snapshot = s;
+	for(unsigned tick = 0; tick < 20; ++tick) logicUpdate(&s, &flying);
+	checkFrozen(&snapshot, &s);
+	logicSetPresentationBusy(&s, 0);
+	for(unsigned tick = 0; tick < 6; ++tick) logicUpdate(&s, &flying);
+	CHECK(s.phase == SECTOR_INTRO && s.x == 41 && s.y == 135 && s.charge == 6);
+	CHECK(!s.stageFrame && !s.simFrame && !s.wave && s.waveTimer == 25);
+	CHECK(!enemyCount(&s) && !hostileCount(&s));
+	logicUpdate(&s, &idle);
+	CHECK((s.events & EVENT_SHOT) && s.shots[0].active);
+	int16_t x = s.shots[0].x;
+	logicUpdate(&s, &idle);
+	CHECK(s.shots[0].x == x + 6 && !s.bossQuietTicks);
+	/* Enemy spawning stays closed for the full acknowledged opening dwell. */
+	while(s.phase == SECTOR_INTRO) {
+		logicUpdate(&s, &idle);
+		CHECK(!enemyCount(&s) && !hostileCount(&s) && s.waveTimer == 25);
+	}
+	for(unsigned tick = 1; tick < 25; ++tick) {
+		logicUpdate(&s, &idle); CHECK(!enemyCount(&s));
+	}
+	logicUpdate(&s, &idle); CHECK(enemyCount(&s) == FORMATION_SIZE);
+	const tPhase blocked[] = {CLEAR, WIN};
+	for(unsigned i = 0; i < 2; ++i) {
+		start(&s); s.phase = blocked[i]; s.sceneReady = 1; s.sceneArmed = 0;
+		s.phaseFrame = 0; s.shots[0] = entity(100, 80, 1); s.shots[0].vx = 6;
+		snapshot = s;
+		for(unsigned tick = 0; tick < 40; ++tick) {
+			logicUpdate(&s, &flying); checkFrozen(&snapshot, &s);
+		}
+	}
+}
+
+static void testLiveBossArrival(void) {
+	const tInput flying = {-1, 1, 1}, right = {1, 0, 0};
+	for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
+		tGameState s, before;
+		start(&s); s.level = level; s.x = 250; s.moveRemainderX = 1;
+		s.wave = g_stageWaveQuota[level]; waitBossIntro(&s);
+		CHECK(s.x == 120 && !s.moveRemainderX && !logicHostileChannelMask(&s));
+		before = s;
+		for(unsigned tick = 0; tick < 30; ++tick) logicUpdate(&s, &flying);
+		checkFrozen(&before, &s);
+		logicScenePresented(&s, s.sceneEpoch);
+		logicSetPresentationBusy(&s, 1); before = s;
+		for(unsigned tick = 0; tick < 30; ++tick) logicUpdate(&s, &flying);
+		checkFrozen(&before, &s);
+		logicSetPresentationBusy(&s, 0); before = s;
+		for(unsigned tick = 0; tick < 6; ++tick) logicUpdate(&s, &flying);
+		CHECK(s.x == 111 && s.y == before.y + 9 && s.charge == 6);
+		logicUpdate(&s, &idle);
+		CHECK((s.events & EVENT_SHOT) && s.shots[0].active);
+		int16_t shotX = s.shots[0].x;
+		logicUpdate(&s, &idle); CHECK(s.shots[0].x == shotX + 6);
+		/* Even visible overlapping hostile/boss fixtures cannot collide here. */
+		s.hostile[0] = entity(s.x, s.y, 1); s.hostile[0].vx = -4;
+		tEntity hostile = s.hostile[0];
+		for(unsigned tick = 0; tick < 20; ++tick) logicUpdate(&s, &right);
+		CHECK(s.x == 120 && !s.moveRemainderX);
+		CHECK(!memcmp(&s.hostile[0], &hostile, sizeof(hostile)));
+		CHECK(!memcmp(&s.boss, &before.boss, sizeof(s.boss)));
+		CHECK(s.simFrame == before.simFrame && s.stageFrame == before.stageFrame);
+		CHECK(s.enemyMotionFrame == before.enemyMotionFrame && s.enemyAccumulator == before.enemyAccumulator);
+		CHECK(s.invulnerable == before.invulnerable && s.lives == before.lives);
+		CHECK(s.waveTimer == before.waveTimer && s.bossQuietTicks == before.bossQuietTicks);
+		logicTogglePause(&s); before = s;
+		for(unsigned tick = 0; tick < 60; ++tick) logicUpdate(&s, &flying);
+		checkFrozen(&before, &s); CHECK(s.phaseFrame == before.phaseFrame);
+		logicTogglePause(&s); logicUpdate(&s, &fire);
+		CHECK(s.phase == BOSS_INTRO && !s.charge);
+		logicUpdate(&s, &idle); CHECK(!(s.events & EVENT_SHOT));
+		logicUpdate(&s, &fire);
+		CHECK(s.phase == BOSS && !s.charge && logicHostileChannelMask(&s) == 0xf0);
+		logicSetPresentationBusy(&s, 1); before = s;
+		for(unsigned tick = 0; tick < 40; ++tick) logicUpdate(&s, &flying);
+		checkFrozen(&before, &s);
+		/* Natural dwell also clears charge without advancing the boss clock. */
+		start(&s); s.level = level; s.wave = g_stageWaveQuota[level]; waitBossIntro(&s);
+		logicScenePresented(&s, s.sceneEpoch); before = s;
+		for(unsigned tick = 1; tick < SCENE_FRAMES; ++tick) {
+			logicUpdate(&s, &fire); CHECK(s.phase == BOSS_INTRO && s.phaseFrame == tick);
+		}
+		logicUpdate(&s, &fire);
+		CHECK(s.phase == BOSS && !s.charge && s.simFrame == before.simFrame);
+		CHECK(!memcmp(&s.boss, &before.boss, sizeof(s.boss)));
+	}
 }
 
 static void testThirteenStoryBeats(void) {
@@ -1440,10 +1590,10 @@ static void testThirteenStoryBeats(void) {
 	for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
 		CHECK(s.phase == SECTOR_INTRO && s.level == level && s.sceneId == seen++);
 		CHECK(!s.sceneReady && !s.phaseFrame); finishScene(&s);
-		s.wave = g_stageWaveQuota[level]; logicUpdate(&s, &idle);
+		s.wave = g_stageWaveQuota[level]; waitBossIntro(&s);
 		CHECK(s.phase == BOSS_INTRO && s.sceneId == seen++);
 		CHECK(!s.sceneReady && !s.phaseFrame); finishScene(&s);
-		logicUpdate(&s, &idle);
+		logicUpdate(&s, &idle); logicUpdate(&s, &idle);
 		s.boss.hp = 1; s.shots[0] = entity(s.boss.x + 8, s.boss.y + 8, 1);
 		logicUpdate(&s, &idle); CHECK(s.phase == BOSS_DYING);
 		finishDeath(&s);
@@ -1706,6 +1856,303 @@ static void testFourHostileChannels(void) {
 	}
 }
 
+static void testGameoverReadyTimeoutAndHeldInput(void) {
+	tGameState s, snapshot;
+	tInput held = {1, 0, 1};
+	start(&s); s.level = 3; s.lives = 1; s.invulnerable = 0;
+	s.score = 1234; s.weaponLevel = s.shotLevel = s.speedLevel = 2;
+	s.hostile[0] = entity(s.x + PLAYER_HIT_X, s.y + PLAYER_HIT_Y, 1);
+	logicUpdate(&s, &held);
+	CHECK(s.phase == HERO_DYING && !s.lives);
+	snapshot = s;
+	for(unsigned tick = 1; tick < HERO_DEATH_FRAMES; ++tick) {
+		logicUpdate(&s, &held); CHECK(s.phase == HERO_DYING);
+		checkFrozen(&snapshot, &s);
+	}
+	logicUpdate(&s, &held);
+	CHECK(s.phase == GAMEOVER && s.presentationBusy && !s.phaseFrame);
+	snapshot = s;
+	for(unsigned tick = 0; tick < 200; ++tick) {
+		logicUpdate(&s, tick & 1 ? &held : &idle);
+		checkFrozen(&snapshot, &s);
+		CHECK(!s.phaseFrame && !s.sceneArmed);
+	}
+	logicSetPresentationBusy(&s, 0);
+	for(unsigned tick = 1; tick < GAMEOVER_FRAMES; ++tick) {
+		logicUpdate(&s, &held);
+		CHECK(s.phase == GAMEOVER && s.phaseFrame == tick);
+	}
+	logicUpdate(&s, &held);
+	CHECK(s.phase == TITLE && s.titleInputBlocked && s.presentationBusy);
+	CHECK(!s.level && s.lives == 3 && !s.score && !s.weaponLevel && !s.shotLevel);
+	CHECK(!s.speedLevel && !s.shield && !s.bonusCycle && !s.charge && !s.wave);
+	CHECK(!enemyCount(&s) && !hostileCount(&s) && !s.boss.active);
+	for(unsigned i = 0; i < SHOT_COUNT; ++i) CHECK(!s.shots[i].active);
+	for(unsigned i = 0; i < BONUS_COUNT; ++i) CHECK(!s.pickups[i].active);
+	for(unsigned i = 0; i < EFFECT_COUNT; ++i) CHECK(!s.effects[i].active);
+	CHECK(s.frame == snapshot.frame + 200 + GAMEOVER_FRAMES);
+	CHECK(s.simFrame == snapshot.simFrame && s.sceneEpoch == snapshot.sceneEpoch);
+	CHECK(s.enemyMotionFrame == snapshot.enemyMotionFrame && s.enemyAccumulator == snapshot.enemyAccumulator);
+	/* An idle tick during composition does not arm the returned title. */
+	logicUpdate(&s, &idle); CHECK(s.titleInputBlocked);
+	for(unsigned tick = 0; tick < 200; ++tick) logicUpdate(&s, &held);
+	logicSetPresentationBusy(&s, 0);
+	for(unsigned tick = 0; tick < 200; ++tick) logicUpdate(&s, &held);
+	CHECK(s.phase == TITLE && s.titleInputBlocked && !s.level);
+	tInput directionOnly = {1, 0, 0};
+	logicUpdate(&s, &directionOnly);
+	CHECK(!s.titleInputBlocked && !s.level);
+	logicUpdate(&s, &held);
+	CHECK(s.phase == SECTOR_INTRO && !s.level && !s.charge);
+	CHECK(s.sceneEpoch == (uint16_t)(snapshot.sceneEpoch + 1));
+	CHECK(s.enemyMotionFrame == snapshot.enemyMotionFrame && s.enemyAccumulator == snapshot.enemyAccumulator);
+}
+
+static void testGameoverSkipBoundary(void) {
+	for(unsigned pressTick = 24; pressTick <= 25; ++pressTick) {
+		tGameState s;
+		logicInit(&s); s.phase = GAMEOVER; s.lives = 0;
+		for(unsigned tick = 1; tick < pressTick; ++tick) logicUpdate(&s, &idle);
+		logicUpdate(&s, &fire);
+		CHECK(s.phase == (pressTick == 25 ? TITLE : GAMEOVER));
+		if(pressTick == 24) {
+			logicUpdate(&s, &fire); CHECK(s.phase == GAMEOVER);
+			logicUpdate(&s, &idle); logicUpdate(&s, &fire);
+			CHECK(s.phase == TITLE && s.titleInputBlocked);
+		}
+	}
+	/* Ordinary initial title/sector selection can still start during composition. */
+	tGameState s;
+	tInput right = {1, 0, 0};
+	logicInit(&s); logicSetPresentationBusy(&s, 1);
+	logicUpdate(&s, &right); logicUpdate(&s, &fire);
+	CHECK(s.phase == SECTOR_INTRO && s.level == 1);
+}
+
+static void testExactEnemyClockAndUnchangedProjectiles(void) {
+	const unsigned rates[] = {16, 17, 18, 20};
+	for(unsigned level = 0; level < LEVEL_COUNT; ++level)
+	for(unsigned accumulator = 0; accumulator < 20; ++accumulator)
+		for(unsigned parity = 0; parity < 2; ++parity) {
+			tGameState s;
+			start(&s); s.level = level; s.waveTimer = 60000;
+			s.enemyAccumulator = accumulator; s.enemyMotionFrame = parity;
+			s.simFrame = parity; s.invulnerable = 60000;
+			s.enemies[0] = entity(300, 80, 1); s.enemies[0].vx = -2;
+			s.enemies[1] = entity(300, 130, 1); s.enemies[1].vx = -3;
+			s.enemies[1].kind = ENEMY_DART;
+			s.enemies[2] = entity(300, 180, 1); s.enemies[2].vx = -2;
+			s.enemies[2].kind = ENEMY_ASTEROID;
+			for(unsigned tick = 1; tick <= 200; ++tick) {
+				logicUpdate(&s, &idle);
+				unsigned steps = (accumulator + rates[level] * tick) / 20;
+				int oddSteps = (steps + (parity == 0)) / 2;
+				CHECK(s.enemyMotionFrame == parity + steps && s.simFrame == parity + tick);
+				CHECK(s.enemies[0].age == steps && s.enemies[1].age == steps);
+				CHECK(s.enemies[0].x == 300 - (int)steps);
+				CHECK(s.enemies[1].x == 300 - (int)steps - oddSteps);
+				CHECK(s.enemies[2].x == s.enemies[0].x);
+				if(tick % 40 == 0) {
+					CHECK(s.enemies[0].x == 300 - (int)(tick * rates[level] / 20));
+					CHECK(s.enemies[1].x == 300 - (int)(tick * rates[level] * 3 / 40));
+				}
+			}
+		}
+	for(int sign = -1; sign <= 1; sign += 2) {
+		tGameState s;
+		tInput move = {1, 0, 1};
+		start(&s); s.waveTimer = 60000; s.simFrame = 0;
+		s.enemyAccumulator = 0; s.enemyMotionFrame = 0;
+		s.enemies[0] = entity(280, 100, 1); s.enemies[0].kind = ENEMY_WEAVER;
+		s.enemies[0].age = sign < 0 ? 32 : 0;
+		s.hostile[0] = entity(240, 170, 1); s.hostile[0].vx = -3; s.hostile[0].vy = sign;
+		s.shots[0] = entity(60, 60, 1); s.shots[0].vx = 6;
+		s.shots[1] = entity(60, 80, 6); s.shots[1].kind = SHOT_CHARGED; s.shots[1].vx = 4;
+		s.pickups[0] = entity(240, 200, 1); s.pickups[0].vx = -1;
+		for(unsigned tick = 1; tick <= 10; ++tick) {
+			logicUpdate(&s, &move);
+			CHECK(s.x == 32 + (int)(tick * 3 / 2) && s.charge == tick);
+			CHECK(s.shots[0].x == 60 + (int)tick * 6 && s.shots[1].x == 60 + (int)tick * 4);
+			CHECK(s.hostile[0].x == 240 - (int)((tick * 3 + 1) / 2));
+			CHECK(s.hostile[0].y == 170 + sign * (int)((tick + 1) / 2));
+			CHECK(s.pickups[0].x == 240 - (int)((tick + 1) / 2) && s.pickups[0].age == tick);
+			if(tick == 5 || tick == 10) CHECK(s.enemies[0].y == 100 + sign * (int)(tick * 2 / 5));
+		}
+	}
+}
+
+static void testSectorEnemyCadences(void) {
+	const unsigned intervals[] = {96, 76, 64, 52};
+	const unsigned rays[] = {3, 5, 5, 7};
+	for(unsigned level = 0; level < LEVEL_COUNT; ++level)
+		for(unsigned member = 0; member < FORMATION_SIZE; ++member) {
+			tGameState s;
+			start(&s); s.level = level; s.waveTimer = 60000;
+			s.enemyAccumulator = 0; s.enemyMotionFrame = 0;
+			s.enemies[0] = entity(240, 120, 1); s.enemies[0].waveMember = member;
+			s.enemies[0].fireCountdown = 50 + 10 * member;
+			unsigned volleys = 0;
+			for(unsigned tick = 1; tick <= 800; ++tick) {
+				unsigned first = 50 + 10 * member;
+				memset(s.hostile, 0, sizeof(s.hostile));
+				logicUpdate(&s, &idle);
+				unsigned due = tick >= first && (tick - first) % intervals[level] == 0;
+				CHECK(hostileCount(&s) == (due ? rays[level] : 0));
+				volleys += !!hostileCount(&s);
+			}
+			CHECK(volleys == 1 + (800 - 50 - member * 10) / intervals[level]);
+		}
+}
+
+static void testEnemyClockPreparingFreeze(void) {
+	for(unsigned mode = 0; mode < 2; ++mode) {
+		tGameState s, snapshot;
+		start(&s); s.waveTimer = 60000;
+		if(mode) { s.wave = g_stageWaveQuota[0]; arriveBoss(&s); }
+		else s.enemies[0] = entity(240, 120, 1);
+		s.enemyMotionFrame = 123; s.enemyAccumulator = 12;
+		logicSetPresentationBusy(&s, 1); snapshot = s;
+		for(unsigned tick = 0; tick < 51; ++tick) {
+			logicUpdate(&s, &fire); checkFrozen(&snapshot, &s);
+		}
+		logicSetPresentationBusy(&s, 0); logicUpdate(&s, &idle);
+		CHECK(s.enemyMotionFrame == 124 && s.enemyAccumulator == 8);
+		CHECK(s.simFrame == snapshot.simFrame + 1);
+	}
+}
+
+static void testIndependentFireAndSectorFans(void) {
+	const unsigned rays[4][2] = {{3, 5}, {5, 5}, {5, 7}, {7, 7}};
+	const unsigned intervals[] = {96, 76, 64, 52};
+	for(unsigned level = 0; level < LEVEL_COUNT; ++level) {
+		for(unsigned gunner = 0; gunner < 2; ++gunner)
+			for(int y = PLAY_TOP; y <= PLAY_BOTTOM - ENEMY_H; y += 12) {
+				tGameState s;
+				start(&s); s.level = level; s.waveTimer = 60000;
+				s.enemyAccumulator = 0; s.enemyMotionFrame = 0;
+				s.enemies[0] = entity(240, y, gunner ? 3 : 1);
+				s.enemies[0].kind = gunner ? ENEMY_GUNNER : ENEMY_SCOUT;
+				s.enemies[0].fireCountdown = 1;
+				logicUpdate(&s, &idle);
+				CHECK(s.enemyMotionFrame == (level == 3));
+				CHECK(s.enemies[0].fireCountdown == intervals[level]);
+				int delta = s.y + PLAYER_H / 2 - y;
+				checkEmptyFan(&s, 240, y + 4, rays[level][gunner], delta < 0 ? -1 : delta > 0);
+				CHECK(hostileCount(&s) > 0); checkSchedule(&s);
+				/* No backlog when visibility rejects a scheduled volley. */
+				memset(s.hostile, 0, sizeof(s.hostile));
+				s.enemies[0].visible = 0; s.enemies[0].fireCountdown = 1;
+				logicUpdate(&s, &idle); CHECK(!hostileCount(&s));
+				CHECK(s.enemies[0].fireCountdown == intervals[level]);
+				logicUpdate(&s, &idle); CHECK(!hostileCount(&s));
+			}
+		/* Boss fire is also due on a skipped motion tick, with no repeat. */
+		tGameState s;
+		start(&s); s.level = level; s.wave = g_stageWaveQuota[level]; arriveBoss(&s);
+		s.enemyAccumulator = 0; s.boss.cooldown = 1; s.boss.tick = 70;
+		logicUpdate(&s, &idle); CHECK(hostileCount(&s) > 0);
+		CHECK(s.boss.tick == 70 + (level == 3));
+		memset(s.hostile, 0, sizeof(s.hostile));
+		logicUpdate(&s, &idle); CHECK(!hostileCount(&s));
+	}
+}
+
+static void testOrdinaryHealthAndSpawnDelays(void) {
+	for(unsigned level = 0; level < LEVEL_COUNT; ++level)
+		for(unsigned wave = 0; wave < 5; ++wave) {
+			tGameState s;
+			start(&s); s.level = level; s.wave = wave; s.waveTimer = 1;
+			logicUpdate(&s, &idle);
+			for(unsigned member = 0; member < FORMATION_SIZE; ++member) {
+				const tEntity *e = &s.enemies[member];
+				CHECK(e->hp == (e->kind == ENEMY_GUNNER || e->kind == ENEMY_ASTEROID ? 3 : 1));
+				/* Spawn update is the first combat tick of the initial delay. */
+				CHECK(e->fireCountdown == 49 + 10 * member);
+			}
+		}
+}
+
+static void testBossQuietBoundaryAndRelease(void) {
+	tGameState s;
+	start(&s); s.wave = g_stageWaveQuota[0];
+	uint32_t sim = s.simFrame;
+	uint16_t stage = s.stageFrame;
+	const tInput right = {1, 0, 0};
+	for(unsigned tick = 1; tick < BOSS_QUIET_FRAMES; ++tick) {
+		logicUpdate(&s, &right);
+		CHECK(s.phase == PLAY && s.bossQuietTicks == tick);
+		CHECK(!enemyCount(&s) && s.wave == g_stageWaveQuota[0]);
+	}
+	CHECK(s.x > 32 && s.simFrame == sim + 49 && s.stageFrame == stage + 49);
+	/* A fresh release on the boundary wins over boss entry, even when its
+	 * muzzle is offscreen and the projectile retires in the same update. */
+	s.x = WORLD_W - PLAYER_W; s.charge = 1;
+	logicUpdate(&s, &idle);
+	CHECK(s.phase == PLAY && !s.bossQuietTicks && (s.events & EVENT_SHOT));
+	for(unsigned tick = 1; tick < BOSS_QUIET_FRAMES; ++tick) {
+		logicUpdate(&s, &idle);
+		CHECK(s.phase == PLAY && s.bossQuietTicks == tick);
+	}
+	logicUpdate(&s, &idle);
+	CHECK(s.phase == BOSS_INTRO && s.boss.hp == 216);
+}
+
+static void testBossProjectileDrainAndPause(void) {
+	for(unsigned hostile = 0; hostile < 2; ++hostile) {
+		tGameState s;
+		start(&s); s.wave = g_stageWaveQuota[0]; s.bossQuietTicks = 23;
+		tEntity *projectile = hostile ? &s.hostile[HOSTILE_COUNT - 1] : &s.shots[SHOT_COUNT - 1];
+		*projectile = entity(200, 70, 1); projectile->visible = 0;
+		for(unsigned tick = 0; tick < 60; ++tick) {
+			logicUpdate(&s, &idle);
+			CHECK(s.phase == PLAY && !s.bossQuietTicks && projectile->active);
+		}
+		projectile->x = hostile ? -HOSTILE_W : WORLD_W;
+		logicUpdate(&s, &idle);
+		CHECK(!projectile->active && !s.bossQuietTicks && s.phase == PLAY);
+		for(unsigned tick = 0; tick < 17; ++tick) logicUpdate(&s, &idle);
+		CHECK(s.bossQuietTicks == 17);
+		logicSetPresentationBusy(&s, 1);
+		uint32_t sim = s.simFrame;
+		for(unsigned tick = 0; tick < 60; ++tick) logicUpdate(&s, &fire);
+		CHECK(s.bossQuietTicks == 17 && s.simFrame == sim && !s.charge);
+		logicSetPresentationBusy(&s, 0);
+		/* Lethal collision takes precedence, then all 40 death ticks freeze. */
+		s.invulnerable = 0;
+		s.hostile[0] = entity(s.x + PLAYER_HIT_X, s.y + PLAYER_HIT_Y, 1);
+		logicUpdate(&s, &idle);
+		CHECK(s.phase == HERO_DYING && s.bossQuietTicks == 17);
+		finishDeath(&s);
+		CHECK(s.phase == PLAY && s.bossQuietTicks == 17);
+		for(unsigned tick = 18; tick < BOSS_QUIET_FRAMES; ++tick) {
+			logicUpdate(&s, &idle);
+			CHECK(s.phase == PLAY && s.bossQuietTicks == tick);
+		}
+		logicUpdate(&s, &idle); CHECK(s.phase == BOSS_INTRO);
+	}
+}
+
+static void testBossFinalRetirementStartsQuietInterval(void) {
+	for(unsigned kill = 0; kill < 2; ++kill) {
+		tGameState s;
+		start(&s); s.wave = g_stageWaveQuota[0];
+		s.enemies[0] = entity(kill ? 200 : -ENEMY_W, 80, 1);
+		s.enemies[0].waveId = 1;
+		s.waves[0].planned = s.waves[0].spawned = FORMATION_SIZE;
+		s.waves[0].remaining = 1; s.waves[0].killed = FORMATION_SIZE - 1;
+		if(kill) s.shots[0] = entity(200, 80, 1);
+		logicUpdate(&s, &idle);
+		CHECK(s.phase == PLAY && !enemyCount(&s) && !s.bossQuietTicks);
+		CHECK(!s.waves[0].remaining && s.waves[0].failed == !kill);
+		CHECK(!!(s.events & EVENT_BONUS_DROP) == kill);
+		for(unsigned tick = 1; tick < BOSS_QUIET_FRAMES; ++tick) {
+			logicUpdate(&s, &idle);
+			CHECK(s.phase == PLAY && s.bossQuietTicks == tick);
+		}
+		logicUpdate(&s, &idle); CHECK(s.phase == BOSS_INTRO);
+	}
+}
+
 static void testPreferredSpritePairs(void) {
 	tGameState s;
 	start(&s); s.waveTimer = 60000;
@@ -1718,7 +2165,129 @@ static void testPreferredSpritePairs(void) {
 		checkSchedule(&s);
 	}
 }
+static void testManualPauseAllPhases(void) {
+	const tPhase phases[] = {PLAY, BOSS, SECTOR_INTRO, BOSS_INTRO, BOSS_DYING, CLEAR, WIN, HERO_DYING};
+	const tInput flying = {1, 1, 1};
+	for(unsigned i = 0; i < sizeof(phases) / sizeof(*phases); ++i) {
+		tGameState s, before, actual;
+		start(&s); s.phase = phases[i]; s.sceneReady = 1; s.phaseFrame = 10;
+		s.charge = 49; s.fireCooldown = 5; s.bossQuietTicks = 17;
+		s.enemies[0] = entity(200, 80, 2); s.hostile[0] = entity(200, 140, 1);
+		s.shots[0] = entity(100, 90, 1); s.pickups[0] = entity(200, 180, 1);
+		s.effects[0] = (tEffect){80, 80, 1, FX_ENEMY, 0, SMALL_EFFECT_FRAMES};
+		s.boss.flashTicks = 6;
+		logicTogglePause(&s);
+		CHECK(s.manualPause && !s.charge && s.pauseFireBlocked && !logicWorldScrolling(&s));
+		before = s;
+		for(unsigned tick = 0; tick < 101; ++tick) {
+			logicUpdate(&s, tick & 1 ? &idle : &flying);
+			actual = s;
+			actual.frame = before.frame; actual.events = before.events;
+			actual.fireWasDown = before.fireWasDown;
+			actual.boss.flashTicks = before.boss.flashTicks;
+			memcpy(actual.effects, before.effects, sizeof(actual.effects));
+			CHECK(!memcmp(&actual, &before, sizeof(actual)));
+			CHECK(heroPresentationVisible(&s) == (phases[i] != HERO_DYING));
+		}
+		CHECK(s.frame == before.frame + 101 && !s.effects[0].active && !s.boss.flashTicks);
+		logicTogglePause(&s); CHECK(!s.manualPause);
+		logicUpdate(&s, &fire);
+		CHECK(!s.charge && !(s.events & (EVENT_SHOT | EVENT_LANCE)));
+		CHECK(s.phase == phases[i]);
+		logicUpdate(&s, &idle); CHECK(!s.pauseFireBlocked);
+	}
+	tGameState s;
+	logicInit(&s); logicTogglePause(&s); CHECK(!s.manualPause);
+	s.phase = GAMEOVER; logicTogglePause(&s); CHECK(!s.manualPause);
+	s.phase = PLAY; logicTogglePause(&s); logicInit(&s);
+	CHECK(!s.manualPause && !s.pauseFireBlocked);
+	logicTogglePause(NULL);
+}
+
+static void testPauseChargeAndHeroContinuity(void) {
+	tGameState s;
+	start(&s); s.waveTimer = 60000;
+	for(unsigned i = 0; i < 50; ++i) logicUpdate(&s, &fire);
+	logicTogglePause(&s); logicUpdate(&s, &idle); logicTogglePause(&s);
+	for(unsigned i = 0; i < 60; ++i) logicUpdate(&s, &fire);
+	CHECK(!s.charge && !s.shots[0].active);
+	logicUpdate(&s, &idle); logicUpdate(&s, &fire); logicUpdate(&s, &idle);
+	CHECK(s.events & EVENT_SHOT);
+	logicInit(&s); logicUpdate(&s, &fire);
+	s.presentationBusy = 1;
+	CHECK(!s.sceneReady && heroPresentationVisible(&s));
+	CHECK(!s.heroBlink && s.invulnerable == RESPAWN_FRAMES);
+	s.presentationBusy = 0; logicScenePresented(&s, s.sceneEpoch);
+	s.x = 119;
+	const tInput right = {1, 0, 0};
+	logicUpdate(&s, &right); CHECK(s.x == 120 && heroPresentationX(&s) == 120);
+	s.phaseFrame = SCENE_FRAMES - 1;
+	logicUpdate(&s, &idle); CHECK(s.phase == PLAY);
+	s.presentationBusy = 1;
+	for(unsigned i = 0; i < 35; ++i) {
+		logicUpdate(&s, &right);
+		CHECK(s.x == 120 && heroPresentationVisible(&s));
+	}
+	s.presentationBusy = 0;
+	for(unsigned i = 0; i < RESPAWN_FRAMES; ++i) {
+		logicUpdate(&s, &idle); CHECK(heroPresentationVisible(&s));
+	}
+	s.heroBlink = 1; s.invulnerable = 4; CHECK(!heroPresentationVisible(&s));
+	const tPhase stories[] = {BOSS_INTRO, BOSS_DYING, CLEAR, WIN};
+	for(unsigned i = 0; i < 4; ++i) {
+		s.phase = stories[i]; s.phaseFrame = 0; s.sceneReady = 0; s.x = 200;
+		logicUpdate(&s, &right);
+		CHECK(s.x == 200 && heroPresentationVisible(&s));
+		CHECK(heroPresentationX(&s) == (stories[i] == BOSS_DYING ? 200 : 120));
+	}
+	s.phase = HERO_DYING; CHECK(!heroPresentationVisible(&s));
+	s.phase = GAMEOVER; CHECK(!heroPresentationVisible(&s));
+}
+
+static void testPublicReturnToTitle(void) {
+	const tPhase phases[] = {PLAY, BOSS, SECTOR_INTRO, BOSS_INTRO, CLEAR, WIN,
+		HERO_DYING, BOSS_DYING, GAMEOVER};
+	const tInput held = {1, 1, 1}, right = {1, 0, 0};
+	for(unsigned i = 0; i < sizeof(phases) / sizeof(*phases); ++i) {
+		for(unsigned paused = 0; paused < 2; ++paused) {
+			tGameState s, expected;
+			memset(&s, 0x01, sizeof(s));
+			s.phase = phases[i]; s.manualPause = paused;
+			s.frame = 1234; s.simFrame = 567; s.sceneEpoch = 42;
+			s.enemyMotionFrame = 453; s.enemyAccumulator = 12;
+			logicInit(&expected);
+			expected.frame = 1234; expected.simFrame = 567; expected.sceneEpoch = 42;
+			expected.enemyMotionFrame = 453; expected.enemyAccumulator = 12;
+			expected.titleInputBlocked = expected.presentationBusy = expected.fireWasDown = 1;
+			expected.titleDirection = 1; expected.events = EVENT_LEVEL;
+			logicReturnToTitle(&s, &held);
+			CHECK(!memcmp(&s, &expected, sizeof(s)));
+			for(unsigned tick = 0; tick < 300; ++tick) logicUpdate(&s, &held);
+			CHECK(s.phase == TITLE && s.level == 0 && s.titleInputBlocked);
+			logicSetPresentationBusy(&s, 0);
+			logicUpdate(&s, &held); CHECK(s.titleInputBlocked);
+			logicUpdate(&s, &right); CHECK(!s.titleInputBlocked && s.level == 0);
+			logicUpdate(&s, &right); CHECK(s.level == 0);
+			logicUpdate(&s, &idle); logicUpdate(&s, &right); CHECK(s.level == 1);
+			logicUpdate(&s, &fire); CHECK(s.phase == SECTOR_INTRO && s.sceneEpoch == 43);
+			logicScenePresented(&s, 42); CHECK(!s.sceneReady);
+		}
+	}
+	logicReturnToTitle(NULL, NULL);
+	tGameState s; logicInit(&s); logicReturnToTitle(&s, NULL);
+	CHECK(s.phase == TITLE && !s.fireWasDown && !s.titleDirection);
+}
+
 int main(void) {
+	testPublicReturnToTitle();
+	testManualPauseAllPhases(); testPauseChargeAndHeroContinuity();
+	testLiveOpeningAndFrozenLaterStories();
+	testLiveBossArrival();
+	testBossQuietBoundaryAndRelease(); testBossProjectileDrainAndPause();
+	testBossFinalRetirementStartsQuietInterval();
+	testGameoverReadyTimeoutAndHeldInput(); testGameoverSkipBoundary();
+	testExactEnemyClockAndUnchangedProjectiles(); testSectorEnemyCadences(); testEnemyClockPreparingFreeze();
+	testIndependentFireAndSectorFans(); testOrdinaryHealthAndSpawnDelays();
 	testSceneHandshakeAndSkip(); testThirteenStoryBeats(); testDeathSnapshotsAndMotionParity();
 	testBossDamageVisibilityAndDeath(); testBossGeometryEdges(); testEffectCapacityAndExpiry();
 	testFourHostileChannels();

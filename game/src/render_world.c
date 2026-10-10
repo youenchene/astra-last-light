@@ -2,6 +2,8 @@
 #include "render_internal.h"
 #include "art.h"
 #include "render.h"
+#include "presentation_rows.h"
+#include "../art/title-plates.h"
 #include <ace/managers/blit.h>
 #include <ace/utils/custom.h>
 #include <ace/utils/fetchmode.h>
@@ -19,7 +21,7 @@ static struct {
 } s_decorCopper[2];
 
 static tVPort *s_pVPort;
-static tBitMap *s_pScreen, *s_pFont, *s_pDecor, *s_pCommonTitle;
+static tBitMap *s_pScreen, *s_pFont, *s_pDecor, *s_pTitle;
 static tBitMap *s_buffers[2];
 static tBitMap *s_pLabels;
 static UBYTE s_ubLevel, s_buffer;
@@ -29,12 +31,15 @@ static UWORD s_pStarX[STAR_COUNT], s_pStarRow[STAR_COUNT];
 static UWORD s_uwOriginalStarColor;
 static ULONG s_pGlyphMasks[3][36][28];
 static UBYTE s_hasScroll;
+/* Physical pixel provenance, deliberately outside the copied command history.
+ * Partial plate/caption repair cannot damage the stable title exterior. */
+static UBYTE s_titleStable[2];
 /* Pixel history and composition cursors belong to a bitmap, not a tick.
  * Each tick advances only the back target (8 rows / two glyphs total). */
 typedef struct {
 	ULONG score;
 	UWORD hp, row, cursor, stars[STAR_COUNT];
-	UBYTE valid, preparing, stage, command;
+	UBYTE valid, preparing, stage, command, paused, bossHud;
 	UBYTE lives, charge, weapon, speed, shield, shotLevel, top, bottom, chargeInk;
 } tWorldBuffer;
 static tWorldBuffer s_history[2];
@@ -64,6 +69,10 @@ typedef struct {
 static tWorldCommand s_commands[32];
 static UBYTE s_commandCount;
 static UBYTE combatBackground(tPhase phase);
+static UBYTE sceneryBackground(tPhase phase) {
+	return combatBackground(phase) || phase == SECTOR_INTRO || phase == BOSS_INTRO ||
+		phase == CLEAR || phase == WIN;
+}
 
 
 /* All display writes are bounded; CPU pixels are used only for tiny dirty
@@ -136,6 +145,39 @@ static UBYTE labelsCreate(void) {
 	return 1;
 }
 
+/* Beveled navigation blades, mirrored about their directional silhouette.
+ * Three rows per command step; zero pixels preserve the panel underneath. */
+static UBYTE titleIconStep(UWORD x, UWORD y, UBYTE right, UWORD *cursor) {
+	static const UBYTE blade[9][11] = {
+		{0,0,0,0,6,2,0,0,0,0,0},
+		{0,0,0,6,15,3,0,0,0,0,0},
+		{0,0,6,15,5,6,6,6,6,6,2},
+		{0,6,15,5,5,5,5,5,5,4,2},
+		{6,15,5,5,4,4,15,15,15,3,2},
+		{0,3,5,4,3,3,3,3,3,2,1},
+		{0,0,3,4,3,2,2,2,2,2,1},
+		{0,0,0,3,2,1,0,0,0,0,0},
+		{0,0,0,0,2,1,0,0,0,0,0}
+	};
+	blitWait();
+	for(UBYTE count = 0; count < 3 && *cursor < 9; ++count, ++*cursor) {
+		UWORD sy = y + *cursor;
+		for(UBYTE col = 0; col < 11; ++col) {
+			UBYTE ink = blade[*cursor][right ? 10 - col : col];
+			if(!ink) continue;
+			UWORD sx = x + col;
+			UWORD offset = (sy << 7) + (sy << 5) + (sx >> 3);
+			UBYTE mask = 0x80 >> (sx & 7);
+			for(UBYTE plane = 0; plane < 4; ++plane) {
+				UBYTE *dest = &s_pScreen->Planes[plane][offset];
+				if(ink & (1 << plane)) *dest |= mask;
+				else *dest &= ~mask;
+			}
+		}
+	}
+	return *cursor == 9;
+}
+
 static void textDraw(UWORD x, UWORD y, const char *pText, UBYTE scale, UBYTE color) {
 	blitWait();
 	UBYTE size = scale == 4 ? 2 : (scale == 2 ? 1 : 0);
@@ -146,7 +188,8 @@ static void textDraw(UWORD x, UWORD y, const char *pText, UBYTE scale, UBYTE col
 			(letter >= '0' && letter <= '9' ? letter - '0' + 26 : 255);
 		if(glyph != 255) {
 			for(UWORD row = 0; row < 7 * scale; ++row) {
-				ULONG bits = s_pGlyphMasks[size][glyph][row] >> (x & 7);
+				ULONG bits = s_pGlyphMasks[size][glyph][row];
+				bits >>= x & 7;
 				UWORD sy = y + row;
 				UWORD offset = (sy << 7) + (sy << 5) + (x >> 3);
 				UBYTE bytes = ((x & 7) + 5 * scale + 7) >> 3;
@@ -212,6 +255,12 @@ static void queueRect(UWORD x, UWORD y, UWORD width, UWORD height, UBYTE color) 
 	cmd->scale = 0; cmd->color = color;
 }
 
+static void queueCentered(UWORD y, const char *text, UBYTE scale, UBYTE color) {
+	UWORD length = 0;
+	while(text[length]) ++length;
+	queueText((WORLD_W - length * 6 * scale + scale) / 2, y, text, scale, color);
+}
+
 static void queueNumber(UWORD x, UWORD y, ULONG value, UBYTE digits) {
 	char text[9];
 	numberText(text, value, digits);
@@ -226,8 +275,8 @@ static void numberDraw(UWORD x, UWORD y, ULONG value, UBYTE digits) {
 
 static void scoreDraw(ULONG score, UBYTE dirty) {
 	if(dirty) {
-		blitRect(s_pScreen, 92, 6, 90, 7, 1);
-		numberDraw(92, 6, score, 8);
+		blitRect(s_pScreen, 162, 6, 48, 7, 1);
+		numberDraw(162, 6, score, 8);
 		return;
 	}
 	char before[9], after[9], glyph[2] = {0, 0};
@@ -237,7 +286,7 @@ static void scoreDraw(ULONG score, UBYTE dirty) {
 	 * Only changed glyphs need clearing; their spacing and colors stay intact. */
 	for(UBYTE i = 0; i < 8; ++i) {
 		if(before[i] == after[i]) continue;
-		UWORD x = 92 + i * 6;
+		UWORD x = 162 + i * 6;
 		blitRect(s_pScreen, x, 6, 6, 7, 1);
 		glyph[0] = after[i];
 		textDraw(x, 6, glyph, 1, 6);
@@ -291,9 +340,8 @@ void renderWorldCopper(const tGameState *pState, UBYTE ready) {
 	tCopBfr *back = s_pVPort->pView->pCopList->pBackBfr;
 	UBYTE buffer = back != s_pDecorCopperA;
 	tCopCmd *commands = &back->pList[ASTRA_COP_DECOR];
-	/* Sector two is open nebula: fetch the space-colored framebuffer all the
-	 * way to the HUD/footer rather than overlaying the retained crystal art. */
-	UBYTE enabled = ready && combatBackground(pState->phase) && pState->level != 1;
+	/* All sectors retain their authored bands; ink zero uses the space palette. */
+	UBYTE enabled = ready && sceneryBackground(pState->phase);
 	if(!enabled) {
 		if(s_decorCopper[buffer].enabled) decorCopperDisable(commands);
 		s_decorCopper[buffer].enabled = 0;
@@ -327,15 +375,16 @@ UBYTE renderWorldCreate(tVPort *pVPort, tBitMap *pFront, tBitMap *pScreen) {
 	decorCopperDisable(&pVPort->pView->pCopList->pFrontBfr->pList[ASTRA_COP_DECOR]);
 	s_decorCopper[0].enabled = s_decorCopper[1].enabled = 0;
 	s_buffers[0] = pScreen; s_buffers[1] = pFront;
+	s_titleStable[0] = s_titleStable[1] = 0;
 	renderWorldBind(pScreen);
 	s_pFont = artFontCreate();
 	if(!s_pFont) return 0;
 	fontMasksCreate();
 	if(!labelsCreate()) return 0;
-	/* Title-only sharing saves 3 * 6144 chip bytes; source plates are retained.
-	 * Gameplay decor and all five manga plates remain sector-specific. */
-	s_pCommonTitle = artGraveyardCreate();
-	if(!s_pCommonTitle) return 0;
+	/* Four read-only sources share one CHIP staging bitmap. Only the eight
+	 * rows needed by the next composition blit are copied into it. */
+	s_pTitle = bitmapCreate(128, 96, 4, BMF_INTERLEAVED);
+	if(!s_pTitle) return 0;
 	tBitMap *pStrip = artDecorCreate();
 	if(!pStrip) return 0;
 	if(!stripValid(pStrip, 64, 8 * DECOR_HEIGHT)) { bitmapDestroy(pStrip); return 0; }
@@ -463,43 +512,50 @@ void renderWorldAnimate(const tGameState *pState) {
 
 static void panelQueue(tPhase phase) {
 	if(phase != TITLE && phase != GAMEOVER) return;
-	queueRect(24, 122, 272, 94, 1);
-	queueRect(24, 122, 272, 1, 15);
-	queueRect(24, 215, 272, 1, 3);
 	if(phase == TITLE) {
-		queueText(102, 131, "ASTRA", 4, 6);
-		queueText(102, 166, "LAST LIGHT", 2, 14);
-		queueText(91, 190, "FIRE TO DEFEND THE DAWN", 1, 7);
-		queueText(88, 203, "LEFT RIGHT SELECT SECTOR", 1, 4);
+		queueRect(24, 128, 272, 88, 1);
+		queueRect(24, 128, 272, 1, 15);
+		queueRect(24, 215, 272, 1, 3);
+		queueCentered(134, "ASTRA", 4, 6);
+		queueCentered(168, "LAST LIGHT", 2, 14);
+		queueCentered(190, "FIRE TO DEFEND THE DAWN", 1, 7);
+		/* 144 visible pixels centered on screen; icons straddle the text baseline. */
+		queueText(88, 202, "", 255, 0);
+		queueText(105, 203, "OR", 1, 4);
+		queueText(122, 202, "", 255, 1);
+		queueText(137, 203, "TO CHANGE SECTOR", 1, 4);
 	}
 	else {
-		queueText(106, 142, "GAME OVER", 2, 11);
-		queueText(70, 169, "THE FLEET WILL REMEMBER YOU", 1, 6);
-		queueText(109, 196, "FIRE TO TRY AGAIN", 1, 7);
+		queueRect(24, 81, 272, 94, 1);
+		queueRect(24, 81, 272, 1, 15);
+		queueRect(24, 174, 272, 1, 3);
+		queueText(106, 101, "GAME OVER", 2, 11);
+		queueText(70, 128, "THE FLEET WILL REMEMBER YOU", 1, 6);
+		queueText(103, 155, "RETURNING TO TITLE", 1, 7);
 	}
 }
 
 static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	if(dirty || s_ubWeapon != pState->weaponLevel || s_ubSpeed != pState->speedLevel ||
 		s_ubShield != pState->shield || s_ubShotLevel != pState->shotLevel) {
-		blitRect(s_pScreen, 20, 249, 6, 7, 0);
-		blitRect(s_pScreen, 44, 249, 6, 7, 0);
-		blitRect(s_pScreen, 68, 249, 6, 7, 0);
-		blitRect(s_pScreen, 92, 249, 6, 7, 0);
-		numberDraw(20, 249, pState->weaponLevel, 1);
-		numberDraw(44, 249, pState->speedLevel, 1);
-		numberDraw(68, 249, pState->shield, 1);
-		numberDraw(92, 249, pState->shotLevel + 1, 1);
+		blitRect(s_pScreen, 50, 249, 6, 7, 0);
+		blitRect(s_pScreen, 98, 249, 6, 7, 0);
+		blitRect(s_pScreen, 158, 249, 6, 7, 0);
+		blitRect(s_pScreen, 206, 249, 6, 7, 0);
+		numberDraw(50, 249, pState->weaponLevel, 1);
+		numberDraw(98, 249, pState->speedLevel, 1);
+		numberDraw(158, 249, pState->shield, 1);
+		numberDraw(206, 249, pState->shotLevel + 1, 1);
 	}
 	if(dirty || s_ulScore != pState->score) {
 		scoreDraw(pState->score, dirty);
 	}
 	if(dirty || s_ubLives != pState->lives) {
-		blitRect(s_pScreen, 230, 6, 18, 7, 1);
-		numberDraw(230, 6, pState->lives, 1);
+		blitRect(s_pScreen, 254, 6, 6, 7, 1);
+		numberDraw(254, 6, pState->lives, 1);
 	}
 	UBYTE ready = pState->charge >= CHARGE_FRAMES;
-	if(dirty || ready != (s_ubCharge >= CHARGE_FRAMES)) {
+	if(!pState->manualPause && (dirty || ready != (s_ubCharge >= CHARGE_FRAMES))) {
 		blitCopy(s_pLabels, 0, ready ? 7 : 0, s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
 		blitCopyAligned(s_pLabels, 0, ready ? 21 : 14, s_pScreen, 224, 249, 96, 7);
 	}
@@ -509,8 +565,9 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 		if(pState->charge) blitRect(s_pScreen, 44, 19,
 			ready ? 100 : pState->charge << 1, 4, ready ? ((pState->frame & 8) ? 7 : 14) : 15);
 	}
-	if(dirty || s_uwHp != pState->boss.hp) {
-		UBYTE labelChanged = dirty || !s_uwHp || !pState->boss.hp;
+	UBYTE bossHud = pState->phase == BOSS;
+	if(dirty || s_uwHp != pState->boss.hp || HISTORY.bossHud != bossHud) {
+		UBYTE labelChanged = dirty || !s_uwHp || !pState->boss.hp || HISTORY.bossHud != bossHud;
 		if(labelChanged) blitRect(s_pScreen, 166, 18, 146, 7, 1);
 		if(pState->phase == BOSS && pState->boss.maxHp) {
 			if(labelChanged) textDraw(166, 18, "BOSS", 1, 11);
@@ -523,6 +580,7 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	s_ubLives = pState->lives;
 	s_ubCharge = pState->charge;
 	s_uwHp = pState->boss.hp;
+	HISTORY.bossHud = bossHud;
 	s_ubWeapon = pState->weaponLevel;
 	s_ubSpeed = pState->speedLevel;
 	s_ubShield = pState->shield;
@@ -531,7 +589,18 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 }
 
 void renderWorldHud(const tGameState *pState) {
-	if(s_isValid) hudDraw(pState, 0);
+	if(s_isValid && pState->phase != TITLE) hudDraw(pState, 0);
+}
+
+void renderWorldPause(const tGameState *state) {
+	if(!s_isValid || HISTORY.paused == state->manualPause) return;
+	HISTORY.paused = state->manualPause;
+	if(state->manualPause) {
+		blitRect(s_pScreen, 8, 18, 32, 7, 1);
+		textDraw(8, 18, "PAUSE", 1, 14);
+	}
+	else blitCopy(s_pLabels, 0, state->charge >= CHARGE_FRAMES ? 7 : 0,
+		s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
 }
 
 static UBYTE combatBackground(tPhase phase) {
@@ -539,6 +608,7 @@ static UBYTE combatBackground(tPhase phase) {
 }
 
 void renderWorldInvalidate(UBYTE resetScroll) {
+	s_titleStable[0] = s_titleStable[1] = 0;
 	for(UBYTE i = 0; i < 2; ++i) s_history[i].valid = s_history[i].preparing = 0;
 	if(resetScroll) s_hasScroll = 0;
 }
@@ -550,6 +620,25 @@ UBYTE renderWorldMatches(const tGameState *pState) {
 }
 
 UBYTE renderWorldReady(void) { return s_history[0].valid && s_history[1].valid; }
+UBYTE renderWorldTargetReady(void) { return s_isValid; }
+
+void renderWorldResumeCombat(tPhase phase) { s_ePhase = phase; }
+
+void renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows) {
+	blitRect(s_pScreen, x, y, width, rows, 0);
+	blitWait();
+	UWORD first = (y << 7) + (y << 5), end = first + rows * 160;
+	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
+		if(s_pStarRow[i] < first || s_pStarRow[i] >= end) continue;
+		UWORD starX = HISTORY.stars[i];
+		UBYTE size = (i & 3) >= 2 ? 2 : 1;
+		for(UBYTE pixel = 0; pixel < size; ++pixel) {
+			UWORD sx = starX + pixel;
+			if(sx >= x && sx < x + width)
+				s_pScreen->Planes[2][s_pStarRow[i] + (sx >> 3)] |= 0x80 >> (sx & 7);
+		}
+	}
+}
 
 void renderWorldBegin(const tGameState *pState) {
 	static const UWORD space[4] = {0x001, 0x102, 0x101, 0x001};
@@ -558,31 +647,25 @@ void renderWorldBegin(const tGameState *pState) {
 	s_hasScroll = 1;
 	s_ubLevel = pState->level;
 	s_ePhase = pState->phase;
+	if(s_ePhase != TITLE) s_titleStable[0] = s_titleStable[1] = 0;
 	s_isValid = 0; s_preparing = 1;
+	HISTORY.paused = 0;
 	s_prepareStage = 0; s_prepareRow = 0;
 	s_commandCount = s_command = 0; s_commandCursor = 0;
 	s_pVPort->pPalette[0] = space[level];
 	s_pVPort->pPalette[4] = s_ePhase == TITLE ? s_uwOriginalStarColor : 0xbdf;
-	queueRect(0, 0, 320, 28, 1);
-	queueRect(0, 28, 320, 1, 15);
-	queueRect(0, 245, 320, 1, 3);
-	queueText(8, 6, "ASTRA", 1, 15);
-	queueText(56, 6, "SCORE", 1, 5);
-	queueText(194, 6, "LIVES", 1, 5);
-	queueText(260, 6, "SECTOR", 1, 5);
-	queueNumber(302, 6, level + 1, 1);
-	queueText(8, 18, pState->charge >= CHARGE_FRAMES ? "READY" : "LANCE", 1,
-		pState->charge >= CHARGE_FRAMES ? 7 : 4);
-	queueText(8, 249, "W   S   R   F", 1, 4);
-	queueText(104, 249, g_stageNames[level], 1, 5);
-	queueText(224, 249, pState->charge >= CHARGE_FRAMES ? "RELEASE FIRE" : "HOLD TO CHARGE",
-		1, pState->charge >= CHARGE_FRAMES ? 14 : 4);
-	queueNumber(20, 249, pState->weaponLevel, 1);
-	queueNumber(44, 249, pState->speedLevel, 1);
-	queueNumber(68, 249, pState->shield, 1);
-	queueNumber(92, 249, pState->shotLevel + 1, 1);
-	queueNumber(92, 6, pState->score, 8);
-	queueNumber(230, 6, pState->lives, 1);
+	if(s_ePhase == TITLE) {
+		queueRect(0, 224, WORLD_W, 8, 0);
+		queueCentered(224, g_stageNames[level], 1, 5);
+	}
+	else {
+	queueNumber(308, 6, level + 1, 1);
+	queueNumber(50, 249, pState->weaponLevel, 1);
+	queueNumber(98, 249, pState->speedLevel, 1);
+	queueNumber(158, 249, pState->shield, 1);
+	queueNumber(206, 249, pState->shotLevel + 1, 1);
+	queueNumber(162, 6, pState->score, 8);
+	queueNumber(254, 6, pState->lives, 1);
 	queueRect(44, 19, 100, 4, 2);
 	if(pState->charge) queueRect(44, 19,
 		pState->charge >= CHARGE_FRAMES ? 100 : pState->charge << 1, 4, 15);
@@ -592,9 +675,11 @@ void renderWorldBegin(const tGameState *pState) {
 		UWORD width = (UWORD)(pState->boss.hp * 112u) / pState->boss.maxHp;
 		if(width) queueRect(198, 19, width, 4, 11);
 	}
+	}
 	panelQueue(s_ePhase);
 	s_ulScore = pState->score; s_ubLives = pState->lives;
 	s_ubCharge = pState->charge; s_uwHp = pState->boss.hp;
+	HISTORY.bossHud = s_ePhase == BOSS;
 	s_ubWeapon = pState->weaponLevel; s_ubSpeed = pState->speedLevel;
 	s_ubShield = pState->shield;
 	s_ubShotLevel = pState->shotLevel;
@@ -602,6 +687,21 @@ void renderWorldBegin(const tGameState *pState) {
 	/* Identical command stream and frozen world snapshot for both targets;
 	 * only the bound back bitmap advances each tick. */
 	s_history[!s_buffer] = HISTORY;
+	/* A retap may arrive before either target completes, or during repair.
+	 * Choose each target's entry stage from its own untouched exterior. */
+	if(s_ePhase == TITLE)
+		for(UBYTE i = 0; i < 2; ++i)
+			if(s_titleStable[i]) s_history[i].stage = 1;
+}
+
+static void titleRows(UWORD row) {
+	/* The preceding target can still be reading the shared staging source.
+	 * Word copies and the centered destination are aligned. */
+	blitWait();
+	const UWORD *source = &s_titlePlates[s_ubLevel][row << 5];
+	UWORD *dest = (UWORD *)(s_pTitle->Planes[0] + (row << 6));
+	for(UWORD word = 0; word < 8 * 32; ++word) dest[word] = source[word];
+	blitCopy(s_pTitle, 0, row, s_pScreen, 96, 26 + row, 128, 8, MINTERM_COOKIE);
 }
 
 void renderWorldStep(void) {
@@ -613,15 +713,9 @@ void renderWorldStep(void) {
 	}
 	else if(s_prepareStage == 1) {
 		if(s_ePhase == TITLE) {
-			blitCopy(s_pCommonTitle, 0, s_prepareRow, s_pScreen,
-				184, 56 + s_prepareRow, 128, 8, MINTERM_COOKIE);
+			titleRows(s_prepareRow);
 			s_prepareRow += 8;
 			if(s_prepareRow == 96) ++s_prepareStage;
-		}
-		else if(s_ubLevel == 1) {
-			/* Both physical framebuffers were cleared to ink zero above. */
-			s_ubTopScroll = s_topScroll; s_ubBottomScroll = s_bottomScroll;
-			++s_prepareStage;
 		}
 		else {
 			UBYTE bottom = s_prepareRow >= DECOR_HEIGHT;
@@ -631,14 +725,26 @@ void renderWorldStep(void) {
 			s_prepareRow += 8;
 			if(s_prepareRow == 2 * DECOR_HEIGHT) {
 				s_ubTopScroll = s_topScroll; s_ubBottomScroll = s_bottomScroll;
-				++s_prepareStage;
+				s_prepareStage = 4; s_prepareRow = 0;
 			}
 		}
 	}
+	else if(s_prepareStage == 4) {
+		blitWait();
+		s_prepareRow = presentationHudStep(s_pScreen->Planes, s_pScreen->BytesPerRow,
+			s_ubLevel * 2 + (s_ubCharge >= CHARGE_FRAMES), s_prepareRow);
+		if(s_prepareRow == 40) { s_prepareStage = 2; s_prepareRow = 0; }
+	}
 	else if(s_prepareStage == 2) {
-		if(s_command < s_commandCount) {
+		UBYTE count = s_ePhase == TITLE && s_titleStable[s_buffer] ? 2 : s_commandCount;
+		if(s_command < count) {
 			tWorldCommand *cmd = &s_commands[s_command];
-			if(cmd->scale) {
+			if(cmd->scale == 255) {
+				if(titleIconStep(cmd->x, cmd->y, cmd->color, &s_commandCursor)) {
+					++s_command; s_commandCursor = 0;
+				}
+			}
+			else if(cmd->scale) {
 				if(renderWorldTextStep(cmd->x, cmd->y, cmd->text, cmd->scale,
 					cmd->color, &s_commandCursor)) { ++s_command; s_commandCursor = 0; }
 			}
@@ -653,7 +759,7 @@ void renderWorldStep(void) {
 		else { ++s_prepareStage; s_prepareRow = 0; }
 	}
 	else {
-		if(combatBackground(s_ePhase)) {
+		if(sceneryBackground(s_ePhase)) {
 			blitWait();
 			for(UBYTE i = 0; i < 8; ++i, ++s_prepareRow) {
 				starToggle(s_prepareRow, s_pStarX[s_prepareRow]);
@@ -663,17 +769,19 @@ void renderWorldStep(void) {
 		}
 		blitWait();
 		s_isValid = 1; s_preparing = 0;
+		if(s_ePhase == TITLE) s_titleStable[s_buffer] = 1;
 	}
 }
 
 void renderWorldDestroy(void) {
+	s_titleStable[0] = s_titleStable[1] = 0;
 	if(s_pLabels) bitmapDestroy(s_pLabels);
 	s_pLabels = 0;
 	if(s_pDecor) bitmapDestroy(s_pDecor);
-	if(s_pCommonTitle) bitmapDestroy(s_pCommonTitle);
+	if(s_pTitle) bitmapDestroy(s_pTitle);
 	if(s_pFont) bitmapDestroy(s_pFont);
 	s_pDecor = s_pFont = 0;
-	s_pCommonTitle = 0;
+	s_pTitle = 0;
 	s_pVPort = 0;
 	s_pScreen = 0;
 	s_isValid = 0;

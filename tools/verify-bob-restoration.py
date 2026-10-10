@@ -10,10 +10,11 @@ The restoration ROI is the union of aligned 32x16 ACE backup rectangles
 across the first pickup's lifetime, not merely its final 16x16 image. Host
 replay excludes visible sprites and the hero over the final three states.
 Every restored pixel must be space $001 or star $BDF. The drop check proves
-the entire opaque P artwork AND transparent mask against actual pixels.
+the entire opaque D artwork AND transparent mask against actual pixels.
 """
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -23,7 +24,9 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
-from agk.image import Image
+_spec = importlib.util.spec_from_file_location("gameover_states", ROOT / "tools/verify-gameover-title.py")
+STATE_PARSER = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(STATE_PARSER)
 BACKGROUND = {(0, 0, 17), (187, 221, 255)}
 
 
@@ -51,6 +54,7 @@ def first_bonus():
 
 
 def image(path):
+    from agk.image import Image
     source = Image.load_png(str(path))
     if (source.width, source.height) != (320, 256):
         raise ValueError(f"{path}: expected 320x256 game-coordinate screenshot")
@@ -94,11 +98,11 @@ def verify_drop(drop, bounds, x_adjust):
 
 def verify_lifecycle(path, evidence):
     """Check native video/stage clocks without assuming frame resets at start."""
-    text = path.read_text()
-    # agkState splits long reports into another AGK line at its buffer boundary.
-    text = re.sub(r"\nAGK (scene_ready=)", r" \1", text)
-    reports = [dict((key, int(value)) for key, value in re.findall(r"(\w+)=(\d+)", line))
-               for line in text.splitlines() if line.startswith("AGK frame=")]
+    verify_lifecycle_text(path.read_text(), evidence)
+
+
+def verify_lifecycle_text(text, evidence):
+    reports = [state for _, state in STATE_PARSER.frame_states(text.splitlines())]
     ready_tail = text.split("AGK combat_ready\n", 1)[1]
     match = re.search(r"AGK frame=(\d+)", ready_tail)
     if not match:
@@ -109,9 +113,19 @@ def verify_lifecycle(path, evidence):
         raise ValueError("combat_ready must precede the first simulation tick")
     scene = next(s for s in reports if s["phase"] == 6 and s["scene_ready"])
     entered = next(s for s in reports if s["phase"] == 1)
-    if entered["frame"] - scene["frame"] + 1 != 150:
+    if entered["frame"] - scene["frame"] + scene["pf"] != 150:
         raise ValueError("sector scene did not dwell exactly 150 acknowledged ticks")
-    death_frame = start + evidence["death_tick"]
+    ready_updates = evidence["ready_updates"]
+    first_kill = next(s for s in reports if s["score"] == 100)
+    if first_kill["frame"] - start != evidence["kill1"] + ready_updates:
+        raise ValueError("native first kill differs from host replay")
+    drop = next(s for s in reports if s["stage"] == evidence["drop_stage"] and s["score"] == 600)
+    if drop["wave"] != 1 or drop["enemies"] or "AGK bonus_drop" not in text:
+        raise ValueError("first formation did not produce genuine six-kill bonus")
+    pickup = next(s for s in reports if s["stage"] == evidence["pickup_stage"] and s["weapon"] == 1)
+    if "AGK bonus_pickup" not in text or pickup["frame"] <= drop["frame"]:
+        raise ValueError("missing genuine pickup after clear")
+    death_frame = start + evidence["death_tick"] + ready_updates
     death = next(s for s in reports if s["frame"] == death_frame)
     resumed = next(s for s in reports if s["frame"] > death_frame and s["phase"] != 9)
     if death["phase"] != 9 or resumed["frame"] - death_frame != 40:

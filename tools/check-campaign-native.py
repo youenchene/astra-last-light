@@ -7,17 +7,18 @@ Evidence: game/build/campaign-native/{a500,a500-aros}/ plus report.json.
 --check-only parses existing evidence without building or running anything.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
-from agk.image import Image
 
 PROFILES = ("a500", "a500-aros")
 
@@ -38,6 +39,8 @@ def performance(text):
     for line in text.splitlines():
         values = dict((k, int(v)) for k, v in re.findall(r"(\w+)=(-?\d+)", line))
         if line.startswith("AGK perf "):
+            require(all(k in values for k in ('frames', 'dropped', 'load', 'maxload')),
+                    'malformed performance window')
             windows.append({**values, "last_state": context.copy()})
         elif "phase" in values:
             context = {k: values[k] for k in ("frame", "level", "phase", "stage", "sim") if k in values}
@@ -106,14 +109,63 @@ def verify_pixels(image, art, index, x, y, background=None):
     return count
 
 
+def check_flashes(text):
+    flashes = records(text, "qa_flash=")
+    require([r["qa_flash"] for r in flashes] == [1, 2, 3, 4],
+            "expected exactly one flash capture per sector")
+    for record in flashes:
+        level = record["qa_flash"]
+        require(record["flash"] in (2, 4, 6), f"sector {level}: flash snapshot is not a white half")
+        require(record["maxhp"] == (216, 336, 432, 480)[level - 1], "fixture changed maxHp")
+        require(record["hp"] == record["maxhp"] - 6, f"sector {level}: flash hit must deal six damage")
+    return flashes
+
+
+def hero_pixels(image, x=32, y=126):
+    colors, frames = artwork("hero32")
+    colors["4"] = (85, 102, 136)  # Attached sprite palette never borrows star ink.
+    for frame in frames:
+        pixels = {(x + dx, y + dy): colors[symbol]
+                  for dy, row in enumerate(frame) for dx, symbol in enumerate(row)
+                  if symbol not in (".", "0")}
+        if all(image.pixel(*point) == color for point, color in pixels.items()):
+            return set(pixels)
+    raise ValueError(f"opening: exact hero artwork missing at {(x, y)}")
+
+
+def check_scene_pair(early, late, scene):
+    # Validate every pixel. Only exact, source-checked hero animation pixels
+    # may differ in any story; the ship remains stationary and source-exact.
+    changing = hero_pixels(early) | hero_pixels(late)
+    require(all(early.pixel(x, y) == late.pixel(x, y)
+                for y in range(256) for x in range(320) if (x, y) not in changing),
+            f"scene {scene}: window or frozen exterior changed")
+    colors, panels = artwork("campaign_manga")
+    colors["."] = early.pixel(0, 56)
+    panel = panels[4 if scene == 12 else scene // 3]
+    require(all(early.pixel(176 + x, 72 + y) == colors[panel[y * 96 // 64][x * 160 // 112]]
+                for y in range(64) for x in range(112)),
+            f"scene {scene}: compact panel differs from original 112x64 source")
+
+
 def check_images(directory, text):
+    from agk.image import Image
+
+    check_flashes(text)
     names = [f"scene{i:02}" for i in range(13)]
+    names += [f"scene{i:02}_late" for i in range(13)]
     names += [f"{kind}{i}" for kind in ("boss", "flash", "dead", "fx") for i in range(1, 5)]
     names += [f"hero{i}" for i in range(8)]
     names += ["F_badge", "F2", "F3"]
     images = {n: Image.load_png(str(directory / f"{n}.screen.png")) for n in names}
     require(all((im.width, im.height) == (320, 256) for im in images.values()), "capture dimensions")
     checked = {}
+    for scene in range(13):
+        early, late = images[f"scene{scene:02}"], images[f"scene{scene:02}_late"]
+        check_scene_pair(early, late, scene)
+        require(any(early.pixel(x, y) != early.pixel(0, 29)
+                    for y in range(29, 53) for x in range(320)),
+                f"scene {scene}: gameplay scenery missing")
     background = {(0, 0, 17), (187, 221, 255)}
     checked["F_badge"] = verify_pixels(images["F_badge"], "bonuses", 4, 80, 126, background)
     for pattern, offsets in ((2, (-6, 6)), (3, (-8, 0, 8))):
@@ -127,7 +179,7 @@ def check_images(directory, text):
         for r in records(text, f"qa_{tag}="):
             level = r[f"qa_{tag}"]
             checked[f"{tag}{level}"] = verify_pixels(images[f"{tag}{level}"], art, level - 1, r["x"], r["y"])
-            require(r["maxhp"] == (108, 144, 192, 240)[level - 1], "fixture changed maxHp")
+            require(r["maxhp"] == (216, 336, 432, 480)[level - 1], "fixture changed maxHp")
     for tag, art, width, height in (("dead", "campaign_fx64", 64, 48),
                                    ("hero", "campaign_fx32", 32, 32),
                                    ("fx_slot", "campaign_fx16", 16, 16)):
@@ -141,12 +193,14 @@ def check_images(directory, text):
 
 
 def inspect(directory):
-    text = (directory / "serial.txt").read_text()
-    perf = performance(text)
-    print(f"{directory.name}: budget {'PASS' if perf['pass'] else 'FAIL (expected known blocker)'}: "
-          f"dropped={perf['dropped']} maxload={perf['maxload']}%", flush=True)
-    result = {"performance": perf, "memory": records(text, "chip_free=")}
+    result = {"performance": None, "memory": [], "functional_pass": False}
     try:
+        text = (directory / "serial.txt").read_text()
+        result['memory'] = records(text, "chip_free=")
+        perf = performance(text)
+        result['performance'] = perf
+        print(f"{directory.name}: budget {'PASS' if perf['pass'] else 'FAIL (expected known blocker)'}: "
+              f"dropped={perf['dropped']} maxload={perf['maxload']}%", flush=True)
         require(result["memory"], "missing chip_free/ram_free memory evidence")
         check_lifecycle(text)
         result["images"] = check_images(directory, text)
@@ -155,6 +209,22 @@ def inspect(directory):
         result.update(functional_pass=False, error=str(error))
     print(f"{directory.name}: functional={result['functional_pass']} {result.get('error', '')}", flush=True)
     return result
+
+
+def preserve_probe(directory):
+    """Retain the exact ON artifacts before finally replaces the working build."""
+    folder = directory / 'probe-on'
+    folder.mkdir(parents=True, exist_ok=True)
+    identity = {}
+    for name in ('astra', 'astra.adf'):
+        source = ROOT / 'game/build' / name
+        target = folder / name
+        require(not target.exists(), f'refusing to overwrite probe evidence: {target}')
+        shutil.copyfile(source, target)
+        identity[name] = {'bytes': target.stat().st_size,
+                          'sha256': hashlib.sha256(target.read_bytes()).hexdigest()}
+    (folder / 'identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+    return identity
 
 
 def main():
@@ -170,6 +240,7 @@ def main():
     try:
         if not args.check_only:
             command("build", "-D", "ASTRA_CAMPAIGN_PROBE=ON")
+            report['probe_identity'] = preserve_probe(args.out)
         for profile in PROFILES:
             directory = args.out / profile
             if not args.check_only:
@@ -183,7 +254,7 @@ def main():
         # Native runner assertions can fail after writing useful evidence.
         for profile in PROFILES:
             directory = args.out / profile
-            if profile not in report["profiles"] and (directory / "serial.txt").exists():
+            if profile not in report["profiles"] and directory.exists():
                 report["profiles"][profile] = inspect(directory)
     finally:
         if not args.check_only:
@@ -199,7 +270,8 @@ def main():
     ok = len(report["profiles"]) == 2 and all(r["functional_pass"] for r in report["profiles"].values())
     ok = ok and not report.get("error") and report.get("production_restored", True)
     if args.strict_performance:
-        ok = ok and all(r["performance"]["pass"] for r in report["profiles"].values())
+        ok = ok and all(r["performance"] and r["performance"]["pass"]
+                        for r in report["profiles"].values())
     return 0 if ok else 1
 
 

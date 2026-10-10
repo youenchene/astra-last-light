@@ -9,8 +9,8 @@
 - Validate on `a500` and `a500-aros`; AROS has extra fast RAM and cannot establish
   that a memory budget fits the baseline A500.
 - All 11 functional campaign features are implemented; **performance acceptance is BLOCKED**.
-  Latest ordinary production suite: 36/36 shared-golden tests PASS,
-  all 36 complete captures byte-identical across profiles. Latest injected fixture:
+  Latest ordinary production suite: 38/38 shared-golden tests PASS,
+  all 42 complete captures byte-identical across profiles. Latest injected fixture:
   functional PASS on both, 40 captures each; strict command exited FAIL (A500
   22 drops/130% peak; AROS 17 drops/123%). Added F probes and changed waves mean
   this is not a like-for-like comparison with older runs. Keep zero drops and
@@ -101,8 +101,10 @@ changes to shared interfaces with their owner before editing another workstream'
 - Preserve restore order for overlapping objects and test removal/scene changes.
 - Dirty HUD updates are important: score formatting avoids32-bit division and
   redraws changed glyphs only, preventing BOB work from missing its scanlines.
-- Veil Nebula (level 1 / displayed sector 2) suppresses decor in both bitmap
-  composition and copper switches. Keep ink 0 at #102 and existing HUD/play bounds.
+- Veil Nebula (level 1 / displayed sector 2) retains crystals in both bitmap
+  composition and copper switches. Clear only corridor-connected inks 0/1 after
+  crop/seam processing; retain enclosed ink-1 shadows and every other crystal ink.
+  Keep ink 0 at #102, PLAY ink 4 at #BDF and existing HUD/play bounds.
 
 ## CPU, memory and audio
 
@@ -114,11 +116,13 @@ changes to shared interfaces with their owner before editing another workstream'
 - Measure, then optimize. Cache stable images/masks, use fixed-point motion and
   bounded loops. Keep gameplay code portable; isolate hardware-specific fast paths.
 - Record memory before adding assets. The 147,456-byte phase bank is removed;
-  decor now uses 57 copper commands and hardware fine scrolling. One common
-  Graveyard title plate saves 18,432 chip bytes; retain source plates and distinct
-  gameplay decor/manga. See `../docs/rendering.md` for the scoped memory ledger.
-- Latest actual production A500 boot: 40,440 free chip / 48,312 total free bytes;
-  initial executable 456,792 bytes. The art manifest retains runtime assets only;
+  decor now uses 57 copper commands and hardware fine scrolling. Four read-only
+  title arrays (24,576 bytes) share one 6,144-byte CHIP staging bitmap, with bounded
+  eight-row copies and original TITLE ink 4 (#568). The bitmap payload saving
+  versus four CHIP plates is 18,432 bytes; ordinary data can still spill into CHIP.
+  See `../docs/rendering.md` for the scoped memory ledger.
+- Latest actual production A500 boot: 24,056 free chip / 30,112 total free bytes;
+  initial executable 474,992 bytes. The art manifest retains runtime assets only;
   removed compiled legacy sections still have preserved source files.
   Obtain fresh telemetry for new allocations; startup readings are not a formal
   worst-case bound. Final evidence is in `../docs/campaign-acceptance.md`.
@@ -164,6 +168,8 @@ bash tools/agk test
 bash tools/agk run -f game/tests/barrage.agk
 python3 tools/verify-rich-art.py
 python3.12 tools/verify-scrolling.py
+python3.12 tools/verify-sector-presentation.py
+python3.12 tools/make-title-plates.py --check
 python3 tools/check-music-channels.py
 python3 tools/check-ace-audio.py
 python3 tools/check-allocation-safety.py
@@ -178,6 +184,10 @@ After visible changes, inspect320×256 `*.screen.png` captures. Review each inte
 change before scoped golden updates, then rerun both profiles without updates.
 Never regenerate goldens blindly or treat an injected fixture as ordinary play.
 Use pixel assertions and `tools/verify-bob-restoration.py` as well as goldens.
+For title/decor changes, run `verify-sector-presentation.py` on both profiles:
+it independently checks original title PNGs, right/left wrap, Nebula connectivity
+and every band pixel. Keep `title_sectors.agk`'s 400-tick selection waits: bounded
+recomposition must finish for both buffers before capture.
 Replan joystick replays when rules change; retain genuine kills/collection checks.
 
 `sync="ticks"` counts game iterations, not elapsed video frames. Keep

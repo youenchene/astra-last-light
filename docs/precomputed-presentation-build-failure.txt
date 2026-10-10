@@ -1,0 +1,11 @@
+Initial precomputed-presentation native build failure (preserved before retry):
+
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+gmake[2]: *** No rule to make target '/tools/make-presentation.py', needed by 'CMakeFiles/presentation_check'.  Stop.
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/presentation_check.dir/all] Error 2
+gmake[1]: *** Waiting for unfinished jobs....
+[ 67%] Built target ace
+gmake: *** [Makefile:136: all] Error 2
+
+Cause: AGK mounts game/ at /project, not the repository parent containing tools/.
+User approved relocating the implementation inside game/ and preserving a host wrapper.

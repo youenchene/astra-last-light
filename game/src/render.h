@@ -11,11 +11,12 @@
  * - restore the back bitmap's N-2 BOB history, animate world, update logic,
  *   draw current HUD/BOBs/sprites, wait for blitter, publish, acknowledge vblank.
  * - independent per-bitmap composition cursors consume <=8 rows / <=2 glyphs
- *   TOTAL per tick. Readiness requires both bitmaps; scene acknowledgement
- *   additionally waits for publication. No per-tick full-screen copies.
+ *   TOTAL per tick. Only complete targets are published; the first is held
+ *   while the second is repaired. Simulation readiness/scene acknowledgement
+ *   require both complete plus vblank acknowledgement. No full-screen copies.
  * - +40960 chip pixels offset by -18432 title-only plates = +22528 bytes,
- *   excluding descriptors. One common Graveyard title plate preserves default
- *   title pixels; sector labels, gameplay decor and manga stay sector-specific.
+ *   excluding descriptors. Four original title sources share one CHIP staging
+ *   plate; sector labels, gameplay decor and manga stay sector-specific.
  *   Runtime free-chip telemetry on baseline A500 remains the acceptance gate.
  */
 
@@ -31,8 +32,12 @@
 
 UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer);
 void renderPalette(void);
+/* Shadow colors only: never recolor the retained visible frame. */
+void renderPreparePalette(void);
 /* Publish viewport colors into all 32 raw copper palette slots. */
 void renderSyncPalette(void);
+/* Override only the unpublished title's lettering; never mutate shadow colors. */
+void renderTitleFlash(UBYTE bright);
 /* Bind every pixel renderer to the actual back bitmap after vblank. */
 void renderBindBack(tBitMap *pBack);
 /* First rendering work after vblank, before input/logic. Ready backgrounds only;
@@ -41,6 +46,13 @@ void renderAnimate(tGameState *pState);
 /* Hero 0..3, enemies 4/5, enemy bullets 6/7. Shots and bonuses are BOBs.
  * Clears entity visibility when hardware/BOB submission is rejected. */
 void renderFrame(tGameState *pState);
+/* Main must skip BOTH viewProcessManagers and copProcessBlocks unless ready.
+ * First target cuts over atomically; the other target is then repaired hidden.
+ * Acknowledge is called after publication crosses vblank, before logic. */
+UBYTE renderTargetReady(void);
+UBYTE renderBothReady(void);
+UWORD renderRevision(void);
+void renderAcknowledge(tGameState *state);
 /* Composition readiness is not a display acknowledgement. After renderFrame,
  * publish copper/palette, wait for vblank, then on the NEXT tick (inside perf
  * measurement, before logicUpdate) acknowledge this epoch if Ready is true.

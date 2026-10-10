@@ -1,7 +1,9 @@
 #include "render_hero.h"
 #include "render_internal.h"
 #include "render_stream.h"
+#include "render_scenes.h"
 #include "art.h"
+#include "hero_presentation.h"
 
 #define HERO_HEIGHT 24
 #define HERO_FRAMES 2
@@ -33,11 +35,10 @@ UBYTE renderHeroCreate(const tView *pView, ULONG *pBlank) {
 
 void renderHeroDraw(const tGameState *pState) {
 	if(!s_pView) return;
-	UBYTE show = pState->phase == PLAY || pState->phase == BOSS;
-	UBYTE enabled = show && (!pState->invulnerable || !(pState->invulnerable & 4));
+	UBYTE enabled = heroPresentationVisible(pState);
 	UBYTE frame = (pState->frame >> 3) & 1;
 	UBYTE buffer = spriteStreamBuffer(&s_pStreams[0], s_pView);
-	UWORD x = s_pView->ubPosX - 1 + pState->x, start = s_pView->ubPosY + pState->y;
+	UWORD x = s_pView->ubPosX - 1 + heroPresentationX(pState), start = s_pView->ubPosY + pState->y;
 	for(UBYTE part = 0; part < HERO_PARTS; ++part) {
 		tSpriteWriter writer;
 		spriteWriterBegin(&writer, &s_pStreams[part], buffer);

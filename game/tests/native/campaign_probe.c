@@ -10,6 +10,9 @@ static uint8_t s_beforeLives;
 static uint32_t s_pauseFrame;
 static uint16_t s_scenes;
 static uint8_t s_playDeath[4], s_bossDeath[4], s_channels[4], s_kills[4];
+static uint8_t s_bossHit[4], s_bossKill[4], s_bossCapture[4], s_flashCapture[4];
+static uint32_t s_beforeEnemyFrame;
+static uint8_t s_beforeEnemyAccumulator;
 static tBoss s_drawnBoss;
 static tEffect s_drawnEffects[EFFECT_COUNT];
 static tEntity s_drawnShots[SHOT_COUNT];
@@ -98,8 +101,10 @@ void campaignProbeBeforeUpdate(tGameState *s) {
 		s->invulnerable = 300;
 		if(s->phase == PLAY) injectPlay(s);
 		else {
-			if(s->boss.tick == 80 || s->boss.tick == 220) {
-				if(s->boss.tick == 220) s->boss.hp = 6;
+			if((s->boss.tick == 80 && !s_bossHit[s->level]) ||
+				(s->boss.tick == 220 && !s_bossKill[s->level])) {
+				if(s->boss.tick == 220) { s_bossKill[s->level] = 1; s->boss.hp = 6; }
+				else s_bossHit[s->level] = 1;
 				shot(&s->shots[0], s->boss.x + 16, s->boss.y + 16, 6);
 			}
 			if(s->boss.tick == 120 && !s_bossDeath[s->level]) {
@@ -110,6 +115,8 @@ void campaignProbeBeforeUpdate(tGameState *s) {
 	s_beforePhase = s->phase; s_beforeSim = s->simFrame;
 	s_beforeFrame = s->frame; s_beforeStage = s->stageFrame;
 	s_beforeTick = s->boss.tick; s_beforeLives = s->lives;
+	s_beforeEnemyFrame = s->enemyMotionFrame;
+	s_beforeEnemyAccumulator = s->enemyAccumulator;
 }
 
 static void checkPause(tGameState *s) {
@@ -121,6 +128,7 @@ static void checkPause(tGameState *s) {
 	}
 	if(!wasDeath) return;
 	if(s->simFrame != s_beforeSim || s->stageFrame != s_beforeStage ||
+		s->enemyMotionFrame != s_beforeEnemyFrame || s->enemyAccumulator != s_beforeEnemyAccumulator ||
 		s->boss.tick != s_beforeTick || s->lives != s_beforeLives ||
 		s->frame != s_beforeFrame + 1) fail(2);
 	if(!death) {
@@ -177,6 +185,8 @@ void campaignProbeAfterFrame(tGameState *s) {
 		s_scenes |= 1u << s->sceneId;
 		clockReport("qa_scene", s, s->sceneId);
 	}
+	if(s->sceneReady && s->phaseFrame == 40)
+		clockReport("qa_scene_static", s, s->sceneId);
 	if(s_beforePhase != s->phase)
 		clockReport("qa_transition", s, s_beforePhase);
 	/* Sample inside a two-tick animation frame, not on its change boundary:
@@ -188,8 +198,15 @@ void campaignProbeAfterFrame(tGameState *s) {
 		}
 		clockReport("qa_fx", s, s->level + 1);
 	}
-	if(s->phase == BOSS && s->boss.tick == 70) captureBoss(s, "qa_boss");
-	if(s->phase == BOSS && s->boss.tick == 82) {
+	if(s->phase == BOSS && s->boss.tick == 70 && !s_bossCapture[s->level]) {
+		s_bossCapture[s->level] = 1; captureBoss(s, "qa_boss");
+	}
+	/* Capture the completed frame's white half, using the same pre-update
+	 * snapshot as its coordinates. Motion ticks and flash ticks are independent. */
+	if(s->phase == BOSS && !s->presentationBusy && s_bossHit[s->level] &&
+		!s_flashCapture[s->level] && s_drawnBoss.flashTicks &&
+		!(s_drawnBoss.flashTicks & 1)) {
+		s_flashCapture[s->level] = 1;
 		if(s->boss.hp != s->boss.maxHp - 6 || !s_drawnBoss.flashTicks) fail(6);
 		captureBoss(s, "qa_flash");
 	}

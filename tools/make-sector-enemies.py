@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline RD-derived sector sprites and authored F badge; no build or API calls."""
+"""Offline RD-derived sector sprites and authored D/F badges; no build or API calls."""
 import argparse
 import os
 from pathlib import Path
@@ -95,6 +95,14 @@ def asteroid_variant(master, sector):
     return ["".join(row) for row in rows]
 
 
+def damage_badge(master):
+    """Replace only the legacy P's 5x7 letter, preserving its orange bezel."""
+    rows = [list(row) for row in master]
+    stamp(rows, 5, 4, ["77772", "72227", "72227", "72227",
+                       "72227", "72227", "77772"])
+    return ["".join(row) for row in rows]
+
+
 def fire_badge():
     # Familiar badge bezel, but a new violet/cyan face and open white F glyph.
     return [
@@ -113,7 +121,7 @@ def make_assets(actors):
         enemies.extend(ship_variant(actors[kind], sector, kind) for kind in range(4))
         enemies.append(actors[4])  # Unused legacy boss slot keeps enum stride six.
         enemies.append(asteroid_variant(actors[5], sector))
-    return enemies, actors[10:14] + [fire_badge()]
+    return enemies, [damage_badge(actors[10])] + actors[11:14] + [fire_badge()]
 
 
 def validate(enemies, bonuses, actors):
@@ -122,8 +130,20 @@ def validate(enemies, bonuses, actors):
     for frame in enemies + bonuses:
         if len(frame) != 16 or any(len(row) != 16 or not set(row) <= set(CHARS) for row in frame):
             raise ValueError("Frames must be 16x16 in the existing palette")
-    if enemies[:6] != actors[:6] or bonuses[:4] != actors[10:14]:
+    if enemies[:6] != actors[:6] or bonuses[1:4] != actors[11:14]:
         raise ValueError("Legacy enemy/badge preservation failed")
+    for y in range(16):
+        for x in range(16):
+            actual, original = bonuses[0][y][x], actors[10][y][x]
+            if (actual == ".") != (original == "."):
+                raise ValueError("Damage badge transparency changed")
+            if not (5 <= x < 10 and 4 <= y < 11) and actual != original:
+                raise ValueError("Damage badge changed outside legacy letter")
+    # Independent row-bit oracle: a closed D, not the legacy P's middle bar.
+    for y, bits in enumerate((30, 17, 17, 17, 17, 17, 30), 4):
+        expected = "".join("7" if bits & (16 >> x) else "2" for x in range(5))
+        if bonuses[0][y][5:10] != expected:
+            raise ValueError("Damage badge must display D")
     for kind in (0, 1, 2, 3, 5):
         masks = {tuple(c != "." for row in enemies[s * 6 + kind] for c in row) for s in range(4)}
         if len(masks) != 4:
@@ -145,7 +165,7 @@ def save_preview(path, enemies, bonuses):
     sys.path.insert(0, str(kit / "harness"))
     from agk.image import Image as AGKImage
 
-    # Four enemy rows in enum order; badge row P/S/R/L/F. Fourfold nearest scale.
+    # Four enemy rows in enum order; badge row D/S/R/L/F. Fourfold nearest scale.
     scale, cell, width, height = 4, 24, 144, 120
     pixels = bytearray()
     frames = enemies + bonuses + [["." * 16] * 16]
@@ -169,7 +189,7 @@ def main():
     validate(enemies, bonuses, actors)
     outputs = {
         "sector_enemies.txt": serialize(enemies, "RD-derived sector enemies; level*6+kind; boss slots unused; see SECTOR-ENEMIES.md"),
-        "bonuses.txt": serialize(bonuses, "Masked BOB pickups P/S/R/L/F; original four retained, authored F; see SECTOR-ENEMIES.md"),
+        "bonuses.txt": serialize(bonuses, "Masked BOB pickups D/S/R/L/F; legacy P letter replaced, S/R/L retained, authored F; see SECTOR-ENEMIES.md"),
     }
     stale = []
     for name, content in outputs.items():
@@ -183,7 +203,7 @@ def main():
         parser.exit(1, "Stale/missing assets: " + ", ".join(stale) + "\n")
     if args.preview:
         save_preview(args.preview, enemies, bonuses)
-    print(f"{'Checked' if args.check else 'Wrote'} 24 enemy + 5 badge frames, all 16x16; legacy pixels/palette preserved")
+    print(f"{'Checked' if args.check else 'Wrote'} 24 enemy + 5 badge frames, all 16x16; D letter scoped, legacy surrounds/mask/palette preserved")
 
 
 if __name__ == "__main__":

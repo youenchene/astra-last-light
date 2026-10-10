@@ -8,12 +8,67 @@ strict PAL 50fps acceptance remains blocked.
 
 ## Ownership
 
+### P pause and larger panels — campaign validation blocked
+
+The latest source adds manual P pause, first-target hero visibility, continuous
+opening closure, stationary narrative ships and offline **112×64** panels within
+the same window. Production pause/continuity checks pass on both profiles;
+the injected A500 campaign has a new display/render startup allocation failure.
+See [current behavior, memory, failure and unfinished validation](pause-ship-continuity.md).
+The 96×56 descriptions below document the preceding accepted revision.
+
+### Precomputed presentation — scoped validation passed
+
+The current static-row implementation and fresh measurements are recorded in
+[precomputed presentation](precomputed-presentation.md). Generated rows use at most
+320 output bytes / 64 decode operations per call. Opening preparation falls from
+6.68 s to **4.92 s**, with **zero title-latency drops** on both profiles. The
+20,234-byte payload fits the original profiles: production A500 startup has
+46,696 CHIP / 51,504 total bytes free. Fresh campaigns pass functionally; broader
+performance remains blocked at 19/12 drops and 125% peak. Both diagnostic flags
+are restored OFF. Earlier failed candidates and evidence are retained separately.
+
+The latest UI keeps five **96×56** manga panels, scene-only **4×6** text, no entry
+headings for scenes 0/3/6/9 and no continuation instruction. The opaque window is
+(152,56)–(312,192); the image starts at (184,72). GAMEOVER is centered vertically.
+Older layout/payload descriptions below are historical. All 13 complete native
+windows pass independent source-pixel checks on both profiles, and 100 complete
+captures per profile match exactly across profiles. Original two-buffer atomic
+publication, dynamic HUD/stars, five shared manga sources, BOB and copper ownership
+remain unchanged.
+
+### Current playtest correction (focused functional validation passed)
+
+See [playtest stabilization](playtest-stabilization.md) for fresh both-profile
+source-pixel, live-opening, transition, GAMEOVER, BOB and scoped golden evidence.
+Full campaign image review and performance acceptance remain separate gates.
+
+TITLE now centers the intact 128×96 plate at (96,26), with a centered title,
+prompts and sector caption below it. GAMEOVER keeps its existing layout. The
+source validator checks all 12,288 plate pixels rather than the old partly
+occluded 8,928 pixels.
+
+Story windows occupy (152,56)–(312,192). Five 80×48 panels are exact offline
+2:1 nearest-neighbor derivatives of the preserved 160×96 masters, with unchanged
+palette indices and word-wrapped 1× text for all 13 beats. The manga strip payload
+falls from 38,400 to 9,600 CHIP bytes; fresh native free-memory evidence is pending.
+
+Acknowledged sector openings permit hero motion and release fire while stage,
+enemy and combat clocks remain frozen and no waves spawn. The hero and shot BOBs
+are occluded when their bounds intersect the opaque window. Other stories remain
+blocking. Live BOBs restore the actual back bitmap before each draw. Closing an
+opening restores each bitmap's BOB history, then repairs only the window at eight
+rows per step using its frozen star history, preserving the atomic publication
+and second-target acknowledgement gate. This is a bounded window-close pause,
+not a second full-world reconstruction. No new framebuffer or runtime allocation
+was added. Existing historical evidence below does not validate these changes.
+
 | Owner | Owned state / responsibility |
 |---|---|
 | `main.c` / ACE simplebuffer | View, viewport, two 320×256×4bpp interleaved bitmaps; input, logic/audio sequencing, publication and vblank wait |
 | `render.c` | Shared blank sprite word, palette/copper coordination, phase routing and back-target binding |
 | `render_world.c` | Decor/title/font assets; per-bitmap HUD cache, star pixel history and composition cursors; copper cache per physical list |
-| `render_scenes.c` | Five manga panels; per-bitmap composition/animation history and two-buffer readiness |
+| `render_scenes.c` | Five manga panels; bounded static-window composition per bitmap and two-buffer readiness |
 | `render_bobs.c` | One BOB manager with separate background queues for the two bitmaps; shots/lances/pickups; boss/effect child lifecycle |
 | `render_boss.c`, `render_effects.c` | Boss/flash and fixed-pool explosion assets/BOBs |
 | Hero/enemy/bullet renderers | Their assets and double-buffered custom sprite DMA streams; phase-owned channel publication |
@@ -30,29 +85,40 @@ phase or collision state. Visibility feedback suppresses invisible collisions.
 
 1. `agkPerfBegin()`, then `renderBindBack(pBack)` binds world, scenes and BOBs to
    the unpublished bitmap.
-2. After startup intros, acknowledge a ready scene epoch from the preceding
-   published frame via `logicScenePresented()`. A ready composition alone is not
-   a display acknowledgement; epoch zero is valid.
+2. Acknowledge only a preceding actual publication after vblank. Both-target
+   readiness clears `presentationBusy` and acknowledges the scene epoch via
+   `logicScenePresented()`. A ready hidden composition alone is not a display
+   acknowledgement; epoch zero is valid. Ready telemetry is emitted here.
 3. `renderAnimate()` runs only for a matching, ready world outside narrative
    scenes. `renderBobsBegin()` selects the queue with
    `bobSetCurrentBuffer(back)`, restores that bitmap's **N−2** background and waits
    for the blitter. Then `renderWorldAnimate()` updates/catches up its star pixels.
-4. Process keyboard/joystick and intro state. Once intros are done, run
-   `logicUpdate()`, campaign music selection and sound events. The intro-ending
-   tick defers music setup to spread startup work over adjacent ticks.
+4. Process keyboard/joystick. Campaign music follows the acknowledged visible
+   phase/sector before logic, including mute toggles. The first theme is selected
+   on the first complete title's acknowledged display tick, while second-buffer
+   repair remains pending. Intro exit retains its last complete frame and palette;
+   it neither clears the screen nor writes the active palette. There is no fixed
+   handoff timer. Micrix retains its fade-in and 100-tick stage but no longer fades
+   to black before title preparation; the outgoing logo stays legible until the
+   clean cut. Original PCM allocation and intro skip latches are retained.
 5. `renderFrame()` follows one of two composition paths:
    - Narrative scene: close an open BOB frame, discard histories/invalidate the
-     world when entering a new scene/epoch, begin if needed, then step the scene.
+     world when entering a new scene/epoch, then rebuild the frozen world before
+     composing the static window. Incoming sector scenes use incoming scenery.
+     A tick advances either world or window, never both bounded steps.
    - World: on mismatch close/discard BOB history before beginning incremental
-     composition; update `presentationBusy` around `renderWorldStep()`, draw HUD
-     when ready, then submit BOBs. Queue order is **boss → effects → pickups →
+     composition; set `presentationBusy` until publication acknowledgement, draw
+     HUD on complete non-TITLE targets, then submit BOBs. Queue order is **boss → effects → pickups →
      shots/lances**, followed by `bobEnd()` and a blitter wait when a frame is open.
 6. Publish back-list decor settings, then **hero → enemies → hostile bullets**.
-   During preparation/scene display, publish empty sprite streams through the
-   display-only phase gate.
-7. Wait for blits, synchronize all 32 palette entries, mark simplebuffer pointers
-   dirty, run `viewProcessManagers()` and `copProcessBlocks()`, then
-   `agkPerfEnd()`.
+   Incomplete targets and narrative windows use empty sprite streams through the
+   display-only phase gate. The preceding visible list and streams remain untouched.
+7. Wait for blits. If the target is incomplete, skip **both**
+   `viewProcessManagers()` and `copProcessBlocks()`. Otherwise synchronize all 32
+   back-list palette entries, mark pointers dirty and call both publication paths.
+   Then `agkPerfEnd()`. The actual pinned simplebuffer swaps even with no dirty
+   pointers, and raw copper processing unconditionally swaps lists: gating only
+   dirty flags would corrupt bitmap/DMA identities.
 8. Wait for `timerGet()` to advance: the new copper list must be acknowledged at
    vblank before the next iteration reuses buffers.
 
@@ -60,9 +126,40 @@ HUD caches, stars, BOB queues and composition cursors follow **bitmap identity**
 not odd/even logic ticks. Scene changes may bypass BOB drawing for many frames.
 This is why the old same-front/back queue-flip cancellation rule is obsolete.
 Incremental world/scene composition advances only the bound back target, in
-bounded steps of up to eight rows or two text glyphs. Both bitmaps must be ready.
+bounded steps of up to eight rows or two text glyphs. First-target completion
+permits a clean cut; that image is held while the old visible bitmap is repaired
+offscreen. Both bitmaps must be ready and acknowledged before simulation resumes.
 There is no per-tick full-screen copy. Logical pauses freeze simulation, not
 display/effect/audio progress; missed video frames still stretch wall-clock time.
+
+### Static story windows and TITLE
+
+TITLE omits both initial and dirty HUD drawing (score, lives, charge and upgrades).
+The original illustration/prompts remain, with a sector-name caption at y232.
+Gameplay keeps its HUD. All 13 narrative beats retain their text and five panels
+inside an opaque `(24,56)`–`(296,216)` window. The 160×96 image begins at `(80,78)`.
+Scanner/glint animation is removed. Sector palette, stars, HUD and copper bands
+remain frozen; hardware entities are blanked while the window is visible. Exit
+rebuilds the same frozen scenery with the same bounded, hidden publication path,
+discarding stale BOB histories before composition. No third framebuffer, screen
+copy, runtime allocation or black interstitial is introduced.
+
+Focused publication/pixel checks pass on both profiles, as do all 13 static-scene
+pairs in the fresh 53-capture-per-profile injected fixture. Strict performance
+remains blocked (A500 16 drops / 123% peak; AROS 11 drops / 120% peak).
+`cut_hold`, `cut_target_ready`,
+`cut_submit`, `cut_visible`, `cut_work` and `music_visible` expose physical bitmap/
+copper identities and vblank clocks. `tools/verify-clean-transitions.py` checks
+repair/publication order, music-controller invocation alignment, complete-frame
+holds, TITLE HUD absence and static scene/restored exterior pixels. Controller
+timestamps alone do not prove exact Paula sample onset or 50fps performance.
+
+The ordinary [BOB replay correction](bob-replay-validation.md) now verifies real
+six-kill bonus creation/collection, all 256 pickup artwork/mask pixels and the
+full 768-pixel aligned background restore region on both profiles. It also checks
+the 150-tick scene and 40-tick death lifecycle against complete wrapped telemetry.
+The replay models the ready acknowledgement's neutral update rather than adding
+an arbitrary wait or pixel offset. Runtime rendering and balance are unchanged.
 
 ## DMA channels and decor
 
@@ -88,18 +185,34 @@ guard pixels. Fine scrolling uses hardware fetch offsets and delay; the old
 blit bounded decor rows into a bitmap; ordinary scrolling does not rebuild phases.
 PLAY advances decor/stars; bosses and both death phases retain positions.
 
-**Veil Nebula (displayed sector 2, level 1) is the exception:** both bitmap
-composition and runtime copper band switches are disabled. Ink 0 is `#102`;
-all **15,360 tested band pixels** match it. HUD and play/collision bounds are
-unchanged, and the original crystal PNG and four-sector decor strip are preserved.
+**Veil Nebula (displayed sector 2, level 1)** retains its crystal artwork in both
+bitmap composition and runtime copper band switches. After the existing 64×24
+crops, seam normalization and two-row corridor clearance, the importer traverses
+only corridor-connected inks 0/1 with four-neighbor horizontal wrapping. It maps
+**544 ink-1 pixels to ink 0** (293 top / 251 bottom), retaining **158 disconnected
+ink-1 shadow pixels** (53 / 105) and every other crystal ink. The original PNG is
+unchanged. Ink 0 is `#102`; HUD and play/collision bounds are unchanged.
 
-The bonus strip now has five 16×16 masked BOB frames in enum order P/S/R/L/F,
-while the pickup pool remains four slots and drops cycle P/F/S/R/L. Normal
+TITLE uses the four original 128×96 PNG illustrations selected by sector.
+`tools/make-title-plates.py` emits four read-only 3,072-word arrays, with frame zero
+matching the old generated Graveyard words. One 6,144-byte CHIP staging bitmap
+serves all four: each composition step copies eight aligned rows (512 bytes),
+then blits to **(184,56)**. Both framebuffer histories must finish recomposition.
+The existing panel covers the illustration where x<296 and y>=122; the remaining
+**8,928 pixels per title** are checked exactly against the source PNG and palette.
+The checker uses its own quantization, not the generated title header.
+Palette 0 is `#001/#102/#101/#001` by sector. TITLE preserves original palette 4
+(`#568`); PLAY retains live palette 4 (`#BDF`) for stars and matching decor inks.
+
+The bonus strip now has five 16×16 masked BOB frames in enum order D/S/R/L/F,
+while the pickup pool remains four slots and drops cycle D/F/S/R/L. Normal
 shots use the twelve-slot BOB pool: F1/F2/F3 selects 0, −6/+6, or −8/0/+8
 vertical muzzle offsets, all vx6/vy0, admitted as a whole volley. Holding fire
 only charges; normal release is capped at one volley per eight ticks. The
-centered 16×10 charged lance remains one projectile. HUD W still reflects damage;
-F1–F3 reflects independent shot count, with the stage caption at x104.
+centered 16×10 charged lance remains one six-damage projectile. HUD DAMAGE at
+(8,249) labels the unchanged `weaponLevel` value 0–2 at x44; FIRE reflects
+independent shot count 1–3. The D badge replaces only the legacy P letter;
+`BONUS_POWER`, numeric levels, capture names and rendering lifecycle are unchanged.
 
 ## Memory ledger
 
@@ -113,26 +226,34 @@ descriptors, resident code/source data, queues and other assets matter too.
 | Two framebuffers | 81,920 bytes |
 | Removed old decor phase bank | −147,456 bytes |
 | Current 384×192×4bpp decor source | 36,864 bytes |
-| One common Graveyard title plate instead of four resident plates | −18,432 bytes |
+| One shared title staging bitmap | 6,144 bytes |
+| Title CHIP bitmap payload saved versus four resident plates | −18,432 bytes |
+| Four read-only title arrays (ordinary data, not CHIP-attributed) | 24,576 bytes |
 | Second framebuffer less title-plate saving | +22,528 bytes, excluding descriptors and other changes |
 | New four-sector music PCM | 13,624 bytes |
 | All generated SFX + five songs | 75,948 sample bytes |
 | Preserved original ACE intro PCM | 13,152 sample bytes |
 
-Title sharing affects **only TITLE**. Original source plates are retained; all
-four decor source sets, sector labels and five manga panels remain distinct;
-Veil Nebula's gameplay bands are disabled.
+Title staging is shared, but the four title illustrations, decor sets, sector
+labels and five manga panels remain distinct. Read-only data still consumes
+resident memory and may spill into CHIP on the baseline machine: the bitmap
+payload saving does not imply unchanged free CHIP telemetry.
 The generated art source size is not its live allocation size: masks and BOB
 save areas also consume memory. Audio MOD files include patterns/headers/PCM;
 adding MOD bytes to PCM bytes would double-count samples.
 
 `game/art/art.toml` now includes only runtime assets. Unused compiled sections
-`player`, `fleet`, `shot`, `scene`, `actors16`, `nebula`, `foundry`, `citadel`
+`player`, `fleet`, `shot`, `scene`, `actors16`, `graveyard`, `nebula`, `foundry`, `citadel`
 and `campaign_flash` were removed; every source file remains. In particular,
 `actors16.txt` remains the authoring input, and active boss flashes still render.
 
-Latest **production** initial executable: **456,792 bytes**. A500 boot telemetry:
-**40,440 free chip bytes / 48,312 total free bytes**. These are actual startup
+The title PNGs now supply `title-plates.h`; removing the remaining `graveyard`
+manifest entry avoids a second compiled copy of that source.
+
+Clean-presentation **production** initial executable: **477,368 bytes**. A500 boot
+telemetry: **23,752 free chip bytes / 27,712 total free bytes**. Earlier four-title
+build: 474,992 bytes, 24,056 free chip / 30,112 total free. Previous common-title build:
+456,792 bytes, 40,440 free chip / 48,312 total free. These are actual startup
 observations, not a formal worst-case bound or a calculation from source sizes.
 AROS's extra fast RAM cannot prove baseline A500 fit.
 
@@ -159,20 +280,33 @@ fault-injected; a successful native startup does not prove every failure path.
 
 ## Validation boundary
 
-The [native fixture](campaign-native-fixture.md) passes functional checks on both
-profiles (40 captures each) but the latest strict command exited FAIL:
-**A500 22 drops / 130% peak**, **AROS 17 drops / 123% peak**. Added F probes and
-changed waves prevent like-for-like comparison with older measurements.
+The fresh [native fixture](campaign-native-fixture.md) passes functional checks on
+both profiles (53 captures each) but the strict command exited FAIL:
+**A500 16 drops / 123% peak**, **AROS 11 drops / 120% peak**. Changed fixture
+captures and preparation prevent like-for-like comparison with older measurements.
 Zero drops and <=90% peak remain the unchanged
 gate; runtime remains **20 ms** and global 50fps is not achieved.
 The project-local `tools/agk-launch.py` uses **6000 frames for cold-load timeout**
 to accommodate the larger executable on AROS. It does not relax gameplay timing
 or modify the global AGK installation.
 
-The latest ordinary production suite passed **36/36** shared-golden
-tests; all **36 complete captures are byte-identical across profiles**. Keep that
+The historical ordinary production suite passed **38/38** shared-golden
+tests; all **42 complete captures were byte-identical across profiles**. This
+predates the latest balance/presentation work; the fresh scoped suite passes
+10/10 boot/skip/title-sector/music/ACE-audio cases. Keep that
 result separate from injected coverage and strict performance. See the
 [acceptance record](campaign-acceptance.md) for emitted ordinary-run timing,
 commands and evidence paths. Inspect intended image changes before any scoped
 golden update. The slower sector music is an artistic change with no proven
 performance benefit; it has not closed the budget.
+
+`tools/verify-sector-presentation.py` independently derives Nebula crops from
+`rd_decor1.png` and uses fixed-point set expansion to validate the importer's
+connectivity mask and exact derivative. It then checks all 15,360 native band
+pixels, finding one unique 64-tile horizontal phase per band; their circular
+phase distance must be at most one. There are no pixel exclusions in these bands.
+`tools/verify-scrolling.py` reuses that assertion and retains the existing sector-1
+four-pixel movement, four parallax rates, hero colors and title-without-decor checks.
+`title_sectors.agk` waits up to 600 ticks for initial `title_ready`, then 400 ticks
+after each selection for bounded two-buffer recomposition. Its six complete
+captures cover the four titles and right/left wraps with shared goldens.

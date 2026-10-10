@@ -1,4 +1,4 @@
-# Masked BOB pickups P/S/R/L/F; original four retained, authored F; see SECTOR-ENEMIES.md
+# Masked BOB pickups D/S/R/L/F; legacy P letter replaced, S/R/L retained, authored F; see SECTOR-ENEMIES.md
 colors
   . transparent
   1 0x112
@@ -24,10 +24,10 @@ frame
 ..5EC777722CE5..
 .4EC27222722CE4.
 .5EC27222722CE5.
-.5EC27777222CE5.
-.5EC27222222CE5.
-.5EC27222222CE5.
-.4EC27222222CE4.
+.5EC27222722CE5.
+.5EC27222722CE5.
+.5EC27222722CE5.
+.4EC27777222CE4.
 ..5EC222222CE5..
 ..45ECCCCCCE54..
 ...445EEEE544...

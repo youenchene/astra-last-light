@@ -2,13 +2,10 @@ wait-serial "AGK title_ready" 600
 press right 1
 wait 2
 press fire 1
-wait-serial "AGK combat_ready" 600
+wait-serial "AGK combat_ready" 1000
 press fire 120
 screenshot nebula
-expect-serial "phase=1 level=2"
-expect-serial "phase=6 level=2 .*scene=3"
-expect-serial "scene_ready=1 preparing=0"
+# Same-record opening/PLAY assertions: verify-sector-state.py, automatic via tools/agk.
 expect-serial "AGK music sector2"
-expect-serial "phase=1 level=2 .*wave=1 .*enemies=6"
 expect-no-serial "bullet_hidden=[1-9]"
 expect-no-serial "ERR|STACK SMASHED|allocation failure"

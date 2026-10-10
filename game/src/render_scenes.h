@@ -4,15 +4,29 @@
 #include <ace/utils/extview.h>
 #include <ace/utils/bitmap.h>
 
-/* Borrows both world screens and viewport; owns one 160x480x4 strip.
+#define SCENE_X 152
+#define SCENE_Y 56
+#define SCENE_W 160
+#define SCENE_H 136
+
+static inline UBYTE renderScenesOccludes(WORD x, WORD y, UWORD width, UWORD height) {
+	return x < SCENE_X + SCENE_W && x + width > SCENE_X &&
+		y < SCENE_Y + SCENE_H && y + height > SCENE_Y;
+}
+
+/* Borrows both world screens and viewport; owns one 112x320x4 strip.
  * Create must run before OS ownership is released. Begin performs no drawing.
  * Each Step advances only the bound back bitmap: <=8 rows OR <=2 glyphs.
- * Ready requires both complete; animation catches up each bitmap on reuse. */
+ * Static window (152,56)-(312,192); exterior and palette belong to the world.
+ * Ready requires both complete; TargetReady gates atomic publication. */
 UBYTE renderScenesCreate(tBitMap *front, tBitMap *screen, tVPort *viewport);
 void renderScenesBind(tBitMap *screen);
 void renderScenesBegin(UBYTE id, UWORD epoch);
 void renderScenesStep(void);
+void renderScenesClose(void);
+void renderScenesEraseStep(void);
 UBYTE renderScenesReady(void);
+UBYTE renderScenesTargetReady(void);
 /* Valid only while Ready is true: epoch zero is a legitimate wrapped epoch. */
 UWORD renderScenesReadyEpoch(void);
 void renderScenesDestroy(void);

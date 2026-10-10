@@ -92,6 +92,29 @@ def write(name, frames, note, palette=None):
         header.extend("".join(CHARS[p] for p in row) for row in frame)
     (ART / name).write_text("\n".join(header) + "\n")
 
+def clear_corridor_backdrop(band, inner_row):
+    """Clear only corridor-connected ink 1, traversing ink 0/1 on a tiled band."""
+    height, width = len(band), len(band[0])
+    result = [row[:] for row in band]
+    pending = deque((x, inner_row) for x in range(width))
+    visited = set()
+    changed = 0
+    while pending:
+        x, y = pending.popleft()
+        if (x, y) in visited or band[y][x] not in (0, 1):
+            continue
+        visited.add((x, y))
+        if band[y][x] == 1:
+            result[y][x] = 0
+            changed += 1
+        pending.extend((((x - 1) % width, y), ((x + 1) % width, y)))
+        if y:
+            pending.append((x, y - 1))
+        if y + 1 < height:
+            pending.append((x, y + 1))
+    return result, changed
+
+
 def main():
     hero = sprite("rd_hero16", 22, frame_width=32, frame_height=24)
     pulse = [[{12: 13, 13: 14, 14: 13}.get(p, p) for p in row] for row in hero]
@@ -119,6 +142,7 @@ def main():
         ("rd_dart16", 10), ("rd_boss16", 16), ("rd_asteroid16", 16))]
     write("actors16.txt", enemies + old[6:], "Frames0-5 from Retro Diffusion masters; readable shots/UI badges retained; see RD-RICH.md")
     bands = []
+    backdrop = []
     for level in range(4):
         width, height, pixels, _ = load(f"rd_decor{level}")
         if width != 64 or height != 64:
@@ -128,10 +152,22 @@ def main():
             for row in band: row[-1] = row[0]
             if top == 0: band[22] = [0] * 64; band[23] = [0] * 64
             else: band[0] = [0] * 64; band[1] = [0] * 64
+            if level == 1:
+                band, changed = clear_corridor_backdrop(band, 23 if top == 0 else 0)
+                remaining = sum(row.count(1) for row in band)
+                backdrop.append({"crop_y": top, "ink1_to_ink0": changed,
+                                 "ink1_shading_retained": remaining})
+                print(f"rd_decor1 crop y={top}: {changed} backdrop pixels cleared; "
+                      f"{remaining} disconnected ink-1 shading pixels retained")
             bands.append(band)
     write("decor.txt", bands, "Retro Diffusion rd_decor0..3.png; top/bottom crops, seam and corridor-edge cleanup")
     (ART / "rd-rich-import.json").write_text(json.dumps({"sources": INPUTS,
-        "processing": "Border-connected cleanup; nearest-neighbor fit; palette quantization; 2-row corridor clearance; seam endpoint match"}, indent=2) + "\n")
+        "processing": "Border-connected cleanup; nearest-neighbor fit; palette quantization; 2-row corridor clearance; seam endpoint match; sector-2 corridor-connected backdrop cleanup",
+        "sector2_backdrop": {
+            "source": "rd_decor1.png",
+            "method": "After clearance and seam normalization, flood from the inner crop edge through inks 0/1 using four neighbors with horizontal wrap; map reachable ink 1 to 0 only",
+            "bands": backdrop,
+        }}, indent=2) + "\n")
     print("Wrote hero32, actors16, bullets, masked bonuses/shots/lance and decor")
     subprocess.run([sys.executable, str(ROOT / "tools/make-sector-enemies.py")], check=True)
 

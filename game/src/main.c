@@ -14,6 +14,7 @@
 #include "audio_assets.h"
 #include "intro.h"
 #include "campaign_audio.h"
+#include "title_confirm.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
 #include "../tests/native/campaign_probe.h"
 #endif
@@ -27,6 +28,15 @@ static tGameState s_sState;
 static UBYTE s_isLoaded, s_isSystemUnused, s_isSound, s_isIntro, s_isIntroDone;
 static UBYTE s_ubReadyFrames;
 static UBYTE s_ubReportTicks;
+static tBitMap *s_firstBitmap;
+static tCopBfr *s_firstCopper;
+static UBYTE s_submitted, s_cutPending, s_visibleValid, s_audioStarted, s_mutePending;
+static UBYTE s_visibleLevel, s_cutBoth, s_cutBitmap, s_cutCopper;
+static tPhase s_visiblePhase;
+static UWORD s_cutRevision, s_lastRevision = 0xffff, s_holdFrames;
+static UBYTE s_lastBoth;
+static tTitleConfirm s_confirm;
+static UBYTE s_confirmSubmitted;
 
 static tInput readInput(void) {
 	tInput input = {0};
@@ -73,6 +83,8 @@ void genericCreate(void) {
 		gameExit();
 		return;
 	}
+	s_firstBitmap = s_pBuffer->pBack;
+	s_firstCopper = s_pView->pCopList->pBackBfr;
 	s_isSound = 1;
 	campaignAudioReset();
 	introCreate(s_pBuffer, s_pVPort);
@@ -150,34 +162,131 @@ static void reportState(void) {
 	agkState("effects", effects);
 	agkState("stage", s_sState.stageFrame);
 	agkState("sim", s_sState.simFrame);
+	agkState("enemy_tick", s_sState.enemyMotionFrame);
+	agkState("enemy_acc", s_sState.enemyAccumulator);
+	agkState("pf", s_sState.phaseFrame);
+	agkState("title_blocked", s_sState.titleInputBlocked);
 	agkState("scene", s_sState.sceneId);
 	agkState("scene_ready", s_sState.sceneReady);
 	agkState("preparing", s_sState.presentationBusy);
+	agkState("paused", s_sState.manualPause);
 	agkState("pattern", s_sState.shotLevel + 1);
 	agkEnd();
+}
+
+static void reportCut(const char *tag) {
+	agkState(tag, s_cutRevision);
+	agkState("phase", s_visiblePhase); agkState("level", s_visibleLevel + 1);
+	agkState("bitmap", s_cutBitmap); agkState("copper", s_cutCopper);
+	agkState("both", s_cutBoth); agkState("vblank", timerGet());
+	agkEnd();
+}
+
+static void acknowledgeFrame(void) {
+	if(!s_submitted) return;
+	s_submitted = 0;
+	if(s_confirmSubmitted) {
+		s_confirmSubmitted = 0;
+		titleConfirmPresented(&s_confirm);
+		agkState("title_confirm_visible", s_confirm.visible);
+		agkState("level", s_sState.level + 1); agkState("vblank", timerGet()); agkEnd();
+	}
+	UBYTE busy = s_sState.presentationBusy, sceneReady = s_sState.sceneReady;
+	renderAcknowledge(&s_sState);
+	if(s_cutPending) { reportCut("cut_visible"); s_cutPending = 0; }
+	if(busy && !s_sState.presentationBusy) {
+		agkState("publication_ready", renderRevision());
+		agkState("phase", s_sState.phase); agkState("level", s_sState.level + 1);
+		agkState("scene_ready", s_sState.sceneReady);
+		agkState("preparing", s_sState.presentationBusy);
+		agkState("vblank", timerGet()); agkEnd();
+		if(logicCombatActive(&s_sState)) agkPrint("AGK combat_ready\n");
+		else if(s_sState.phase == TITLE) agkPrint("AGK title_ready\n");
+		else if(s_sState.phase == GAMEOVER) agkPrint("AGK gameover_ready\n");
+		else if(s_sState.sceneReady) agkPrint("AGK scene_ready\n");
+		reportState();
+	}
+	else if(!sceneReady && s_sState.sceneReady) reportState();
+}
+
+static void publishFrame(void) {
+	if(s_isIntroDone && !renderTargetReady()) {
+		if(!s_holdFrames) {
+			agkState("cut_hold", renderRevision());
+			agkState("bitmap", s_pBuffer->pBack != s_firstBitmap);
+			agkState("copper", s_pView->pCopList->pBackBfr != s_firstCopper);
+			agkEnd();
+		}
+		++s_holdFrames;
+		/* ACE swaps even if not dirty. Leave both managers AND copper alone:
+		 * visible pixels, palette and DMA stream identities remain immutable. */
+		return;
+	}
+	renderSyncPalette();
+	if(s_isIntroDone && s_sState.phase == TITLE && s_confirm.active && renderBothReady()) {
+		s_confirmSubmitted = 1;
+		if(!s_confirm.visible) soundPlay(SOUND_SFX_CONFIRM);
+		/* Last publication is normal, so the scene's hidden work retains a
+		 * complete, normally colored title rather than a stuck flash. */
+		renderTitleFlash(!(s_confirm.visible & 1));
+		agkState("title_confirm_submit", s_confirm.visible + 1);
+		agkState("vblank", timerGet()); agkEnd();
+	}
+	if(s_isIntroDone) {
+		s_visibleValid = s_submitted = 1;
+		s_visibleLevel = s_sState.level; s_visiblePhase = s_sState.phase;
+		s_cutRevision = renderRevision(); s_cutBoth = renderBothReady();
+		s_cutBitmap = s_pBuffer->pBack != s_firstBitmap;
+		s_cutCopper = s_pView->pCopList->pBackBfr != s_firstCopper;
+		if(s_cutRevision != s_lastRevision || s_cutBoth != s_lastBoth) {
+			s_cutPending = 1;
+			agkState("cut_target_ready", renderTargetReady()); agkEnd();
+			reportCut("cut_submit");
+			agkState("cut_work", s_holdFrames); agkEnd();
+		}
+		s_lastRevision = s_cutRevision; s_lastBoth = s_cutBoth;
+	}
+	s_holdFrames = 0;
+	s_pBuffer->ubDirtyCounter = 1;
+	viewProcessManagers(s_pView);
+	copProcessBlocks();
 }
 
 void genericProcess(void) {
 	agkPerfBegin();
 	if(!s_isLoaded) { agkPerfEnd(); gameExit(); return; }
 	renderBindBack(s_pBuffer->pBack);
-	UBYTE acknowledged = 0;
-	if(s_isIntroDone && !s_sState.sceneReady && renderSceneReady()) {
-		logicScenePresented(&s_sState, renderSceneReadyEpoch());
-		acknowledged = s_sState.sceneReady;
-	}
-	if(s_isIntroDone) renderAnimate(&s_sState);
+	acknowledgeFrame();
 	keyProcess();
 	joyProcess();
-	if(keyCheck(KEY_ESCAPE)) { agkPerfEnd(); gameExit(); return; }
-	UBYTE muteToggle = s_isIntroDone && keyUse(KEY_M);
+	UBYTE escapePressed = keyUse(KEY_ESCAPE);
+	if(escapePressed && (!s_isIntroDone || s_sState.phase == TITLE)) {
+		s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
+		agkPrint("AGK escape_quit\n");
+		agkPerfEnd(); gameExit(); return;
+	}
+	s_mutePending ^= s_isIntroDone && keyUse(KEY_M);
+	/* Consume intro/title edges too, so a held P cannot leak into live play. */
+	UBYTE pausePressed = keyUse(KEY_P);
+	if(s_isIntroDone && pausePressed) logicTogglePause(&s_sState);
+	if(s_isIntroDone) renderAnimate(&s_sState);
+	/* Select music for the acknowledged visible frame, never the hidden work.
+	 * This runs at the start of that display tick, within perf measurement. */
+	if(s_visibleValid) {
+		campaignAudioUpdate(s_visibleLevel, s_visiblePhase, s_mutePending);
+		s_mutePending = 0;
+		if(!s_audioStarted) {
+			s_audioStarted = 1;
+			agkState("music_visible", s_cutRevision);
+			agkState("vblank", timerGet()); agkEnd();
+		}
+	}
 	tInput input = readInput();
-	UBYTE introEnded = 0;
 
 	if(!s_isIntroDone && !introProcess(input.fire)) {
 		s_isIntroDone = 1;
-		introEnded = 1;
-		renderPalette();
+		renderPreparePalette();
+		agkPrint("AGK intro_released\n");
 		/* A fire used to skip an intro must not also skip the title. */
 		s_sState.fireWasDown = input.fire;
 	}
@@ -185,39 +294,53 @@ void genericProcess(void) {
 		UBYTE heartbeat = ++s_ubReportTicks == 50;
 		if(heartbeat) s_ubReportTicks = 0;
 		tPhase oldPhase = s_sState.phase;
+		UBYTE oldLevel = s_sState.level;
 		UWORD oldWave = s_sState.wave;
 		UBYTE wasPreparing = s_sState.presentationBusy;
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeBeforeUpdate(&s_sState);
 #endif
-		logicUpdate(&s_sState, &input);
-		/* Spread logo clearing and initial module setup over adjacent video
-		 * ticks; music still starts after both original intros finish. */
-		if(!introEnded) campaignAudioUpdate(s_sState.level, s_sState.phase, muteToggle);
-		soundEvents(s_sState.events);
+		UBYTE confirming = 0;
+		if(escapePressed) {
+			s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
+			logicReturnToTitle(&s_sState, &input);
+			agkPrint("AGK escape_title\n");
+		}
+		else {
+			confirming = titleConfirmFilter(&s_confirm, &s_sState, &input);
+			logicUpdate(&s_sState, &input);
+		}
+		if(confirming) {
+			agkState("title_confirm_input", 1);
+			agkState("vblank", timerGet()); agkEnd();
+		}
+		ULONG acceptedAt = timerGet();
+		UWORD previousRevision = renderRevision();
+		/* Confirm has its own sound; retain warp for later sector transitions. */
+		soundEvents(oldPhase == TITLE ? s_sState.events & ~EVENT_LEVEL : s_sState.events);
 		renderFrame(&s_sState);
+		if(oldPhase == TITLE && (oldLevel != s_sState.level || s_sState.phase != TITLE)) {
+			agkState("title_input", renderRevision());
+			agkState("phase", s_sState.phase); agkState("level", s_sState.level + 1);
+			agkState("vblank", acceptedAt); agkEnd();
+		}
+		else if(s_sState.phase == TITLE && previousRevision != renderRevision()) {
+			agkState("title_begin", renderRevision());
+			agkState("from", oldPhase); agkState("vblank", acceptedAt); agkEnd();
+		}
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeAfterFrame(&s_sState);
 #endif
-		if(wasPreparing && !s_sState.presentationBusy) {
-			if(logicCombatActive(&s_sState)) agkPrint("AGK combat_ready\n");
-			else if(s_sState.phase == TITLE) agkPrint("AGK title_ready\n");
-		}
-		if(acknowledged || wasPreparing != s_sState.presentationBusy ||
+		if(oldPhase == GAMEOVER && s_sState.phase == TITLE)
+			agkPrint("AGK gameover_title\n");
+		if(wasPreparing != s_sState.presentationBusy ||
 			(s_sState.events & (EVENT_EXPLOSION | EVENT_HIT | EVENT_LEVEL |
 				EVENT_BONUS_DROP | EVENT_BONUS_PICKUP)) ||
-			oldPhase != s_sState.phase || oldWave != s_sState.wave ||
+			oldPhase != s_sState.phase || oldWave != s_sState.wave || pausePressed ||
 			heartbeat) reportState();
 	}
 	blitWait();
-	/* Intros own viewport colors while active; palette MOVEs must follow them
-	 * because viewLoad only initializes the 16 playfield colors at 4bpp. */
-	renderSyncPalette();
-	/* Raw ACE lists only refresh pointers when dirty. Explicitly associate the
-	 * completed pixels with the same back copper list as the sprite streams. */
-	s_pBuffer->ubDirtyCounter = 1;
-	viewProcessManagers(s_pView);
-	copProcessBlocks();
+	publishFrame();
 	/* If performance reporting itself crosses the next vblank, that already
 	 * acknowledges this list: do not accidentally wait for a second blank. */
 	ULONG publishedAt = timerGet();

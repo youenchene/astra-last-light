@@ -56,5 +56,21 @@
       "border_pixels_removed": 0
     }
   ],
-  "processing": "Border-connected cleanup; nearest-neighbor fit; palette quantization; 2-row corridor clearance; seam endpoint match"
+  "processing": "Border-connected cleanup; nearest-neighbor fit; palette quantization; 2-row corridor clearance; seam endpoint match; sector-2 corridor-connected backdrop cleanup",
+  "sector2_backdrop": {
+    "source": "rd_decor1.png",
+    "method": "After clearance and seam normalization, flood from the inner crop edge through inks 0/1 using four neighbors with horizontal wrap; map reachable ink 1 to 0 only",
+    "bands": [
+      {
+        "crop_y": 0,
+        "ink1_to_ink0": 293,
+        "ink1_shading_retained": 53
+      },
+      {
+        "crop_y": 40,
+        "ink1_to_ink0": 251,
+        "ink1_shading_retained": 105
+      }
+    ]
+  }
 }

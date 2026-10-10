@@ -1,0 +1,18 @@
+# Ordinary input, production build: move and release-fire before opening skip age.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK scene_ready" 1000
+screenshot opening_idle
+press right 6
+screenshot opening_moved
+press fire 6
+wait 2
+screenshot opening_shot
+wait 4
+screenshot opening_shot_later
+wait 30
+screenshot opening_settled
+expect-serial "AGK sfx shot"
+wait-serial "AGK combat_ready" 1000
+screenshot opening_closed
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

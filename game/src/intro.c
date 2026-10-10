@@ -228,8 +228,10 @@ static void micrixTick(void) {
     s_loaded[buffer] = 1;
   }
   UBYTE ubColor, ubSpark = s_uwTick >= 43 && s_uwTick < 55;
-  UWORD uwFade = s_uwTick < 9 ? 7 + s_uwTick * 8 / 9 :
-    s_uwTick > 85 ? MICRIX_TICKS - s_uwTick : 15;
+  /* Keep the outgoing logo legible until the complete title replaces it.
+   * Fading to zero before bounded preparation would create a black gap.
+   * Original fade-in, stage duration, glint, PCM and skip timing are retained. */
+  UWORD uwFade = s_uwTick < 9 ? 7 + s_uwTick * 8 / 9 : 15;
   WORD wGlint = s_uwTick >= 10 && s_uwTick < 45 ?
     70 + (s_uwTick - 10) * 180 / 35 : -1;
   for (ubColor = 0; ubColor < 4; ++ubColor) {
@@ -307,7 +309,9 @@ UBYTE introProcess(UBYTE ubFire) {
       beginStage(INTRO_MICRIX);
       return 1;
     }
-    clearBuffers();
+    /* Retain the last complete Micrix frame and its copper palette while the
+     * title is prepared offscreen. No clear or palette reset on this handoff. */
+    ptplayerSfxStopOnChannel(3);
     /* Keep original PCM alive until the shared player is destroyed. Its
      * channel-stop command is asynchronous and DMA must never see freed RAM. */
     s_ubStage = INTRO_DONE;

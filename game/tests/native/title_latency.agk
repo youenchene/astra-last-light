@@ -1,0 +1,39 @@
+# Timing comes from title_input/cut_visible vblank clocks, never these waits.
+wait-serial "AGK title_ready" 600
+screenshot title1
+press right 1
+wait-serial "AGK title_ready" 600
+screenshot title2
+press right 1
+wait-serial "AGK title_ready" 600
+screenshot title3
+press right 1
+wait-serial "AGK title_ready" 600
+screenshot title4
+press right 1
+wait-serial "AGK title_ready" 600
+screenshot wrap_right
+press left 1
+wait-serial "AGK title_ready" 600
+screenshot wrap_left
+# Neutral-separated taps cancel two unfinished targets.
+press right 1
+wait 2
+press left 1
+wait 2
+press right 1
+wait-serial "AGK cut_visible=9 " 600
+screenshot rapid_first
+# Retap while the other physical bitmap is still repairing.
+press left 1
+wait-serial "AGK title_ready" 600
+screenshot repair_retap
+# Fire during the next composition must enter the selected sector safely.
+press right 1
+wait 2
+press fire 1
+wait-serial "AGK scene_ready" 800
+screenshot fire_ready
+wait-serial "AGK combat_ready" 800
+screenshot combat_ready
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

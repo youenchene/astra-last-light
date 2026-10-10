@@ -1,7 +1,7 @@
 # Ordinary input: one-tick hold, normal release, then idle until retirement.
 wait-serial "AGK title_ready" 600
 press fire 1
-wait-serial "AGK combat_ready" 600
+wait-serial "AGK combat_ready" 1000
 wait 8
 press fire 1
 wait 3

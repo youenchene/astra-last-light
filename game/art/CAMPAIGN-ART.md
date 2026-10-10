@@ -157,3 +157,11 @@ All crop bounds must stay within 160×96, particularly at the bottom/right edge.
 Owned deliverables are exactly the generator, these six text files and this
 provenance document. Generation writes only the six text assets. Runtime,
 manifest, logic, rendering and audio integration remain parent-owned.
+# Compact playtest derivative
+
+`campaign_manga_compact.txt` is generated offline by
+`python3 tools/make-compact-manga.py` from the preserved `campaign_manga.txt`.
+It selects every second source pixel/row, producing five 80×48 panels with the
+original palette indices, no new dependencies and no runtime resampling.
+`python3 tools/make-compact-manga.py --check` checks exact reproducibility.
+Native artistic approval is pending; the original masters remain unchanged.

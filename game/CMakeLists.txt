@@ -80,6 +80,21 @@ if(EXISTS ${CMAKE_BINARY_DIR}/sound/sound.c)
 	include_directories(${CMAKE_BINARY_DIR}/sound)
 endif()
 add_executable(astra ${SOURCES})
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_custom_target(presentation_check
+	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py --check
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py
+		${CMAKE_CURRENT_SOURCE_DIR}/src/render_scenes.c
+		${CMAKE_CURRENT_SOURCE_DIR}/src/scene_font.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/logic.c
+		${CMAKE_CURRENT_SOURCE_DIR}/art/font.txt
+		${CMAKE_CURRENT_SOURCE_DIR}/art/presentation-rows.h
+	VERBATIM)
+add_dependencies(astra presentation_check)
+option(ASTRA_PRESENTATION_TIMING "NON-SHIPPING decoder raster timing" OFF)
+if(ASTRA_PRESENTATION_TIMING)
+	target_compile_definitions(astra PRIVATE ASTRA_PRESENTATION_TIMING=1)
+endif()
 option(ASTRA_CAMPAIGN_PROBE "NON-SHIPPING injected native campaign fixture" OFF)
 if(ASTRA_CAMPAIGN_PROBE)
 	target_sources(astra PRIVATE tests/native/campaign_probe.c)
