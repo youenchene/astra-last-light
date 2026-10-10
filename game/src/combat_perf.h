@@ -7,10 +7,12 @@ enum { CP_RESTORE, CP_LOGIC, CP_AUDIO, CP_RENDER, CP_BOBS, CP_SPRITES,
 void combatPerfBegin(unsigned char stage);
 void combatPerfEnd(unsigned char stage);
 void combatPerfFrame(const tGameState *state);
+void combatPerfFlush(const tGameState *state);
 #else
 #define combatPerfBegin(stage) ((void)0)
 #define combatPerfEnd(stage) ((void)0)
 #define combatPerfFrame(state) ((void)0)
+#define combatPerfFlush(state) ((void)0)
 #endif
 #ifdef ASTRA_COMBAT_STRESS
 void combatStressBefore(tGameState *state);

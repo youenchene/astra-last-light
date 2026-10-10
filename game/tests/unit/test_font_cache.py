@@ -39,16 +39,19 @@ int main(void) {
     fontMasksCreate();
     for(unsigned plane = 0; plane < 4; ++plane) bitmap.Planes[plane] = pixels + plane * 40;
     for(unsigned glyph = 0; glyph < 36; ++glyph) for(unsigned scale = 1; scale <= 4; scale *= 2) {
+      for(unsigned left = 0; left < 8; ++left) for(unsigned color = 0; color < 16; ++color) {
+        if(glyph && color != 6) continue;
         memset(pixels, 0xa5, sizeof(pixels));
         char text[2] = {glyph < 26 ? 'A' + glyph : '0' + glyph - 26, 0};
-        textDraw(5, 40, text, scale, 6);
+        textDraw(left, 40, text, scale, color);
         for(unsigned y = 0; y < 256; ++y) for(unsigned x = 0; x < 320; ++x) {
             unsigned ink = (0xa5 & (128 >> (x & 7))) ? 15 : 0;
-            if(x >= 5 && x < 5 + 5 * scale && y >= 40 && y < 40 + 7 * scale &&
-               (glyphs[glyph][(y - 40) / scale] & (1 << (4 - (x - 5) / scale)))) ink = 6;
+            if(x >= left && x < left + 5 * scale && y >= 40 && y < 40 + 7 * scale &&
+               (glyphs[glyph][(y - 40) / scale] & (1 << (4 - (x - left) / scale)))) ink = color;
             for(unsigned plane = 0; plane < 4; ++plane)
                 assert(!!(bitmap.Planes[plane][y * 160 + x / 8] & (128 >> (x & 7))) == !!(ink & (1 << plane)));
         }
+      }
     }
 }
 '''

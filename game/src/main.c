@@ -40,6 +40,11 @@ static UWORD s_cutRevision, s_lastRevision = 0xffff, s_holdFrames;
 static UBYTE s_lastBoth;
 static tTitleConfirm s_confirm;
 static UBYTE s_confirmSubmitted;
+#ifdef AGK_SERIAL_ENABLED
+/* Debug-channel replay boundary, independent of the four diagnostic flags. */
+void astraPerfFinish(ULONG logicFrame);
+static UBYTE s_perfComplete;
+#endif
 
 static tInput readInput(void) {
 	tInput input = {0};
@@ -265,12 +270,30 @@ static void publishFrame(void) {
 
 void genericProcess(void) {
 	agkPerfBegin();
-	galaxyTraceBegin();
+#ifdef AGK_SERIAL_ENABLED
+	if(s_perfComplete) {
+		/* Post-measurement hold lets the harness drain serial/audio. Preserve
+		 * the final scanout. Begin supplies harness ticks, but without End
+		 * these iterations never add a completed-frame sample or report. */
+		ULONG at = timerGet();
+		while(timerGet() == at) { }
+		return;
+	}
+#endif
+	galaxyTraceBegin(&s_sState);
 	if(!s_isLoaded) { agkPerfEnd(); gameExit(); return; }
 	renderBindBack(s_pBuffer->pBack);
 	acknowledgeFrame();
 	keyProcess();
 	joyProcess();
+#ifdef AGK_SERIAL_ENABLED
+	if(keyUse(KEY_F8)) {
+		astraPerfFinish(s_sState.frame);
+		combatPerfFlush(&s_sState);
+		s_perfComplete = 1;
+		return;
+	}
+#endif
 #ifdef ASTRA_COMBAT_STRESS
 	/* The harness releases only after copying the acknowledged complete image.
 	 * Keep all held ticks in whole-frame metrics; never reuse its DMA buffers. */
@@ -298,6 +321,7 @@ void genericProcess(void) {
 	combatPerfBegin(CP_RESTORE);
 	if(s_isIntroDone) renderAnimate(&s_sState);
 	combatPerfEnd(CP_RESTORE);
+	galaxyTraceMark(0);
 	/* Select music for the acknowledged visible frame, never the hidden work.
 	 * This runs at the start of that display tick, within perf measurement. */
 	combatPerfBegin(CP_AUDIO);
@@ -342,6 +366,7 @@ void genericProcess(void) {
 			logicUpdate(&s_sState, &input);
 		}
 		combatPerfEnd(CP_LOGIC);
+		galaxyTraceMark(1);
 		if(confirming) {
 			agkState("title_confirm_input", 1);
 			agkState("vblank", timerGet()); agkEnd();
@@ -352,9 +377,11 @@ void genericProcess(void) {
 		combatPerfBegin(CP_AUDIO);
 		soundEvents(oldPhase == TITLE ? s_sState.events & ~EVENT_LEVEL : s_sState.events);
 		combatPerfEnd(CP_AUDIO);
+		galaxyTraceMark(2);
 		combatPerfBegin(CP_RENDER);
 		renderFrame(&s_sState);
 		combatPerfEnd(CP_RENDER);
+		galaxyTraceMark(6);
 		combatStressAfter(&s_sState);
 		if(oldPhase == TITLE && (oldLevel != s_sState.level || s_sState.phase != TITLE)) {
 			agkState("title_input", renderRevision());
@@ -387,6 +414,9 @@ void genericProcess(void) {
 	 * acknowledges this list: do not accidentally wait for a second blank. */
 	ULONG publishedAt = timerGet();
 	galaxyTraceFrame(&s_sState);
+#ifdef ASTRA_PRESENTATION_TIMING
+	if(keyUse(KEY_F10)) galaxyTraceReport();
+#endif
 	agkPerfEnd();
 	/* The newly published copper list becomes active at vblank. Start the
 	 * next logic tick only after that acknowledgement, not at line 300 while
@@ -398,6 +428,7 @@ void genericProcess(void) {
 
 void genericDestroy(void) {
 	agkDebugAsync(0);
+	galaxyTraceReport();
 	blitWait();
 	if(s_isLoaded) { systemSetDmaBit(DMAB_SPRITE, 0); viewLoad(0); }
 	if(s_isSystemUnused) systemUse();

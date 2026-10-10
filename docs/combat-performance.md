@@ -3,7 +3,15 @@
 Baseline: parent commit `52a37a1`. Target remains PAL A500 7 MHz OCS,
 512 KiB CHIP + 512 KiB slow, zero drops and <=90% peak. AROS is supplementary.
 
-**Final: both bounded optimizations accepted; production ADF validated with all
+**Current it10: complete-window accounting fixed and HUD optimization accepted.**
+Both profiles retain all final partial-window frames. Against identically metered
+it9j, campaign improves8→6 drops A500 and6→4 AROS; ordinary BOB improves3→2 and2→1.
+No scoped peak regresses. Global0-drop/90% acceptance remains **FAIL**.
+See [complete-window results](#it10--complete-window-accounting-and-accepted-hud-step).
+All older tables without an explicit completion marker cover **emitted windows
+only**, not complete replays; they remain historical evidence, not full-run gates.
+
+**Historical final: both bounded optimizations accepted; production ADF validated with all
 diagnostic flags OFF.** The capture race is corrected with an acknowledged-scanout
 handshake. All final baseline/candidate full pixels and emitted gameplay states
 match. Global 50fps acceptance remains **FAIL**, with the unchanged thresholds.
@@ -13,6 +21,11 @@ Full numerical tables for all 48 cases, ten stages, both profiles and each
 measured iteration: [raw-counter tables](combat-performance-tables.md).
 
 ## Recap: where frame time is spent and which hardware is involved
+
+**Latest accepted HUD step is it10c, revalidated with complete accounting.**
+A500 complete campaign is6/116%, ordinary BOB2/107%; AROS4/107%,1/101%.
+The targeted hardware-time table in the earlier it10 investigation remains
+attribution evidence; the complete OFF table below controls acceptance.
 
 **Latest accepted Step D is it9j:** fixed galaxies + 36 moving stars. Campaign
 drops improve **8→7 A500, 7→6 AROS**; ordinary BOB improves **3→0, 2→0**. Global
@@ -115,6 +128,309 @@ it6 review and caveats:
   commits did not refresh them. No golden was updated in this step: a refresh would also
   accept that unreviewed earlier drift. It needs its own scoped review.
 - Evidence: `game/build/perf-loop5-it6-{on,prod,campaign}`; logs alongside.
+
+### it10 — complete-window accounting and accepted HUD step
+
+The user authorized correction of the previously reported accounting defect.
+**Accept the HUD candidate:** independently dirty upgrade counters and narrow
+number formatting, with unchanged glyph rendering, both physical-buffer caches,
+same-frame visibility, logic, enemy quotas, health, effect counts/durations,
+galaxy restoration and audio. The font-only trial stays rejected. The intermediate
+dirty-only trial is not selected. This is a measured incremental improvement,
+not completion of the50fps goal.
+
+#### Local accounting correction and boundary contract
+
+- The installed AGK provides `agkPerfReport()`, which prints its actual pending
+  count and resets the accumulators. However, `agkPerfEnd()` used to report before
+  the next `agkPerfBegin()` counted the preceding frame's missed vblanks. A naïve
+  final flush loses the last frame's drops when the final window is exactly50.
+- `game/tools/patch-perf.py` transforms a **build-local copy** of the installed
+  `runtime/src/perf.c`, with exactly-one-match anchors. CMake replaces only that
+  translation unit in this project's AGK target and rejects a changed source
+  inventory. The installed kit is untouched. Original source SHA256:
+  `fefcb992ba03b88dc41b915409b02ab4aef5ec34c46e979b28147ebb027ffe8c`.
+- Full windows report at the following Begin, after counting the prior frame's
+  missed vblanks. Begin's sampled timestamp still precedes regular reporting, so
+  report CPU/serial time remains in the following measured gameplay frame. The
+  report's timing position changes relative to old evidence; both baseline and
+  candidate were rebuilt with the identical correction. This is not a comparison
+  of a patched candidate with an old unpatched binary.
+- The runners retain exact copies of each original replay and append only an F8
+  key command, a completion-marker wait and a marker assertion. At that Begin,
+  F8 flushes the pending samples and reports cumulative actual frames/drops plus
+  `boundary_frame`. It does not execute a new logic/render tick or call End for
+  the boundary itself. No fake50-frame window, padding wait, timer reset, warmed
+  measurement interval or excluded original tail is used.
+- The final report (partial **or full**), marker and subsequent display hold are
+  explicitly **post-measurement overhead**. The hold emits harness ticks so serial
+  and audio can be collected, but advances neither gameplay nor the meter. F8 is
+  compiled only with the existing `AGK_SERIAL_ENABLED` debug channel and is absent
+  from a non-debug build. All four ASTRA diagnostic flags remain OFF for ordinary
+  production timing; campaign injection alone is ON in the injected fixture.
+- Each completed-frame drop is assigned once to the window containing that
+  frame. `astraPerfFinish` is idempotent; empty reports emit no zero-frame record.
+  `agkPerfBegin()` remains the first frame-loop operation; after completion its
+  finished latch allows harness ticks but cannot reopen the meter, even if End
+  is accidentally called. Both final builds include and test this latch.
+  Host tests execute the transformed actual AGK source for0/1/49/50/51/99/100/101
+  frames, including1/3 missed vblanks on the final frame and duplicate flushes.
+  Regular-report overhead is simulated and asserted inside the following sample.
+- `perf_boundary.py` rejects missing/duplicate completion markers, malformed
+  partial counts, reports after completion, mismatched raw serial/manifest windows,
+  and inconsistent cumulative counts. Generated scenario inventory and complete
+  source text are checked, not silently ignored. Historical `--check-only` reads
+  label missing completion markers `complete=false`; strict acceptance requires
+  complete evidence. Campaign build/finally restoration explicitly sets all flags.
+- The optional combat-stage profiler also flushes partial windows and now reports
+  their actual `frames` alongside call counts. An executable host test verifies
+  exact frame/call/line counts and duplicate-flush behavior. No intrusive full
+  stage-profile run was used to establish this acceptance.
+
+The initial boundary trial emitted its marker then exited, which prevented the
+harness from completing serial/audio capture. The retained failed run is
+`perf-loop5-it10-complete-candidate-prod`; the explicit post-measurement hold fixes
+that integration problem. The strict comparison's new input-directory rejection
+was resolved by checking every generated replay against original+exact suffix.
+Neither correction weakens gameplay, image, lifecycle or performance assertions.
+
+#### Complete profiler-OFF results
+
+Both builds use the accounting correction and original scenario inputs. Table
+entries are **dropped vblanks / peak load%**. Every final window is included once.
+
+| Scenario | Actual frames / final window | A500 it9j → accepted HUD | AROS it9j → accepted HUD |
+|---|---:|---:|---:|
+| Pause continuity | 1417 /17 | 0/80 → **0/77** | 0/77 → **0/75** |
+| Clean transitions | 1000 /50 | 0/80 → **0/76** | 0/77 → **0/75** |
+| GAMEOVER/title | 3054 /4 | 0/83 → 0/83 | 0/81 → 0/81 |
+| Manga | 1159 /9 | 0/81 → **0/78** | 0/79 → **0/76** |
+| Ordinary BOB | 1247 /47 | 3/108 → **2/107** | 2/105 → **1/101** |
+| Injected campaign | 9172 /22 | 8/116 → **6/116** | 6/110 → **4/107** |
+
+Counts are equal between builds and profiles. Their boundary logic-frame IDs are
+1170/753/2807/911/1000/8925 respectively. Meter totals also include measured intro
+iterations, explaining why they are not equal to the gameplay frame counter.
+For BOB, the previously omitted47-frame tail exposes the remaining overruns.
+For clean transitions, the final complete50-frame window is now properly included.
+No arbitrary replay extension was added to reach a report boundary; any elapsed
+iterations before key recognition are measured and their exact count is reported.
+
+Weighted, quantized mean loads are not universally lower: A500 BOB
+32.663→32.623%, campaign34.656→34.650%; AROS BOB31.350→31.392%,
+campaign33.298→33.358%. These small changes are retained explicitly. Acceptance
+is the requested drop reduction without peak regression, not a blanket mean-cost
+improvement. The unchanged0-drop/90% global gate still fails.
+
+Hardware recap: the prior targeted trace attributes the useful HUD savings to
+removing redundant CPU formatting/font work and three unnecessary Blitter clears
+when only one upgrade counter changes. Two S1 death HUD calls fall115→46 and
+92→36 raster lines. Six-effect BOB bursts remain approximately95–112 lines,
+including CPU setup, internal waits, masked Blitter DMA and chip-bus contention;
+the second-buffer BOSS label redraw remains68–69 lines. The complete-window
+correction measures whole iterations and does **not** isolate Paula interrupts,
+Copper/sprite DMA occupancy or pure CPU cycles. No new stage-cost claim is inferred
+from the corrected aggregate percentages. Actual final68000 instructions are
+retained in `perf-loop5-it10-final-68000.txt` for world, BOB, boss and effects.
+
+#### Identity, validation and final production
+
+- **182/182 complete images and908 gameplay-state records identical** between
+  complete baseline and candidate: per profile38 ordinary captures/199 states,
+  53 campaign captures/255 states. The original906 records still match; one extra
+  BOB heartbeat/frame1000 per profile is present identically before the boundary.
+  No state field is ignored, no masking/golden change, no phase re-alignment.
+- Functional/source/lifecycle checks pass for every ordinary case and all13
+  campaign scenes, four bosses/flashes/deaths, six simultaneous effects and F
+  fixtures. Final restored-OFF galaxy source checks pass all four sectors and
+  pause continuity: **352256 exact pixels/profile**.
+- C1/1 and Python107/107 pass, including actual patched counter execution, strict
+  header/manifest validation, stage partial flushes, and narrow/full-width number
+  formatting. No allocation change requires new allocation-failure injection.
+- Final production executable **501576 bytes**, versus identically metered
+  it9j501248 (+328 HUD bytes). A500 startup free CHIP/total is41104/50432;
+  AROS152248/1361168. Startup figures are not formal worst-case memory bounds.
+- All four ASTRA flags are OFF. Final executable SHA256
+  `e31f49fd6c5b4776640c512ed864133e8ea6abacd604600e5a0c6d0441c5325e`, ADF
+  `d01105e715a10120111754eeb18d49b8ace63a9572be2ff40ff2734d550d6d38`.
+  `cmp` matches the measured candidate binary after restoration; the final ADF
+  was booted/source-validated on both profiles.
+
+Evidence under `game/build/`:
+`perf-loop5-it10-complete-{base-final-prod,base-final-campaign,hud-final-prod,hud-final-campaign}`,
+candidate `comparison.json`, `perf-loop5-it10-complete-final2-galaxy` and
+`perf-loop5-it10-complete-off-final` (fresh both-profile BOB replay/source checks).
+Earlier complete-meter trials remain retained, but the final paired rebuilds
+above are authoritative and include the post-boundary finished latch.
+The it8 pending documentation, tests and admission harness remain outside this
+accepted step; no installed kit, other worktree, GUI or paid service was changed.
+
+**Precise remaining complete-window gap:** A500 campaign6 dropped vblanks and
+26 peak-load points; ordinary BOB2 drops and17 points. AROS campaign4 drops/107%,
+BOB1/101%. Next bounded diagnosis remains the simultaneous effects/score bursts,
+boss HUD recreation overlapping firing work, and the now-counted ordinary
+wave-spawn/pickup tail. Global50fps is not achieved.
+
+### it10 — HUD trials and new measurement blocker
+
+**Historical stop, subsequently resolved above.** This section preserves the
+initial incomplete-window measurements and diagnosis; its unaccepted-candidate
+status and hashes describe that earlier point, not the final selected runtime.
+
+Work remains isolated on `perf/combat-loop`, HEAD `8171bfd`. Pending it8 docs,
+tests and admission harness are preserved. No paid generation or GUI was used.
+
+#### Stop condition: incomplete final performance window
+
+Newly discovered **measurement-accounting defect**, not a new gameplay failure:
+`perf-loop5-it9j-prod/a500/bob_restore/serial.txt` ends at line 208. Its last
+`AGK perf frames=50` is line 193, after the frame953/stage213 kill report.
+Frames954/stage214 (new wave), 961/stage221 (kill), 977/stage237 (pickup) and
+981/stage241 (kill) are subsequently reported, then the final capture ends the
+scenario without another perf report. These frames are absent from the aggregate
+0/95%. The same omission affects candidate aggregation. A final partial-window
+frame count is not exposed, so the exact missing denominator is **unknown**.
+
+The ordinary diagnostic replay additionally flushes its trace with F10 after the
+original assertions. It identifies frame816/stage116 as the original reported
+95% peak (third kill: score300, 3 shots, 4 hostiles, 1 effect). Its identifier-only
+trace measures 298 lines there. Later trace frames954 and977 exceed313 lines,
+but instrumentation changes elapsed time and DMA/IRQ alignment: these are **not
+proof of the corresponding OFF drop count**. They establish that the unreported
+tail must be measured, not dismissed. Extended replay time is not counted as the
+original scenario's timing.
+
+Per the user's stop rule, no accounting correction was made and no optimization
+was accepted. Proposed next correction: explicitly flush the final partial perf
+window at the replay boundary, preserve its actual frame count, prevent duplicate
+counting, and remeasure it9j and the candidate on both profiles. Audit the other
+scenarios for the same missing-tail issue. Do not weaken thresholds or label the
+current emitted-window aggregates as complete-run acceptance.
+
+#### Exact event attribution and hardware-time recap
+
+The retained it9j trace maps its seven A500 overrun frames to the following
+identifiers. Canonical frame/phase/stage identities stay unchanged in it10c; no
+preparation scheduling was changed. The final diagnostic checkpoints are enabled
+only for 15 selected frame IDs; all other slow frames retain whole-frame records.
+Both baseline and candidate campaign traces count **8974 iterations to flush,
+15 targeted frames, 28 retained records, zero omitted**. No per-frame serial dump
+is performed. The first exploratory split timed every combat frame and is kept
+as exploratory evidence only.
+
+The table reports elapsed **raster lines per selected call** (one call/frame),
+baseline→candidate, not isolated CPU cycles or steady-state means. The final
+baseline/candidate traces are `perf-loop5-it10-{base-targeted}` and
+`perf-loop5-it10c-targeted`. The seven baseline whole-frame line counts come from
+the older, lighter `perf-loop5-it9j-trace`; they are not checkpoint sums.
+
+| Frame / event | it9j light total | HUD bounds it9j→it10c | BOB submission bounds it9j→it10c |
+|---|---:|---:|---:|
+| 751, S1 PLAY stage51, six kills, events66, six effects | 329 | 26→24 | 95→96 |
+| 801, S1 HERO_DYING stage101, events6, hero effect | 353 | **115→46** | 33→30 |
+| 1585, S1 HERO_DYING boss tick120, events6 | 358 | **92→36** | 71→72 |
+| 2817, S2 PLAY stage51, six kills | 365 | 41→39 | 109→109 |
+| 4879, S3 PLAY stage51, six kills | 361 | 40→38 | 112→112 |
+| 6927, S4 PLAY stage51, six kills | 360 | 40→38 | 109→110 |
+| 7780, S4 BOSS tick122, second bitmap after respawn, events0 | 340 | 68→69 | 61→60 |
+
+- Four six-kill HUD calls: mean/max **36.75/41→34.75/39 lines**;
+  candidate **11.10%/12.46%** of313 lines. Their BOB mean/max is
+  **106.25/112→106.75/112 lines** (**34.11%/35.78%**). This trial does not solve
+  that burst.
+- Two S1 death HUD calls: **103.5/115→41/46 lines**, candidate
+  **13.10%/14.70%**. Unchanged counters previously caused four clears, four
+  number conversions and four glyph writes when only one counter changed.
+- Four first-boss foreground frames1416/3487/5550/7597 retain HUD
+  **69/68/68/68 lines** and BOB **80/80/80/85 lines** in both builds. Galaxy decode
+  is zero; repair completion remains separated from foreground publication.
+- S4 post-respawn redraw recreates the BOSS label/bar on the second bitmap;
+  its HUD cost remains68–69 lines. Before that HUD, logic/fixture/audio/input
+  span from restore-end to audio-end is117→109 lines. The targeted checkpoints
+  do not isolate fixture copies from logic or foreground music from that span.
+- Audio event calls on the seven frames are approximately13–15 lines when
+  events66/6 fire, versus2–3 on the event-free resume frame. Sound ordering and
+  event counts are unchanged. Paula IRQ execution is not isolated.
+
+Hardware inspection: actual pinned ACE `bobPush` queues objects and may start a
+save when idle; `bobProcessNext` saves **all backgrounds before drawing**, waits
+internally, then issues masked A/B/C/D blits. `bobEnd` drains the queue. Thus BOB
+elapsed time includes 68000 pointer/setup work, Blitter DMA, internal waits and
+chip-bus contention. Effect sizes/counts/lifetimes remain16×16×6,32×32 hero and
+64×48 boss; no queue item or restore order was removed. Boss first draw copies
+576 mask words into the existing flash bitmap; it is a once-per-sector CPU CHIP
+copy, not steady BOB DMA. The HUD uses CPU font-mask writes plus Blitter clears;
+large elapsed HUD costs cannot all be attributed to glyph pixels alone.
+
+Actual production68000 `numberText` audit shows the new narrow path uses
+`MULU.W #0xCCCD` via a register, SWAP and word shifts, not DIVU or a32-bit helper.
+The retained full-width path has register-count long shifts/subtractions and
+stack spills; no large-score formatting shortcut is claimed. The frame-buffer
+font writer, BOB implementation, audio and logic remain unchanged in it10c.
+
+Instrumentation is material: for the seven mapped frames, final targeted baseline
+totals355/374/369/377/372/371/353 are **11–26 lines above** the older light trace.
+Do not subtract a fixed overhead to manufacture OFF timing; recording also adds
+work after the last timestamp. This is attribution only. The production-OFF
+binary is byte-identical before/after the diagnostic additions.
+
+#### Bounded HUD trials — emitted complete-window results only
+
+Ordinary lists are pause / transitions / GAMEOVER / manga / BOB. Numbers are
+drops/peak%. The accounting blocker above applies to every acceptance claim.
+
+| Trial | Ordinary A500 | Ordinary AROS | Campaign A500; AROS | Decision |
+|---|---|---|---|---|
+| it9j reference | 0/80,0/80,0/83,0/81,0/95 | 0/77,0/77,0/81,0/79,0/90 | 7/116;6/110 | Existing accepted runtime; timing coverage now qualified |
+| it10 font-only | 0/80,0/80,0/83,0/81,0/95 | 0/77,0/77,0/81,0/79,0/90 | 7/115;6/107 | Rejected: no drop or ordinary peak improvement; removed |
+| it10b independent counter dirtiness | 0/80,0/80,0/83,0/81,0/95 | 0/77,0/77,0/81,0/79,0/91 | 5/116;4/107 | Not selected: AROS BOB crosses90% |
+| it10c independent dirtiness + narrow number formatting | 0/76,0/76,0/83,0/78,0/94 | 0/74,0/74,0/81,0/76,0/90 | 5/115;4/107 | **Unaccepted candidate, stopped for accounting defect** |
+
+Candidate changes only `render_world.c`'s HUD work: each physical bitmap redraws
+only changed upgrade counters, and values≤65535 use bounded word arithmetic.
+All changed values still draw on the same iteration. Full-width scores retain
+their existing formatting path. No presentation delay, collision postponement,
+asset/galaxy write, effect-duration/count, health, firing or audio change.
+
+Full comparison against it9j passes for every trial: per profile **38 ordinary
+captures/198 states plus53 campaign captures/255 states**, totaling **182 full
+captures and906 state records**. No masks, changed goldens or dynamic-phase
+exclusions. Scene acknowledgements, simulation frame IDs and preparation lengths
+match exactly; canonical re-alignment was unnecessary. All13 scene pairs,
+campaign lifecycle, source effect/flash/F checks and ordinary source/restoration
+checks pass. These checks validate functionality, not missing timing samples.
+
+#### Preserved state and final OFF evidence
+
+Current source is the **uncommitted it10c candidate**, not an accepted replacement
+for it9j. Diagnostic code is guarded by PRESENTATION_TIMING, which is OFF along
+with CAMPAIGN_PROBE, COMBAT_TIMING and COMBAT_STRESS. Final build is500708 bytes;
+SHA256 `0404df1594d15ff58a7dce0210d20c6045b6c78013d0971fdd5c1eab659e415b`;
+ADF `957a49e896133095db569631ff5c1449826c23d7e9669d4605190fa29c3a8878`.
+`cmp` matches the measured it10c ordinary binary. Final OFF native BOB replay
+passes on both profiles in `perf-loop5-it10-stop-final`; C1/1 and Python104/104
+pass. New number tests cover all65536 narrow values,65536 boundary, byte counters,
+decimal/uint32 wraps and100000 deterministic full-width values. Existing glyph
+oracle now exercises all eight alignments and all inks for its representative
+glyph. No allocation was added.
+
+Patches are retained in `.tmp/it10-font-and-diagnostic.patch`,
+`.tmp/it10b-dirty-and-diagnostic.patch`, `.tmp/it10c-blocked-candidate.patch`;
+the new untracked `test_hud_numbers.py` remains alongside the candidate.
+Evidence prefixes are `perf-loop5-it10{,b,c}-campaign`,
+`perf-loop5-it10{,b,c2}-prod`, and the targeted/ordinary trace directories above.
+The first font extraction test failure was corrected by including its helper;
+the rejected helper was then removed. A shutdown-only trace flush was unsuitable
+for a script ending at WIN and was corrected. One c-run was refused by the stale
+ADF guard after a comment edit; `it10c2-prod` is its rebuilt replacement. Those
+failed attempts remain retained, not reported as passing runs.
+
+**Remaining gap, incomplete-window scope:** it10c still has5 reported A500 campaign
+drops/115% (25pp above90), ordinary BOB94% (4pp above90), and AROS campaign4/107%.
+The full-run gap is not yet known because final partial windows are missing.
+After correcting accounting, next diagnosis is the four six-effect/score bursts,
+the S4 second-bitmap boss HUD redraw with firing work, and ordinary wave-spawn /
+pickup tail frames. No global50fps completion or accepted progress commit is claimed.
 
 ### it9 — fixed galaxy Step D: accepted at it9j
 

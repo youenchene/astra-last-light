@@ -33,6 +33,24 @@ endif()
 add_subdirectory(${ACE_DIR} ace)
 include_directories(${ACE_DIR}/include)
 add_subdirectory(${AGK_KIT}/runtime agk)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# Keep the installed kit immutable. Replace only this build's perf translation
+# unit with an anchor-checked copy; original debug.c and public API stay intact.
+execute_process(COMMAND ${Python3_EXECUTABLE}
+	${CMAKE_CURRENT_SOURCE_DIR}/tools/patch-perf.py
+	${AGK_KIT}/runtime/src/perf.c ${CMAKE_BINARY_DIR}/perf-complete.c
+	RESULT_VARIABLE PERF_PATCH_RESULT)
+if(NOT PERF_PATCH_RESULT EQUAL 0)
+	message(FATAL_ERROR "AGK final-window accounting transform failed")
+endif()
+get_target_property(AGK_SOURCES agk SOURCES)
+if(NOT "src/perf.c" IN_LIST AGK_SOURCES)
+	message(FATAL_ERROR "AGK perf source inventory changed")
+endif()
+list(REMOVE_ITEM AGK_SOURCES src/perf.c)
+set_property(TARGET agk PROPERTY SOURCES "${AGK_SOURCES};${CMAKE_BINARY_DIR}/perf-complete.c")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+	${CMAKE_CURRENT_SOURCE_DIR}/tools/patch-perf.py ${AGK_KIT}/runtime/src/perf.c)
 
 file(GLOB_RECURSE SOURCES src/*.c)
 # Art converted by agk (art/ -> build/art/art.c + art.h), if the project has any
@@ -80,7 +98,6 @@ if(EXISTS ${CMAKE_BINARY_DIR}/sound/sound.c)
 	include_directories(${CMAKE_BINARY_DIR}/sound)
 endif()
 add_executable(astra ${SOURCES})
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_custom_target(presentation_check
 	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py --check
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py

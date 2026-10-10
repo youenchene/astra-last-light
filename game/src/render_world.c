@@ -4,6 +4,7 @@
 #include "render.h"
 #include "presentation_rows.h"
 #include "galaxy_rows.h"
+#include "galaxy_trace.h"
 #include "../art/title-plates.h"
 #include <ace/managers/blit.h>
 #include <ace/utils/custom.h>
@@ -226,6 +227,18 @@ static void textDraw(UWORD x, UWORD y, const char *pText, UBYTE scale, UBYTE col
 }
 
 static void __attribute__((noinline)) numberText(char *text, ULONG value, UBYTE digits) {
+	/* Narrow counters/scores avoid the full-width subtraction path. The 68000
+	 * build uses word reciprocal multiplies here, with no libgcc divide. */
+	if(value <= 65535) {
+		UWORD rest = value;
+		text[digits] = 0;
+		for(UBYTE i = digits; i; --i) {
+			UWORD quotient = rest / 10u;
+			text[i - 1] = '0' + rest - quotient * 10u;
+			rest = quotient;
+		}
+		return;
+	}
 	static const ULONG powers[] = {1, 10, 100, 1000, 10000, 100000,
 		1000000, 10000000, 100000000};
 	/* Only eight-digit scores and byte-sized one-digit counters are used.
@@ -584,15 +597,20 @@ static void panelQueue(tPhase phase) {
 }
 
 static void hudDraw(const tGameState *pState, UBYTE dirty) {
-	if(dirty || s_ubWeapon != pState->weaponLevel || s_ubSpeed != pState->speedLevel ||
-		s_ubShield != pState->shield || s_ubShotLevel != pState->shotLevel) {
+	if(dirty || s_ubWeapon != pState->weaponLevel) {
 		blitRect(s_pScreen, 50, 249, 6, 7, 0);
-		blitRect(s_pScreen, 98, 249, 6, 7, 0);
-		blitRect(s_pScreen, 158, 249, 6, 7, 0);
-		blitRect(s_pScreen, 206, 249, 6, 7, 0);
 		numberDraw(50, 249, pState->weaponLevel, 1);
+	}
+	if(dirty || s_ubSpeed != pState->speedLevel) {
+		blitRect(s_pScreen, 98, 249, 6, 7, 0);
 		numberDraw(98, 249, pState->speedLevel, 1);
+	}
+	if(dirty || s_ubShield != pState->shield) {
+		blitRect(s_pScreen, 158, 249, 6, 7, 0);
 		numberDraw(158, 249, pState->shield, 1);
+	}
+	if(dirty || s_ubShotLevel != pState->shotLevel) {
+		blitRect(s_pScreen, 206, 249, 6, 7, 0);
 		numberDraw(206, 249, pState->shotLevel + 1, 1);
 	}
 	if(dirty || s_ulScore != pState->score) {
@@ -637,7 +655,9 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 }
 
 void renderWorldHud(const tGameState *pState) {
+	galaxyTraceMark(3);
 	if(s_isValid && pState->phase != TITLE && pState->phase != WIN) hudDraw(pState, 0);
+	galaxyTraceMark(4);
 }
 
 void renderWorldPause(const tGameState *state) {

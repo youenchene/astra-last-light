@@ -17,6 +17,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools'))
+from perf_boundary import scenario_with_boundary, complete_performance
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
 
@@ -202,6 +204,10 @@ def inspect(directory):
         text = (directory / "serial.txt").read_text()
         result['memory'] = records(text, "chip_free=")
         perf = performance(text)
+        if 'AGK perf_complete=' in text:
+            perf = complete_performance(text, perf)
+        else:
+            perf['complete'] = False  # retained historical partial-window evidence
         result['performance'] = perf
         print(f"{directory.name}: budget {'PASS' if perf['pass'] else 'FAIL (expected known blocker)'}: "
               f"dropped={perf['dropped']} maxload={perf['maxload']}%", flush=True)
@@ -239,18 +245,24 @@ def main():
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     report = {"fixture": "NON-SHIPPING injected state; not ordinary campaign clear", "profiles": {}}
+    flags = ('COMBAT_STRESS', 'COMBAT_TIMING', 'PRESENTATION_TIMING')
+    off = [part for flag in flags for part in ('-D', 'ASTRA_'+flag+'=OFF')]
     def command(*parts):
         subprocess.run(["bash", "tools/agk", *parts], cwd=ROOT, check=True)
     try:
         if not args.check_only:
-            command("build", "-D", "ASTRA_CAMPAIGN_PROBE=ON")
+            command("build", *off, "-D", "ASTRA_CAMPAIGN_PROBE=ON")
             report['probe_identity'] = preserve_probe(args.out)
         for profile in PROFILES:
             directory = args.out / profile
             if not args.check_only:
+                scenario = scenario_with_boundary(ROOT, "game/tests/native/campaign.agk", args.out/'scenarios')
                 command("run", "--no-build", "--fresh", "-p", profile,
-                        "-f", "game/tests/native/campaign.agk", "-o", str(directory))
+                        "-f", str(scenario), "-o", str(directory))
             report["profiles"][profile] = inspect(directory)
+            if not args.check_only:
+                entry = report["profiles"][profile]
+                entry['performance'] = complete_performance((directory/'serial.txt').read_text(), entry['performance'])
             if not report["profiles"][profile]["functional_pass"]:
                 break  # stop on unexpected failure, do not auto-correct
     except (subprocess.CalledProcessError, ValueError, OSError) as error:
@@ -263,9 +275,10 @@ def main():
     finally:
         if not args.check_only:
             try:
-                command("build", "-D", "ASTRA_CAMPAIGN_PROBE=OFF")
+                command("build", *off, "-D", "ASTRA_CAMPAIGN_PROBE=OFF")
                 cache = (ROOT / "game/build/CMakeCache.txt").read_text()
-                require("ASTRA_CAMPAIGN_PROBE:BOOL=OFF" in cache, "production cache not OFF")
+                require(all('ASTRA_'+flag+':BOOL=OFF' in cache for flag in (*flags, 'CAMPAIGN_PROBE')),
+                        "production cache not OFF")
                 report["production_restored"] = True
             except (subprocess.CalledProcessError, OSError, ValueError) as error:
                 report["production_restored"] = False
@@ -274,7 +287,7 @@ def main():
     ok = len(report["profiles"]) == 2 and all(r["functional_pass"] for r in report["profiles"].values())
     ok = ok and not report.get("error") and report.get("production_restored", True)
     if args.strict_performance:
-        ok = ok and all(r["performance"] and r["performance"]["pass"]
+        ok = ok and all(r["performance"] and r["performance"]["pass"] and r["performance"].get('complete')
                         for r in report["profiles"].values())
     return 0 if ok else 1
 

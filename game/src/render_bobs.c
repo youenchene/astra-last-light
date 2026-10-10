@@ -5,6 +5,7 @@
 #include "render_scenes.h"
 #include "art.h"
 #include "combat_perf.h"
+#include "galaxy_trace.h"
 #include <ace/managers/bob.h>
 
 #define BOB_WIDTH 16
@@ -151,6 +152,7 @@ void renderBobsDraw(tGameState *pState) {
 	combatPerfEnd(CP_WAIT);
 	s_isFrameOpen = 0;
 	combatPerfEnd(CP_BOBS);
+	galaxyTraceMark(5);
 }
 
 void renderBobsDiscard(void) {

@@ -69,7 +69,18 @@ def scenario_captures(case):
 
 def validate_production_report(folder, report):
     require_names(report['cases'], SCENARIOS, f'{folder}: scenario manifest')
-    require_names((p.name for p in folder.iterdir() if p.is_dir()), SCENARIOS,
+    expected_dirs = set(SCENARIOS)
+    if (folder/'scenarios').exists():
+        from perf_boundary import BOUNDARY_SUFFIX, complete_performance
+        expected_dirs.add('scenarios')
+        require_names((p.name for p in (folder/'scenarios').iterdir()),
+                      (case+'.agk' for case in SCENARIOS), 'boundary replay inventory')
+        for case in SCENARIOS:
+            original = ROOT/f'game/tests/{"" if case == "bob_restore" else "native/"}{case}.agk'
+            if (folder/'scenarios'/(case+'.agk')).read_text() != original.read_text()+BOUNDARY_SUFFIX:
+                raise ValueError('boundary replay changed original input: '+case)
+            complete_performance((folder/case/'serial.txt').read_text(), report['cases'][case]['performance'])
+    require_names((p.name for p in folder.iterdir() if p.is_dir()), expected_dirs,
                   f'{folder}: scenario directories')
     for case in SCENARIOS:
         actual = capture_hashes(folder/case, scenario_captures(case))

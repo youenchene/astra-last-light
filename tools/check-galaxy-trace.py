@@ -12,18 +12,27 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--profile',choices=('a500','a500-aros'),default='a500')
+    parser.add_argument('--ordinary-bob',action='store_true')
     args=parser.parse_args()
     args.out.mkdir(parents=True,exist_ok=False)
+    scenario=ROOT/'game/tests/native/campaign.agk'
+    if args.ordinary_bob:
+        scenario=args.out.resolve()/'bob-trace.agk'
+        scenario.write_text((ROOT/'game/tests/bob_restore.agk').read_text()+
+                            '\nkey 0x59\nwait-serial "AGK galaxy_diag_omitted=0" 100\n'
+                            'expect-serial "AGK galaxy_diag_omitted=0"\n')
 
     def run(*parts):
         with (args.out/'commands.log').open('a') as log:
             subprocess.run(['bash','tools/agk',*parts],cwd=ROOT,
                            stdout=log,stderr=subprocess.STDOUT,check=True)
     try:
-        run('build','-D','ASTRA_CAMPAIGN_PROBE=ON','-D','ASTRA_PRESENTATION_TIMING=ON',
+        run('build','-D','ASTRA_CAMPAIGN_PROBE='+('OFF' if args.ordinary_bob else 'ON'),
+            '-D','ASTRA_PRESENTATION_TIMING=ON',
             '-D','ASTRA_COMBAT_TIMING=OFF','-D','ASTRA_COMBAT_STRESS=OFF')
         run('run','--no-build','--fresh','--profile',args.profile,
-            '-f','game/tests/native/campaign.agk','-o',str(args.out/args.profile))
+            '-f',str(scenario),
+            '-o',str(args.out/args.profile))
     finally:
         run('build',*[part for flag in FLAGS for part in ('-D','ASTRA_'+flag+'=OFF')])
         cache=(ROOT/'game/build/CMakeCache.txt').read_text()
