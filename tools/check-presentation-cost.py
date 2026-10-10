@@ -26,7 +26,7 @@ if __name__ == '__main__':
             rows = [{k: int(v) for k,v in re.findall(r'(\w+)=(-?\d+)', line)}
                     for line in (folder/'serial.txt').read_text().splitlines()
                     if line.startswith('AGK row_cost=')]
-            assert [r['row_cost'] for r in rows] == [1, 0, 1, 0], rows
+            assert [r['row_cost'] for r in rows] == [1, 0, 2, 1, 0, 2], rows
             report[profile] = rows
     finally:
         try:

@@ -1,5 +1,14 @@
 # Rendering, publication and memory
 
+Latest story implementation: [selected RD 140×84 images and 320×192 WIN](selected-rd-story-images.md).
+Five shared compressed images decode directly into the back bitmap; WIN clears
+both targets and omits world/HUD/decor/sprites. Functional checks pass on both
+profiles, including all 13 source-exact scenes and held-fire/restart/ESC. The
+loader error-103/bank-placement failure is fixed by compression and a separate
+ordinary-data hunk. Production is 487,888 bytes; A500 startup free CHIP/total RAM
+is 51,616/63,432 bytes. Probe/timing flags are OFF. Performance work awaits the
+parent commit. Older layout and validation sections below are historical.
+
 This is the current double-framebuffer design, grounded in `game/src/main.c`,
 `render.c/.h`, `render_bobs.c`, `render_world.c` and `render_scenes.c`.
 Hardware constraints and change gates are authoritative in

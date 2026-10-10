@@ -54,7 +54,7 @@ typedef struct { UWORD pPalette[32]; } tVPort;
 #define DECOR_BOTTOM 220
 static tBitMap bitmaps[2], *s_buffers[2] = {bitmaps, bitmaps + 1}, *s_pScreen;
 static tVPort viewport, *s_pVPort = &viewport;
-static unsigned rows, glyphs, outside, clearing;
+static unsigned rows, glyphs, outside, clearing, scenery, hud;
 static void blitWait(void) {}
 static UBYTE titleIconStep(UWORD x,UWORD y,UBYTE right,UWORD *cursor) {
     (void)x;(void)y;(void)right;
@@ -71,13 +71,13 @@ static void blitRect(tBitMap *b, UWORD x, UWORD y, UWORD w, UWORD h, UBYTE color
         }
 }
 static void starsReset(void) {}
-static void starToggle(UBYTE i, UWORD x) {(void)i; (void)x;}
+static void starToggle(UBYTE i, UWORD x) {(void)i; (void)x; ++scenery;}
 static void decorRows(UWORD a,UWORD b,UWORD c,UWORD d,UWORD e) {
-    (void)a;(void)b;(void)c;(void)d;(void)e;
+    (void)a;(void)b;(void)c;(void)d;(void)e; ++scenery;
 }
 static UWORD presentationHudStep(unsigned char *const planes[4], UWORD stride,
                                 UBYTE variant, UWORD row) {
-    (void)planes;(void)stride;(void)variant; return row + 4;
+    (void)planes;(void)stride;(void)variant; ++hud; return row + 4;
 }
 static UBYTE renderWorldTextStep(UWORD x,UWORD y,const char *text,
                                UBYTE scale,UBYTE color,UWORD *cursor) {
@@ -149,6 +149,26 @@ int main(void) {
     state.phase = TITLE;
     renderWorldBegin(&state);
     assert(complete() > 60);
+    /* WIN must clear both dirty physical bitmaps without visiting any world
+     * painter. A TITLE restart must rebuild rather than reuse stale provenance. */
+    memset(bitmaps[0].pixels, 15, sizeof(bitmaps[0].pixels));
+    memset(bitmaps[1].pixels, 7, sizeof(bitmaps[1].pixels));
+    state.phase = WIN; state.level = 3;
+    renderWorldInvalidate(0);
+    renderWorldBegin(&state);
+    scenery = hud = 0;
+    assert(s_commandCount == 0 && viewport.pPalette[0] == 0);
+    for(unsigned buffer = 0; buffer < 2; ++buffer) {
+        renderWorldBind(bitmaps + buffer);
+        assert(complete() == 32);
+        assert(!scenery && !hud && !glyphs);
+        for(unsigned y = 0; y < 256; ++y)
+            for(unsigned x = 0; x < 320; ++x) assert(!bitmaps[buffer].pixels[y][x]);
+    }
+    assert(!sceneryBackground(WIN) && sceneryBackground(CLEAR) && sceneryBackground(BOSS_DYING));
+    state.phase = TITLE;
+    renderWorldBegin(&state);
+    assert(complete() > 60 && viewport.pPalette[0] == 0x001);
     puts("PASS cold/repair/retap/fire/invalidation/GAMEOVER; 8 rows or 2 glyphs");
 }
 '''

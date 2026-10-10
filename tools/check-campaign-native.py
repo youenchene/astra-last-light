@@ -136,16 +136,16 @@ def hero_pixels(image, x=32, y=126):
 def check_scene_pair(early, late, scene):
     # Validate every pixel. Only exact, source-checked hero animation pixels
     # may differ in any story; the ship remains stationary and source-exact.
-    changing = hero_pixels(early) | hero_pixels(late)
+    changing = set() if scene == 12 else hero_pixels(early) | hero_pixels(late)
     require(all(early.pixel(x, y) == late.pixel(x, y)
                 for y in range(256) for x in range(320) if (x, y) not in changing),
             f"scene {scene}: window or frozen exterior changed")
-    colors, panels = artwork("campaign_manga")
-    colors["."] = early.pixel(0, 56)
-    panel = panels[4 if scene == 12 else scene // 3]
-    require(all(early.pixel(176 + x, 72 + y) == colors[panel[y * 96 // 64][x * 160 // 112]]
-                for y in range(64) for x in range(112)),
-            f"scene {scene}: compact panel differs from original 112x64 source")
+    from selected_rd_oracle import scene_rgb
+    panel = scene_rgb(scene)
+    x0, y0 = (0, 32) if scene == 12 else (162, 68)
+    require(all(early.pixel(x0 + x, y0 + y) == color
+                for y, row in enumerate(panel) for x, color in enumerate(row)),
+            f"scene {scene}: panel differs from original selected RD source")
 
 
 def check_images(directory, text):
@@ -163,6 +163,8 @@ def check_images(directory, text):
     for scene in range(13):
         early, late = images[f"scene{scene:02}"], images[f"scene{scene:02}_late"]
         check_scene_pair(early, late, scene)
+        if scene == 12:
+            continue  # Full ending pixels, including black margins, checked separately.
         require(any(early.pixel(x, y) != early.pixel(0, 29)
                     for y in range(29, 53) for x in range(320)),
                 f"scene {scene}: gameplay scenery missing")

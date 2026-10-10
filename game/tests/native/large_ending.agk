@@ -1,0 +1,76 @@
+# NON-SHIPPING quota/collision fixture; phases and acknowledgements remain real.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK qa_scene=0 " 1000
+screenshot scene00
+wait-serial "AGK qa_scene_static=0 " 100
+screenshot scene00_late
+wait-serial "AGK qa_scene=1 " 1000
+screenshot scene01
+wait-serial "AGK qa_scene_static=1 " 100
+screenshot scene01_late
+wait-serial "AGK qa_scene=2 " 1000
+screenshot scene02
+wait-serial "AGK qa_scene_static=2 " 100
+screenshot scene02_late
+wait-serial "AGK qa_scene=3 " 1000
+screenshot scene03
+wait-serial "AGK qa_scene_static=3 " 100
+screenshot scene03_late
+wait-serial "AGK qa_scene=4 " 1000
+screenshot scene04
+wait-serial "AGK qa_scene_static=4 " 100
+screenshot scene04_late
+wait-serial "AGK qa_scene=5 " 1000
+screenshot scene05
+wait-serial "AGK qa_scene_static=5 " 100
+screenshot scene05_late
+wait-serial "AGK qa_scene=6 " 1000
+screenshot scene06
+wait-serial "AGK qa_scene_static=6 " 100
+screenshot scene06_late
+wait-serial "AGK qa_scene=7 " 1000
+screenshot scene07
+wait-serial "AGK qa_scene_static=7 " 100
+screenshot scene07_late
+wait-serial "AGK qa_scene=8 " 1000
+screenshot scene08
+wait-serial "AGK qa_scene_static=8 " 100
+screenshot scene08_late
+wait-serial "AGK qa_scene=9 " 1000
+screenshot scene09
+wait-serial "AGK qa_scene_static=9 " 100
+screenshot scene09_late
+wait-serial "AGK qa_scene=10 " 1000
+screenshot scene10
+wait-serial "AGK qa_scene_static=10 " 100
+screenshot scene10_late
+wait-serial "AGK qa_scene=11 " 1000
+screenshot scene11
+wait-serial "AGK qa_scene_static=11 " 100
+screenshot scene11_late
+# Hold during WIN preparation: it cannot arm or dismiss the ending.
+wait-serial "AGK qa_transition=3 level=4 phase=5 " 300
+hold fire
+wait-serial "AGK cut_visible=22 phase=5 " 1000
+screenshot ending_first
+wait-serial "AGK qa_scene=12 " 1000
+screenshot scene12
+wait 1
+screenshot ending_next_buffer
+wait-serial "AGK qa_scene_static=12 " 100
+screenshot scene12_late
+wait-serial "AGK qa_complete=8191 " 300
+wait 100
+screenshot ending_held
+release
+wait 2
+screenshot ending_released
+press fire 1
+wait-serial "AGK scene_ready" 1000
+screenshot restarted_opening
+key 0x45
+wait-serial "AGK title_ready" 600
+screenshot returned_title
+expect-serial "AGK qa_NON_SHIPPING_injected_fixture"
+expect-no-serial "qa_fail=|bullet_hidden=[1-9]|ERR|STACK SMASHED|allocation failure"

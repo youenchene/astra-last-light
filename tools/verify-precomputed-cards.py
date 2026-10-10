@@ -13,41 +13,46 @@ sys.path.insert(0, str(KIT/'harness'))
 from agk.image import Image
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('directories', nargs='+', type=Path)
-    args = parser.parse_args()
+def check_scene(path, scene):
     spec = importlib.util.spec_from_file_location('oracle', ROOT/'game/tests/unit/test_presentation_rows.py')
     oracle = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(oracle)
-    frames = []
-    for line in (ROOT/'game/art/campaign_manga_compact.txt').read_text().splitlines():
-        if line == 'frame':
-            frames.append([])
-        elif len(line) == 112 and set(line) <= set('.123456789ABCDEF'):
-            frames[-1].append(['.123456789ABCDEF'.index(ch) for ch in line])
-    assert len(frames) == 5 and all(len(frame) == 64 for frame in frames)
-    colors = {int(index): int(value,16) for index,value in re.findall(
+    from selected_rd_oracle import original_panels
+    pixels = oracle.reference_card(scene)
+    panel = 4 if scene == 12 else scene // 3
+    x0, y0 = (0, 32) if scene == 12 else (162, 68)
+    for y, row in enumerate(original_panels()[panel]):
+        pixels[y0+y][x0:x0+len(row)] = row
+    if scene != 12:
+        for y in range(68, 152):
+            for x in (160, 161, 302, 303):
+                pixels[y][x] = 0
+    palette = {int(index): int(value,16) for index,value in re.findall(
         r'^(\d+)\s+0x([0-9a-fA-F]{3})\b', (ROOT/'game/art/palette.txt').read_text(), re.M)}
-    entries = re.findall(r'\{"[^"]+", "[^"]+", "[^"]+", (\d), (\d)\}',
-                         (ROOT/'game/src/render_scenes.c').read_text())
+    palette[0] = 0 if scene == 12 else (0x001, 0x102, 0x101, 0x001)[scene//3]
+    palette[4] = 0xbdf
+    rgb = {ink: tuple((value >> shift & 15)*17 for shift in (8,4,0))
+           for ink,value in palette.items()}
+    image = Image.load_png(path)
+    assert (image.width, image.height) == (320, 256), path
+    count = 0
+    for y in (range(256) if scene == 12 else range(56,192)):
+        for x in (range(320) if scene == 12 else range(152,312)):
+            assert image.pixel(x,y) == rgb[pixels[y][x]], (path,x,y)
+            count += 1
+    return count
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('directories', nargs='+', type=Path)
+    parser.add_argument('--scene', type=int, choices=range(13))
+    args = parser.parse_args()
     for folder in args.directories:
         count = 0
-        for scene in range(13):
-            pixels = oracle.reference_card(scene)
-            panel = int(entries[scene][0])
-            for y in range(64):
-                pixels[72+y][176:288] = frames[panel][y]
-            palette = dict(colors)
-            palette[0] = (0x001, 0x102, 0x101, 0x001)[min(scene//3,3)]
-            palette[4] = 0xbdf
-            rgb = {ink: tuple((value >> shift & 15)*17 for shift in (8,4,0))
-                   for ink,value in palette.items()}
+        scenes = range(13) if args.scene is None else [args.scene]
+        for scene in scenes:
             for suffix in ('', '_late'):
                 path = folder/f'scene{scene:02}{suffix}.screen.png'
-                image = Image.load_png(path)
-                for y in range(56,192):
-                    for x in range(152,312):
-                        assert image.pixel(x,y) == rgb[pixels[y][x]], (path,x,y)
-                        count += 1
-        print(f'PASS {folder}: {count} exact native window pixels, all 13 cards twice')
+                count += check_scene(path, scene)
+        print(f'PASS {folder}: {count} exact native pixels, {len(scenes)} scenes twice')

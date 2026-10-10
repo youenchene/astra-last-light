@@ -11,7 +11,7 @@ typedef struct {
 } tScene;
 
 /* IDs are the portable logic contract, not art-frame numbers. These are five
- * original local plates, reused with thirteen distinct narrative treatments. */
+ * selected Retro Diffusion plates, reused with thirteen narrative treatments. */
 static const tScene s_scenes[13] = {
 	{"ORBITAL GRAVEYARD", "THE WRECKS STILL CALL OUR NAMES", "KEEP THE LAST LIGHT ALIVE", 0, 0},
 	{"SALVAGE CLAW", "A REACTOR WAKES AMONG THE DEAD", "THOSE JAWS WILL NOT TAKE US", 0, 1},
@@ -27,7 +27,7 @@ static const tScene s_scenes[13] = {
 	{"THE CROWN FALLS", "THE REACTOR GOES DARK", "LOOK BEYOND THE FALLING TOWERS", 3, 2},
 	{"DAWN RESTORED", "THE LAST LIGHT BURNS AGAIN", "WE MADE IT HOME", 4, 3}
 };
-static tBitMap *s_screen, *s_manga;
+static tBitMap *s_screen;
 static tBitMap *s_buffers[2];
 static UBYTE s_id, s_active, s_buffer;
 static UWORD s_epoch;
@@ -48,11 +48,10 @@ void renderScenesBind(tBitMap *screen) {
 }
 
 UBYTE renderScenesCreate(tBitMap *front, tBitMap *screen, tVPort *viewport) {
-	if(!screen || !viewport || s_manga) return 0;
+	if(!front || !screen || !viewport) return 0;
 	s_screen = screen;
 	s_buffers[0] = screen; s_buffers[1] = front;
-	s_manga = artCampaignMangaCreate();
-	return stripValid(s_manga, 112, 320) && bitmapIsChip(s_manga);
+	return 1;
 }
 
 void renderScenesBegin(UBYTE id, UWORD epoch) {
@@ -66,18 +65,18 @@ void renderScenesBegin(UBYTE id, UWORD epoch) {
 }
 
 void renderScenesStep(void) {
-	if(!s_active || !s_manga) return;
+	if(!s_active) return;
 	const tScene *scene = &s_scenes[s_id];
 	if(s_ready) return;
 	if(s_stage == 0) {
 		blitWait();
 		s_row = presentationCardStep(s_screen->Planes, s_screen->BytesPerRow, s_id, s_row);
-		if(s_row == SCENE_H) { s_row = 0; ++s_stage; }
+		if(s_row == presentationCardHeight(s_id)) { s_row = 0; ++s_stage; }
 	}
 	else if(s_stage == 1) {
-		blitCopy(s_manga, 0, scene->panel * 64 + s_row,
-			s_screen, 176, 72 + s_row, 112, 8, MINTERM_COOKIE);
-		if((s_row += 8) == 64) { blitWait(); s_ready = 1; }
+		blitWait();
+		s_row = presentationMangaStep(s_screen->Planes, s_screen->BytesPerRow, scene->panel, s_row);
+		if(s_row == presentationMangaHeight(scene->panel)) s_ready = 1;
 	}
 }
 
@@ -99,7 +98,6 @@ UWORD renderScenesReadyEpoch(void) { return s_epoch; }
 
 void renderScenesDestroy(void) {
 	blitWait();
-	if(s_manga) bitmapDestroy(s_manga);
-	s_manga = s_screen = 0;
+	s_screen = 0;
 	s_active = s_ready = 0;
 }

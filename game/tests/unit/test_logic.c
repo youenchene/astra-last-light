@@ -2187,7 +2187,7 @@ static void testManualPauseAllPhases(void) {
 			actual.boss.flashTicks = before.boss.flashTicks;
 			memcpy(actual.effects, before.effects, sizeof(actual.effects));
 			CHECK(!memcmp(&actual, &before, sizeof(actual)));
-			CHECK(heroPresentationVisible(&s) == (phases[i] != HERO_DYING));
+			CHECK(heroPresentationVisible(&s) == (phases[i] != HERO_DYING && phases[i] != WIN));
 		}
 		CHECK(s.frame == before.frame + 101 && !s.effects[0].active && !s.boss.flashTicks);
 		logicTogglePause(&s); CHECK(!s.manualPause);
@@ -2237,8 +2237,8 @@ static void testPauseChargeAndHeroContinuity(void) {
 	for(unsigned i = 0; i < 4; ++i) {
 		s.phase = stories[i]; s.phaseFrame = 0; s.sceneReady = 0; s.x = 200;
 		logicUpdate(&s, &right);
-		CHECK(s.x == 200 && heroPresentationVisible(&s));
-		CHECK(heroPresentationX(&s) == (stories[i] == BOSS_DYING ? 200 : 120));
+		CHECK(s.x == 200 && heroPresentationVisible(&s) == (stories[i] != WIN));
+		CHECK(heroPresentationX(&s) == (stories[i] == BOSS_DYING || stories[i] == WIN ? 200 : 120));
 	}
 	s.phase = HERO_DYING; CHECK(!heroPresentationVisible(&s));
 	s.phase = GAMEOVER; CHECK(!heroPresentationVisible(&s));

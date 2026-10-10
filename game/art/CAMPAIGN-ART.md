@@ -1,5 +1,11 @@
 # Original local campaign pixel art
 
+Current runtime story artwork uses the user's five selected Retro Diffusion
+masters in `selected-rd/`, enlarged offline to 140×84 for ordinary scenes and
+320×192 for the dedicated ending, with bounded direct row decoding. See
+[selection, conversion and validation](../../docs/selected-rd-story-images.md).
+The procedural sources and provenance below are preserved historical artwork.
+
 ## Provenance
 
 These six text-art sources are **new, original, locally authored procedural

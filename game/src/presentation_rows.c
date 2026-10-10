@@ -7,7 +7,7 @@
 #include <agk/debug.h>
 /* Diagnostic build only. Measure the decoder including music interrupts;
  * serial reporting happens afterwards and is not counted as decoder work. */
-static struct { UWORD calls, peak; ULONG total; } s_timing[2];
+static struct { UWORD calls, peak; ULONG total; } s_timing[3];
 static ULONG s_startVblank;
 static UWORD s_startLine;
 static UWORD sampleLine(ULONG *vblank) {
@@ -40,21 +40,42 @@ static void timingEnd(UBYTE kind, UBYTE id, UWORD row, UWORD last) {
 #define timingEnd(kind, id, row, last) ((void)0)
 #endif
 
-/* Generated runs are nonzero and sum to span for each of four planes. Bound
- * both decoding and output even if an invalid generated stream is supplied. */
+/* Trusted, host-validated generated commands never cross a plane. Count is in
+ * the low six bits: repeat, prior-framebuffer copy, literal, packed literal.
+ * Zero escapes to a same-column previous-row copy; all references point only
+ * into bytes already decoded for this layer on this bound physical bitmap. */
 static void rowWrite(unsigned char *const planes[4], unsigned short stride,
-	unsigned short y, unsigned char x, unsigned char span, unsigned short offset) {
-	const unsigned char *source = s_presentationBytes + offset + 1;
+	unsigned short y, unsigned char x, unsigned char span, unsigned short id,
+	const unsigned char *literals) {
 	unsigned short position = y * stride + x;
 	for(unsigned char plane = 0; plane < 4; ++plane) {
+		const unsigned char *source = s_presentationBytes + s_presentationPlanes[id][plane];
 		unsigned char *dest = planes[plane] + position;
 		unsigned char remaining = span;
 		for(unsigned char op = 0; remaining && op < span; ++op) {
-			unsigned char token = *source++, count = token & 127;
+			unsigned char token = *source++, count = token ? token & 63 : *source++;
 			if(!count || count > remaining) return;
 			remaining -= count;
-			if(token & 128) {
+			if(!token) {
+				while(count--) { *dest = *(dest - stride); ++dest; }
+			}
+			else if((token & 192) == 192) {
+				while(count >= 2) {
+					unsigned char packed = *source++;
+					*dest++ = literals[packed >> 4];
+					*dest++ = literals[packed & 15];
+					count -= 2;
+				}
+				if(count) *dest++ = literals[*source++ >> 4];
+			}
+			else if(token & 128) {
 				while(count--) *dest++ = *source++;
+			}
+			else if(token & 64) {
+				unsigned short from = *source++ * stride;
+				from += *source++;
+				const unsigned char *copy = planes[0] + from;
+				while(count--) *dest++ = *copy++;
 			}
 			else {
 				unsigned char value = *source++;
@@ -64,21 +85,39 @@ static void rowWrite(unsigned char *const planes[4], unsigned short stride,
 	}
 }
 
-unsigned short presentationCardStep(unsigned char *const planes[4],
-	unsigned short stride, unsigned char id, unsigned short row) {
-	if(id >= 13 || row >= 136) return row;
-	timingBegin(0, row);
-	unsigned short end = row + PRESENTATION_BYTE_BUDGET / 80;
-	if(end > 136) end = 136;
+static unsigned short layerStep(unsigned char *const planes[4], unsigned short stride,
+	const tPresentationLayout *layout, const unsigned short *rows, unsigned short row) {
+	unsigned short bytes = PRESENTATION_BYTE_BUDGET;
+	unsigned short costBytes = layout->span * 4;
 	unsigned char operations = PRESENTATION_OP_BUDGET;
-	while(row < end) {
-		unsigned char cost = s_presentationBytes[s_cardRows[id][row]];
+	while(row < layout->height && bytes >= costBytes) {
+		unsigned short offset = rows[layout->first + row];
+		unsigned char cost = s_presentationCosts[offset];
 		if(cost > operations) break;
 		operations -= cost;
-		rowWrite(planes, stride, 56 + row, 19, 20, s_cardRows[id][row]);
+		bytes -= costBytes;
+		unsigned short y = layout->y + row;
+		if(row >= layout->split) y += layout->gap;
+		rowWrite(planes, stride, y, layout->x, layout->span, offset, s_presentationLiterals[layout->literals]);
 		++row;
 	}
-	timingEnd(0, id, row, 136);
+	return row;
+}
+
+unsigned short presentationCardHeight(unsigned char id) {
+	return id < 13 ? s_cardLayouts[id].height : 0;
+}
+
+unsigned short presentationMangaHeight(unsigned char panel) {
+	return panel < 5 ? s_mangaLayouts[panel].height : 0;
+}
+
+unsigned short presentationCardStep(unsigned char *const planes[4],
+	unsigned short stride, unsigned char id, unsigned short row) {
+	if(id >= 13 || row >= s_cardLayouts[id].height) return row;
+	timingBegin(0, row);
+	row = layerStep(planes, stride, &s_cardLayouts[id], s_cardRows, row);
+	timingEnd(0, id, row, s_cardLayouts[id].height);
 	return row;
 }
 
@@ -90,13 +129,23 @@ unsigned short presentationHudStep(unsigned char *const planes[4],
 	if(end > 40) end = 40;
 	unsigned char operations = PRESENTATION_OP_BUDGET;
 	while(row < end) {
-		unsigned char cost = s_presentationBytes[s_hudRows[variant][row]];
+		unsigned short offset = s_hudRows[variant * 40 + row];
+		unsigned char cost = s_presentationCosts[offset];
 		if(cost > operations) break;
 		operations -= cost;
 		rowWrite(planes, stride, row < 29 ? row : row + 216,
-			0, 40, s_hudRows[variant][row]);
+			0, 40, offset, s_presentationLiterals[0]);
 		++row;
 	}
 	timingEnd(1, variant, row, 40);
+	return row;
+}
+
+unsigned short presentationMangaStep(unsigned char *const planes[4],
+	unsigned short stride, unsigned char panel, unsigned short row) {
+	if(panel >= 5 || row >= s_mangaLayouts[panel].height) return row;
+	timingBegin(2, row);
+	row = layerStep(planes, stride, &s_mangaLayouts[panel], s_mangaRows, row);
+	timingEnd(2, panel, row, s_mangaLayouts[panel].height);
 	return row;
 }

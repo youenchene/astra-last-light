@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = ('tools/make-presentation.py', 'src/render_scenes.c', 'src/scene_font.h',
-          'src/logic.c', 'art/font.txt')
+          'src/logic.c', 'art/font.txt', 'art/palette.txt', 'tools/selected_rd.py')
 
 
 class PresentationGeneratorTests(unittest.TestCase):
@@ -21,6 +21,7 @@ class PresentationGeneratorTests(unittest.TestCase):
             target = destination / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / 'game' / name, target)
+        shutil.copytree(ROOT / 'game/art/selected-rd', destination / 'art/selected-rd')
         return destination / 'tools/make-presentation.py'
 
     def test_both_entry_points_from_unrelated_cwd(self):

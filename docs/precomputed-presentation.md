@@ -1,5 +1,15 @@
 # Precomputed static presentation
 
+Latest implementation uses five [selected RD image tables](selected-rd-story-images.md):
+140×84 ordinary panels and a dedicated 320×192 WIN. Mixed-height descriptors,
+shared plane streams and byte/cross-row compression retain the 320-byte/64-command
+bound. Total generated data is 42,225 bytes, in a separate ordinary-data hunk to
+avoid A500 code-hunk admission/placement failure. The manga CHIP strip is removed.
+Both profiles pass all 13 native source-pixel scenes and ending input/cleanup;
+production and probe startup pass, and both diagnostic flags are restored OFF.
+Opening first/both visibility is 137/274 PAL vblanks. Full evidence, memory and
+remaining performance limits are in the linked record. Timings below are historical.
+
 ## Subsequent pause/panel change
 
 The latest source uses 112×64 panels and relocated static frame/dialogue rows.

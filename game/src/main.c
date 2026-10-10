@@ -6,6 +6,7 @@
 #include <ace/managers/viewport/simplebuffer.h>
 #include <ace/utils/custom.h>
 #include <hardware/dmabits.h>
+#include <proto/exec.h>
 #include <agk/debug.h>
 #include <agk/perf.h>
 #include "logic.h"
@@ -73,6 +74,10 @@ void genericCreate(void) {
 	keyCreate();
 	joyOpen();
 	logicInit(&s_sState);
+	agkState("display_memory", 0);
+	agkState("chip_free", memGetFreeChipSize());
+	agkState("chip_largest", AvailMem(MEMF_CHIP | MEMF_LARGEST));
+	agkState("ram_free", memGetFreeSize()); agkEnd();
 	if(!createDisplay() || !renderCreate(s_pView, s_pVPort, s_pBuffer)) {
 		agkPrint("AGK allocation failure\n");
 		gameExit();

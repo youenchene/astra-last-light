@@ -40,7 +40,8 @@ key 0x19
 wait 4
 screenshot play_paused
 hold right
-wait 60
+# Three periodic 50-tick samples regardless of the entry heartbeat phase.
+wait 160
 screenshot play_paused_late
 release fire
 key 0x19

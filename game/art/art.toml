@@ -65,8 +65,3 @@ depth = 4
 source = "campaign_fx64.txt"
 kind = "bob"
 depth = 4
-
-[campaign_manga]
-source = "campaign_manga_compact.txt"
-kind = "bitmap"
-depth = 4

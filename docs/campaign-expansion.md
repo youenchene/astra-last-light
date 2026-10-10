@@ -2,6 +2,17 @@
 
 ## Status
 
+### Current larger selected images / dedicated WIN — functional scope passed
+
+Ordinary selected manga is **140×84**, with a dedicated **320×192** ending and
+no WIN HUD/world/sprites. Both-profile source checks cover all 13 mappings,
+held-fire/restart/ESC, ordinary scene dwell and death pauses. Production and
+probe-ON startup now fit unchanged A500 hardware after the loader-hunk correction;
+production OFF is restored. See [current geometry, memory and complete evidence](selected-rd-story-images.md).
+The known pause-sampling harness issue is corrected without relaxing assertions.
+Performance optimization is deferred until the parent commit; global 50fps
+acceptance remains blocked. The following revision notes are historical.
+
 ### Latest pause/ship/panel revision — native campaign blocked
 
 P pause, narrative ship visibility and 112×64 offline panels are implemented.

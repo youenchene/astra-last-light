@@ -29,7 +29,9 @@ static tPhase s_ePhase;
 static UBYTE s_ubDecorTick, s_topScroll, s_bottomScroll;
 static UWORD s_pStarX[STAR_COUNT], s_pStarRow[STAR_COUNT];
 static UWORD s_uwOriginalStarColor;
-static ULONG s_pGlyphMasks[3][36][28];
+/* Cache horizontal scaling only; vertical repetitions share their source row.
+ * This removes 9072 bytes of redundant resident storage at cold-load time. */
+static ULONG s_pGlyphMasks[3][36][7];
 static UBYTE s_hasScroll;
 /* Physical pixel provenance, deliberately outside the copied command history.
  * Partial plate/caption repair cannot damage the stable title exterior. */
@@ -71,7 +73,7 @@ static UBYTE s_commandCount;
 static UBYTE combatBackground(tPhase phase);
 static UBYTE sceneryBackground(tPhase phase) {
 	return combatBackground(phase) || phase == SECTOR_INTRO || phase == BOSS_INTRO ||
-		phase == CLEAR || phase == WIN;
+		phase == CLEAR;
 }
 
 
@@ -96,8 +98,7 @@ static void fontMasksCreate(void) {
 					if(pixelRead(s_pFont, col, glyph * 7 + row))
 						for(UBYTE dx = 0; dx < scale; ++dx)
 							mask |= 0x80000000UL >> (col * scale + dx);
-				for(UBYTE dy = 0; dy < scale; ++dy)
-					s_pGlyphMasks[size][glyph][row * scale + dy] = mask;
+				s_pGlyphMasks[size][glyph][row] = mask;
 			}
 	}
 }
@@ -188,7 +189,7 @@ static void textDraw(UWORD x, UWORD y, const char *pText, UBYTE scale, UBYTE col
 			(letter >= '0' && letter <= '9' ? letter - '0' + 26 : 255);
 		if(glyph != 255) {
 			for(UWORD row = 0; row < 7 * scale; ++row) {
-				ULONG bits = s_pGlyphMasks[size][glyph][row];
+				ULONG bits = s_pGlyphMasks[size][glyph][row >> size];
 				bits >>= x & 7;
 				UWORD sy = y + row;
 				UWORD offset = (sy << 7) + (sy << 5) + (x >> 3);
@@ -589,11 +590,11 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 }
 
 void renderWorldHud(const tGameState *pState) {
-	if(s_isValid && pState->phase != TITLE) hudDraw(pState, 0);
+	if(s_isValid && pState->phase != TITLE && pState->phase != WIN) hudDraw(pState, 0);
 }
 
 void renderWorldPause(const tGameState *state) {
-	if(!s_isValid || HISTORY.paused == state->manualPause) return;
+	if(!s_isValid || state->phase == WIN || HISTORY.paused == state->manualPause) return;
 	HISTORY.paused = state->manualPause;
 	if(state->manualPause) {
 		blitRect(s_pScreen, 8, 18, 32, 7, 1);
@@ -652,13 +653,13 @@ void renderWorldBegin(const tGameState *pState) {
 	HISTORY.paused = 0;
 	s_prepareStage = 0; s_prepareRow = 0;
 	s_commandCount = s_command = 0; s_commandCursor = 0;
-	s_pVPort->pPalette[0] = space[level];
+	s_pVPort->pPalette[0] = s_ePhase == WIN ? 0 : space[level];
 	s_pVPort->pPalette[4] = s_ePhase == TITLE ? s_uwOriginalStarColor : 0xbdf;
 	if(s_ePhase == TITLE) {
 		queueRect(0, 224, WORLD_W, 8, 0);
 		queueCentered(224, g_stageNames[level], 1, 5);
 	}
-	else {
+	else if(s_ePhase != WIN) {
 	queueNumber(308, 6, level + 1, 1);
 	queueNumber(50, 249, pState->weaponLevel, 1);
 	queueNumber(98, 249, pState->speedLevel, 1);
@@ -709,7 +710,13 @@ void renderWorldStep(void) {
 	if(s_prepareStage == 0) {
 		blitRect(s_pScreen, 0, s_prepareRow, WORLD_W, 8, 0);
 		s_prepareRow += 8;
-		if(s_prepareRow == WORLD_H) { ++s_prepareStage; s_prepareRow = 0; }
+		if(s_prepareRow == WORLD_H) {
+			/* WIN clears each physical target, then bypasses decor, HUD, commands
+			 * and stars entirely. Its dedicated scene owns only art and margins. */
+			if(s_ePhase == WIN) { blitWait(); s_isValid = 1; s_preparing = 0; }
+			else ++s_prepareStage;
+			s_prepareRow = 0;
+		}
 	}
 	else if(s_prepareStage == 1) {
 		if(s_ePhase == TITLE) {

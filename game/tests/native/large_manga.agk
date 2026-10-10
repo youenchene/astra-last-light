@@ -1,0 +1,15 @@
+# Production first/second-target manga pixels and ordinary PLAY cleanup.
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK cut_visible=2 phase=6" 1000
+screenshot opening_first
+wait-serial "AGK scene_ready" 1000
+screenshot scene00
+wait 40
+screenshot scene00_late
+wait-serial "AGK combat_ready" 1000
+screenshot combat_ready
+key 0x45
+wait-serial "AGK title_ready" 600
+screenshot returned_title
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

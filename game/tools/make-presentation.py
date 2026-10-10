@@ -2,11 +2,15 @@
 """Compile static presentation pixels into shared, byte-run encoded planar rows.
 
 Source text remains authored in render_scenes.c / logic.c; the two source fonts
-are inputs only. No font atlas, manga copy, or framebuffer is emitted.
+are inputs only. Five shared selected manga row tables avoid thirteen art copies.
 """
 import argparse
+from collections import Counter
 from pathlib import Path
 import re
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from selected_rd import panels
 
 GAME_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = GAME_ROOT / "art/presentation-rows.h"
@@ -59,13 +63,20 @@ def layers():
     scenes, names, small, font = inputs()
     cards, hud = [], []
     for index, (title, caption, reply, panel, style) in enumerate(scenes):
+        if index == 12:
+            image = [[0] * 320 for _ in range(256)]
+            text(image, (320 - len(title) * 6 + 1) // 2, 12, title, 14, font, 5)
+            prompt = 'FIRE TO RESTART'
+            text(image, (320 - len(prompt) * 6 + 1) // 2, 237, prompt, 6, font, 5)
+            cards.append(image[:32] + image[224:])
+            continue
         image = [[0] * 160 for _ in range(136)]
         accent = [5, 11, 7, 14][int(style)]
-        rect(image, 20, 12, 120, 72, accent)
-        if index == 12 or index % 3:
+        rect(image, 6, 10, 148, 88, accent)
+        if index % 3:
             wrapped(image, 4, title, accent, small)
-        wrapped(image, 88, caption, 6, small)
-        wrapped(image, 108, reply, 14, small)
+        wrapped(image, 100, caption, 6, small)
+        wrapped(image, 118, reply, 14, small)
         cards.append(image)
     for name in names:
         for ready in range(2):
@@ -91,63 +102,151 @@ def planar(row):
                  for plane in range(4) for x in range(0, len(row), 8))
 
 
-def encode(row):
-    # Literal blocks avoid two-byte runs for dense glyph data. Commands never
-    # cross plane boundaries; prefix their exact count for bounded scheduling.
-    data, operations = [], 0
-    span = len(row) // 4
-    for start in range(0, len(row), span):
-        end = start + span
-        while start < end:
-            stop = start + 1
-            while stop < end and row[stop] == row[start]:
-                stop += 1
-            if stop - start >= 3:
-                data.extend((stop - start, row[start]))
-                start = stop
-            else:
-                stop = start + 1
-                while stop < end:
-                    if stop + 2 < end and row[stop] == row[stop+1] == row[stop+2]:
-                        break
-                    stop += 1
-                data.append(128 | (stop - start))
-                data.extend(row[start:stop])
-                start = stop
-            operations += 1
+def encode(row, previous=None, dictionary=None, literals=()):
+    # Offline shortest encoding: repeat / prior-framebuffer reference / literal /
+    # packed-literal (two arbitrary dictionary bytes per input byte). Token zero
+    # escapes to a previous-row copy. No command crosses a plane or references
+    # uninitialized pixels. This is byte compression, never runtime resizing.
+    best = [(0, 0, b'')] * (len(row) + 1)
+    for start in range(len(row) - 1, -1, -1):
+        choices = []
+        matches = {}
+        if dictionary is not None:
+            for source, address in dictionary.get(row[start:start+4], {}).items():
+                count = 4
+                while count < min(len(source), len(row) - start) and source[count] == row[start+count]:
+                    count += 1
+                for length in range(4, count + 1):
+                    matches[length] = address
+        for count in range(1, len(row) - start + 1):
+            stop = start + count
+            commands = [bytes([128 | count]) + row[start:stop]]
+            if all(value in literals for value in row[start:stop]):
+                codes = [literals.index(value) for value in row[start:stop]]
+                if len(codes) & 1:
+                    codes.append(0)
+                commands.append(bytes([192 | count]) + bytes(
+                    codes[i] << 4 | codes[i+1] for i in range(0, len(codes), 2)))
+            if row[start:stop] == bytes([row[start]]) * count:
+                commands.append(bytes([count, row[start]]))
+            if previous is not None and row[start:stop] == previous[start:stop]:
+                commands.append(bytes([0, count]))
+            if count in matches:
+                address = matches[count]
+                commands.append(bytes([64 | count, address >> 8, address & 255]))
+            size, operations, suffix = best[stop]
+            choices.extend((len(command) + size, operations + 1, command + suffix)
+                           for command in commands)
+        best[start] = min(choices)
+    _, operations, data = best[0]
     assert 0 < operations <= 64
-    return bytes([operations] + data)
+    return bytes([operations]) + data
 
 
 def generate():
     cards, hud = layers()
+    manga = panels()
+    literal_tables = []
+    for images in (cards + hud, *([image] for image in manga)):
+        frequencies = Counter(value for image in images for pixels in image for value in planar(pixels))
+        literal_tables.append(tuple(value for value, _ in sorted(
+            frequencies.items(), key=lambda pair: (-pair[1], pair[0]))[:16]))
     pool, offsets = bytearray(), {}
+    rows, row_ids, costs = [], {}, []
     tables = []
-    for group in (cards, hud):
+    for group in (cards, hud, manga):
         table = []
-        for image in group:
+        for image_index, image in enumerate(group):
+            literals = literal_tables[image_index + 1 if group is manga else 0]
             indices = []
-            for pixels in image:
-                row = encode(planar(pixels))
-                if row not in offsets:
-                    offsets[row] = len(pool)
-                    pool.extend(row)
-                indices.append(offsets[row])
+            previous = None
+            dictionary = {}
+            for row_index, pixels in enumerate(image):
+                raw = planar(pixels)
+                if group is cards:
+                    y, x = (row_index + (192 if row_index >= 32 else 0), 0) if image_index == 12 else (56 + row_index, 19)
+                elif group is hud:
+                    y, x = row_index + (216 if row_index >= 29 else 0), 0
+                else:
+                    y, x = (32 + row_index, 0) if image_index == 4 else (68 + row_index, 20)
+                # The two margin/HUD bands are not adjacent in the framebuffer.
+                if (group is hud and row_index == 29) or (group is cards and len(image) == 64 and row_index == 32):
+                    previous = None
+                span = len(raw) // 4
+                planes, cost = [], 0
+                for start in range(0, len(raw), span):
+                    plane = raw[start:start+span]
+                    encoded = encode(plane, None if previous is None else previous[start:start+span], dictionary, literals)
+                    cost += encoded[0]
+                    stream = encoded[1:]
+                    if stream not in offsets:
+                        offsets[stream] = len(pool)
+                        pool.extend(stream)
+                    planes.append(offsets[stream])
+                    for column in range(span - 3):
+                        address = (y << 8) | ((start // span) * 40 + x + column)
+                        dictionary.setdefault(plane[column:column+4], {}).setdefault(plane[column:], address)
+                assert 0 < cost <= 64
+                key = tuple(planes)
+                if key not in row_ids:
+                    row_ids[key] = len(rows)
+                    rows.append(key)
+                    costs.append(cost)
+                indices.append(row_ids[key])
+                previous = raw
             table.append(indices)
         tables.append(table)
     assert len(pool) < 65536
+    assert len(rows) < 65536
     lines = ['/* Generated by tools/make-presentation.py; do not edit. */',
              '#ifndef ASTRA_PRESENTATION_ROWS_H', '#define ASTRA_PRESENTATION_ROWS_H',
-             f'static const unsigned char s_presentationBytes[{len(pool)}] = {{']
+             '/* Keep this read-only payload out of the monolithic code hunk.',
+             ' * AmigaDOS must fit each hunk into one physical memory bank. */',
+             '#ifdef AMIGA', '#define PRESENTATION_DATA __attribute__((section(".data")))',
+             '#else', '#define PRESENTATION_DATA', '#endif',
+             f'static const unsigned char s_presentationBytes[{len(pool)}] PRESENTATION_DATA = {{']
     for i in range(0, len(pool), 24):
         lines.append('\t' + ','.join(str(v) for v in pool[i:i+24]) + ',')
     lines.append('};')
-    for name, table in zip(('s_cardRows', 's_hudRows'), tables):
-        lines.append(f'static const unsigned short {name}[{len(table)}][{len(table[0])}] = {{')
-        lines.extend('\t{' + ','.join(map(str, row)) + '},' for row in table)
+    lines.append('static const unsigned char s_presentationLiterals[6][16] PRESENTATION_DATA = {')
+    lines.extend('\t{' + ','.join(map(str, literals)) + '},' for literals in literal_tables)
+    lines.append('};')
+    lines.append(f'static const unsigned short s_presentationPlanes[{len(rows)}][4] PRESENTATION_DATA = {{')
+    lines.extend('\t{' + ','.join(map(str, row)) + '},' for row in rows)
+    lines.append('};')
+    lines.append(f'static const unsigned char s_presentationCosts[{len(costs)}] PRESENTATION_DATA = {{')
+    for start in range(0, len(costs), 24):
+        lines.append('\t' + ','.join(map(str, costs[start:start+24])) + ',')
+    lines.append('};')
+    lines.extend(('typedef struct {',
+                  '\tunsigned short first, height, y;',
+                  '\tunsigned char x, span;',
+                  '\tunsigned short split, gap, literals;',
+                  '} tPresentationLayout;'))
+    for name, table in zip(('s_card', 's_hud', 's_manga'), tables):
+        flat = [offset for image in table for offset in image]
+        assert len(flat) < 65536
+        lines.append(f'static const unsigned short {name}Rows[{len(flat)}] PRESENTATION_DATA = {{')
+        for start in range(0, len(flat), 24):
+            lines.append('\t' + ','.join(map(str, flat[start:start+24])) + ',')
         lines.append('};')
-    lines.extend(('#endif', ''))
-    size = len(pool) + sum(len(row) * 2 for table in tables for row in table)
+        if name == 's_hud':
+            continue
+        lines.append(f'static const tPresentationLayout {name}Layouts[{len(table)}] PRESENTATION_DATA = {{')
+        first = 0
+        for index, image in enumerate(table):
+            if name == 's_card':
+                y, x, span, split, gap = (0, 0, 40, 32, 192) if index == 12 else (56, 19, 20, 136, 0)
+            else:
+                y, x, span, split, gap = (32, 0, 40, 192, 0) if index == 4 else (68, 20, 18, 84, 0)
+            assert span * 4 <= 320 and x + span <= 40
+            assert y + len(image) + gap <= 256
+            literals = index + 1 if name == 's_manga' else 0
+            lines.append('\t{' + ','.join(map(str, (first, len(image), y, x, span, split, gap, literals))) + '},')
+            first += len(image)
+        lines.append('};')
+    lines.extend(('#undef PRESENTATION_DATA', '#endif', ''))
+    size = len(pool) + len(rows) * 9 + sum(len(row) * 2 for table in tables for row in table) + 18 * 14 + 96
     return '\n'.join(lines), size
 
 
@@ -161,4 +260,4 @@ if __name__ == '__main__':
             raise SystemExit('stale presentation rows: run python3 tools/make-presentation.py')
     else:
         OUTPUT.write_text(generated)
-    print(f'presentation rows: {size} resident bytes; 13 cards, 8 shared HUD variants')
+    print(f'presentation rows: {size} resident bytes; 13 cards, 8 HUD variants, 5 shared RD images')

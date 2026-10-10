@@ -10,6 +10,7 @@
 #include <ace/managers/memory.h>
 #include <ace/utils/sprite.h>
 #include <ace/utils/custom.h>
+#include <agk/debug.h>
 
 static tView *s_pView;
 static tVPort *s_pVPort;
@@ -21,6 +22,15 @@ static UBYTE s_targetReady;
 /* DMA renderers need a phase gate, not a per-frame copy of the entity pools.
  * This zero-initialized display-only state is never passed to portable logic. */
 static tGameState s_blankState;
+
+static UBYTE constructionResult(UBYTE ok, UBYTE owner) {
+	if(!ok) {
+		agkState("render_allocation_owner", owner);
+		agkState("chip_free", memGetFreeChipSize());
+		agkState("ram_free", memGetFreeSize()); agkEnd();
+	}
+	return ok;
+}
 
 static UBYTE isScene(tPhase phase) {
 	return phase == SECTOR_INTRO || phase == BOSS_INTRO || phase == CLEAR || phase == WIN;
@@ -63,7 +73,7 @@ UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer) 
 	s_pView = pView;
 	s_pVPort = pVPort;
 	s_pBlank = memAllocChipClear(sizeof(ULONG));
-	if(!s_pBlank) return 0;
+	if(!constructionResult(s_pBlank != 0, 0)) return 0;
 	/* Initialize the entire reservation, including padding overwritten by
  * older manager constructors. Never leave zero words as copper commands. */
 	for(UBYTE i = 0; i < ASTRA_COP_BUFFER; ++i) {
@@ -73,12 +83,12 @@ UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer) 
 	/* All eight sprite pointers start blank in both copper buffers; each
 	 * renderer then publishes its own hand-built DMA streams. */
 	spriteDisableInCopRawMode(pView->pCopList, 0xFF, ASTRA_COP_SPRITES, s_pBlank);
-	if(!renderHeroCreate(pView, s_pBlank)) return 0;
-	if(!renderEnemiesCreate(pView, s_pBlank)) return 0;
-	if(!renderBulletsCreate(pView, s_pBlank)) return 0;
-	if(!renderWorldCreate(pVPort, pBuffer->pFront, pBuffer->pBack)) return 0;
-	if(!renderScenesCreate(pBuffer->pFront, pBuffer->pBack, pVPort)) return 0;
-	if(!renderBobsCreate(pBuffer->pFront, pBuffer->pBack)) return 0;
+	if(!constructionResult(renderHeroCreate(pView, s_pBlank), 1)) return 0;
+	if(!constructionResult(renderEnemiesCreate(pView, s_pBlank), 2)) return 0;
+	if(!constructionResult(renderBulletsCreate(pView, s_pBlank), 3)) return 0;
+	if(!constructionResult(renderWorldCreate(pVPort, pBuffer->pFront, pBuffer->pBack), 4)) return 0;
+	if(!constructionResult(renderScenesCreate(pBuffer->pFront, pBuffer->pBack, pVPort), 5)) return 0;
+	if(!constructionResult(renderBobsCreate(pBuffer->pFront, pBuffer->pBack), 6)) return 0;
 	renderPalette();
 	return 1;
 }

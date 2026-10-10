@@ -1,0 +1,273 @@
+{
+  "provider": "Retro Diffusion",
+  "selection": "1B 2B 3B 4B 5A",
+  "palette_sha256": "b70089f39812f803317adf278350a8af499da3e1cb41540c97f0294a45b68556",
+  "jobs": [
+    {
+      "id": "graveyard-b",
+      "panel": "graveyard",
+      "direction": "B",
+      "title": "Le bernard-l’ermite des épaves",
+      "description": "Une carapace d’épaves protège un réacteur-œil ; les pinces restent clairement mécaniques.",
+      "status": "complete",
+      "task_id": "73dbdd45-0492-4bcd-b036-42fd7868c586",
+      "image": "generated/graveyard-b.png",
+      "request": {
+        "prompt": "The same original adult space pilot throughout the series: asymmetric violet fringe, cyan almond eyes, small diagonal cheek mark, silver flight suit, side-mounted communicator. Alert pilot wearing an open-face helmet; orbital wreck field below a ringed planet. A salvage-claw vessel with open grapple jaws and an amber circular reactor dominates the right. Non-gory grotesque biomechanical pixel art: ceramic shells, jointed metal tendons, ribbed machinery and improbable organic silhouettes. Unsettling living architecture contrasts with the recognizably human pilot. No blood, wounds, exposed flesh or viscera. The salvage vessel is a hermit-crab machine inhabiting a shell assembled from wrecked ships, with two enormous jointed grapple claws and a single amber reactor-eye. A few ribbed metal cables curve through empty space. The pilot watches with controlled unease. Steel violet and amber. One opaque landscape pixel-art story illustration, 160x96 pixels. Pilot bust occupies the left 40 percent, one large sector silhouette on the right, a small silver cyan fighter as secondary scale cue. Keep face, gesture and main silhouette legible when reduced to 112x64. Bold connected pixel clusters, clear dark-light separation, three depth planes, restrained sixteen-color palette, sparse detail, no antialiasing, no blur. No lettering, text, captions, speech bubbles, symbols resembling writing, logos, watermarks, borders, panel divisions or UI. ",
+        "width": 160,
+        "height": 96,
+        "style": "rd_pro__default",
+        "seed": 861002,
+        "n": 1,
+        "remove_bg": false
+      },
+      "quote": {
+        "status": "ok",
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T06:10:38.457697+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost"
+      },
+      "quote_history": [
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-09T09:44:37.020754+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        },
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-10T06:08:23.582454+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        }
+      ],
+      "request_sha256": "5a49c84263d736252a595dcdc93654d218583fe098a43e7ce71215ad8f3cb22a",
+      "idempotency_key": "ef6f091b-1ee4-5d49-a3cc-014d72444372",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T06:10:41.297812+00:00",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T06:16:12.745412+00:00",
+      "preview": "generated/graveyard-b-112x64.png",
+      "image_sha256": "af554017ccf1570e1957b34272f9520bdc2a42c5bce27ba87ca806f134418740",
+      "preview_sha256": "57517b02c6f0fad575a2b5d1fc4a25bab9c6dab6503318a4ae47a69a47ac4c7f",
+      "preview_method": "nearest_neighbor_floor_112x64",
+      "provenance": "Retro Diffusion API original master; preview is a local derivative",
+      "durable_image": "graveyard-b.png",
+      "rgb_sha256": "70ee21fc5b7ceba298ef4aa7cf2397aef1e4bb7b69cc69d34c8f024e9f22b907"
+    },
+    {
+      "id": "nebula-b",
+      "panel": "nebula",
+      "direction": "B",
+      "title": "La raie-chrysalide",
+      "description": "Une chrysalide minérale s’ouvre sur une raie aux nageoires nervurées.",
+      "status": "complete",
+      "task_id": "e847983d-4f64-4583-9dd3-7088a3c7222c",
+      "image": "generated/nebula-b.png",
+      "request": {
+        "prompt": "The same original adult space pilot throughout the series: asymmetric violet fringe, cyan almond eyes, small diagonal cheek mark, silver flight suit, side-mounted communicator. Open-face helmeted pilot glancing sideways into violet crystal clouds beneath a crescent moon. A manta-shaped alien vessel has swept fins, one cyan slit eye and a forked tail. Non-gory grotesque biomechanical pixel art: ceramic shells, jointed metal tendons, ribbed machinery and improbable organic silhouettes. Unsettling living architecture contrasts with the recognizably human pilot. No blood, wounds, exposed flesh or viscera. An enormous mineral chrysalis opens to reveal a biomechanical manta, ceramic fins ribbed like folded leaves, cyan nodes embedded in its shell and a forked metal tail. Two crystal clouds cradle the creature; the pilot is wary, intact and human. Violet shell, cyan glow, deep indigo gaps. One opaque landscape pixel-art story illustration, 160x96 pixels. Pilot bust occupies the left 40 percent, one large sector silhouette on the right, a small silver cyan fighter as secondary scale cue. Keep face, gesture and main silhouette legible when reduced to 112x64. Bold connected pixel clusters, clear dark-light separation, three depth planes, restrained sixteen-color palette, sparse detail, no antialiasing, no blur. No lettering, text, captions, speech bubbles, symbols resembling writing, logos, watermarks, borders, panel divisions or UI. ",
+        "width": 160,
+        "height": 96,
+        "style": "rd_pro__default",
+        "seed": 861005,
+        "n": 1,
+        "remove_bg": false
+      },
+      "quote": {
+        "status": "ok",
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T06:10:38.891226+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost"
+      },
+      "quote_history": [
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-09T09:44:37.417540+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        },
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-10T06:08:23.955310+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        }
+      ],
+      "request_sha256": "f2fa2dd668f06adafdabff63cfbe1eb34bfee085b2827dc21d66fbceee305442",
+      "idempotency_key": "b7e836dd-2ee5-5fee-81c7-0f1ebac69015",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T06:10:44.937557+00:00",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T06:16:14.260172+00:00",
+      "preview": "generated/nebula-b-112x64.png",
+      "image_sha256": "47fdc380e841ab98aced47804f15abbee0c21e1a8b8237f202a8c87b47b0887e",
+      "preview_sha256": "b565de11cd5bd3c8b5a769d1bb84d46ec2473ca0694529e6e83acd9ef3c64f24",
+      "preview_method": "nearest_neighbor_floor_112x64",
+      "provenance": "Retro Diffusion API original master; preview is a local derivative",
+      "durable_image": "nebula-b.png",
+      "rgb_sha256": "a0f047cbd3b5bdded8b3c3e7d666dd050ba095c083106f7283fe6e4dd6b9ab5f"
+    },
+    {
+      "id": "foundry-b",
+      "panel": "foundry",
+      "direction": "B",
+      "title": "Le poumon de cuivre",
+      "description": "Le navire devient un soufflet vivant, fait de plaques et de conduits métalliques.",
+      "status": "complete",
+      "task_id": "0dec9365-b5b2-4227-99ba-0c6ce0063145",
+      "image": "generated/foundry-b.png",
+      "request": {
+        "prompt": "The same original adult space pilot throughout the series: asymmetric violet fringe, cyan almond eyes, small diagonal cheek mark, silver flight suit, side-mounted communicator. Wary open-face helmeted pilot with a few soot marks on the face, confronting a broad copper furnace-carrier ship beneath industrial gantries. Twin gun sponsons, gridded glowing heat chamber and furnace windows. Non-gory grotesque biomechanical pixel art: ceramic shells, jointed metal tendons, ribbed machinery and improbable organic silhouettes. Unsettling living architecture contrasts with the recognizably human pilot. No blood, wounds, exposed flesh or viscera. The factory ship resembles a giant copper bellows-lung made entirely of metal, accordion ribs expanding around a rectangular furnace chamber. Twin armored sponsons remain clearly visible, ceramic pipes curl like antennae beneath two gantries. Pilot recoils slightly in orange reflected light. Non-gory industrial organism. One opaque landscape pixel-art story illustration, 160x96 pixels. Pilot bust occupies the left 40 percent, one large sector silhouette on the right, a small silver cyan fighter as secondary scale cue. Keep face, gesture and main silhouette legible when reduced to 112x64. Bold connected pixel clusters, clear dark-light separation, three depth planes, restrained sixteen-color palette, sparse detail, no antialiasing, no blur. No lettering, text, captions, speech bubbles, symbols resembling writing, logos, watermarks, borders, panel divisions or UI. ",
+        "width": 160,
+        "height": 96,
+        "style": "rd_pro__default",
+        "seed": 861008,
+        "n": 1,
+        "remove_bg": false
+      },
+      "quote": {
+        "status": "ok",
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T06:10:39.284710+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost"
+      },
+      "quote_history": [
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-09T09:44:37.819599+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        },
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-10T06:08:24.389052+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        }
+      ],
+      "request_sha256": "5640b54b3697c2fc5f9c2e6eed707c63bbaac70e36b5fa0b1cdb3e2ec58a3ec4",
+      "idempotency_key": "2cb9034b-d584-503d-8d54-3860ef7c4ebe",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T06:10:48.662155+00:00",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T06:18:08.494481+00:00",
+      "preview": "generated/foundry-b-112x64.png",
+      "image_sha256": "76253ab50a14bfe5d6c3542bfefa7f2e9a9177c2f9414033218b63344f4e3b19",
+      "preview_sha256": "503e0c9f4f85e829cbfcdf8dfa7815e1e1dda4810120048f14e1a273970f9a9f",
+      "preview_method": "nearest_neighbor_floor_112x64",
+      "provenance": "Retro Diffusion API original master; preview is a local derivative",
+      "durable_image": "foundry-b.png",
+      "rgb_sha256": "b365d21df937ae4978d69a73a5155c8595653f06e0a595a6594586132204d9fc"
+    },
+    {
+      "id": "citadel-b",
+      "panel": "citadel",
+      "direction": "B",
+      "title": "Le reliquaire articulé",
+      "description": "Une couronne-insecte déploie ses arcs métalliques autour d’un réacteur froid.",
+      "status": "complete",
+      "task_id": "62c2c8bc-0a00-4183-86b1-9527c791090b",
+      "image": "generated/citadel-b.png",
+      "request": {
+        "prompt": "The same original adult space pilot throughout the series: asymmetric violet fringe, cyan almond eyes, small diagonal cheek mark, silver flight suit, side-mounted communicator. Determined narrow-eyed pilot in open-face helmet before a reactor crown and cathedral towers. The enemy has a silver lance, open ion halo, angular pinnacles and luminous conduits. Non-gory grotesque biomechanical pixel art: ceramic shells, jointed metal tendons, ribbed machinery and improbable organic silhouettes. Unsettling living architecture contrasts with the recognizably human pilot. No blood, wounds, exposed flesh or viscera. The crown reactor is a ceremonial insect-machine, three silver carapace pinnacles above jointed cathedral-rib arches, an open cyan halo suspended between antenna-like conduits and a long lance. No literal skulls or gore. Pilot's stern human face opposes the alien symmetry. Pearl metal, black-violet void, cold cyan. One opaque landscape pixel-art story illustration, 160x96 pixels. Pilot bust occupies the left 40 percent, one large sector silhouette on the right, a small silver cyan fighter as secondary scale cue. Keep face, gesture and main silhouette legible when reduced to 112x64. Bold connected pixel clusters, clear dark-light separation, three depth planes, restrained sixteen-color palette, sparse detail, no antialiasing, no blur. No lettering, text, captions, speech bubbles, symbols resembling writing, logos, watermarks, borders, panel divisions or UI. ",
+        "width": 160,
+        "height": 96,
+        "style": "rd_pro__default",
+        "seed": 861011,
+        "n": 1,
+        "remove_bg": false
+      },
+      "quote": {
+        "status": "ok",
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T06:10:39.651738+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost"
+      },
+      "quote_history": [
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-09T09:44:38.182199+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        },
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-10T06:08:24.772295+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        }
+      ],
+      "request_sha256": "63c1bb0e7696626b39283a3ad743754c07adb02babe4766e6d139e42be532438",
+      "idempotency_key": "e56a05e7-5e12-5a45-8453-9e04368e2c59",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T06:10:52.173899+00:00",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T06:18:09.092838+00:00",
+      "preview": "generated/citadel-b-112x64.png",
+      "image_sha256": "74b4b8916ff21bf09d4ff9a0e4a9acdf3bae872444dbfd260d256f390d16e41f",
+      "preview_sha256": "ec0031bdbf4d9ba7029c9b1ecb2932aa5f4fa0575d953d4909f058df6ff7ad03",
+      "preview_method": "nearest_neighbor_floor_112x64",
+      "provenance": "Retro Diffusion API original master; preview is a local derivative",
+      "durable_image": "citadel-b.png",
+      "rgb_sha256": "42274b2b539a4d8ca2f2a203d6cda037fa307cf1cbebe78860498b85a90ba424"
+    },
+    {
+      "id": "victory-a",
+      "panel": "victory",
+      "direction": "A",
+      "title": "Le sourire après le vide",
+      "description": "Un salut lisible et une aube oblique remplacent la tension des quatre secteurs.",
+      "status": "complete",
+      "task_id": "302bbd3e-479d-4735-879d-e0eade1c4e54",
+      "image": "generated/victory-a.png",
+      "request": {
+        "prompt": "The same original adult space pilot throughout the series: asymmetric violet fringe, cyan almond eyes, small diagonal cheek mark, silver flight suit, side-mounted communicator. Victorious pilot without helmet, longer violet hair visible, silver flight suit and collar-mounted communicator, smiling warmly with one gloved two-finger salute. Fighter departing above a dawn world among shattered crown fragments. No active enemy. Uncanny science-fiction manga translated into crisp pixel art: angular expressive eyes, severe ink-like shadow wedges, asymmetrical machine design, eccentric perspective, elegant line economy. Strange but emotionally human, adventurous rather than horror. Warm relieved manga smile and unmistakable two-finger gloved salute beside the face. Long violet hair lifts in one graphic sweep; three broken crown pieces trail behind the silver fighter like irregular confetti over a slanted dawn horizon. Strange perspective but tender optimistic mood, peach dawn and cyan accents. One opaque landscape pixel-art story illustration, 160x96 pixels. Pilot bust occupies the left 40 percent, one large sector silhouette on the right, a small silver cyan fighter as secondary scale cue. Keep face, gesture and main silhouette legible when reduced to 112x64. Bold connected pixel clusters, clear dark-light separation, three depth planes, restrained sixteen-color palette, sparse detail, no antialiasing, no blur. No lettering, text, captions, speech bubbles, symbols resembling writing, logos, watermarks, borders, panel divisions or UI. ",
+        "width": 160,
+        "height": 96,
+        "style": "rd_pro__default",
+        "seed": 861013,
+        "n": 1,
+        "remove_bg": false
+      },
+      "quote": {
+        "status": "ok",
+        "balance_cost": "0.18",
+        "checked_at": "2026-10-10T06:10:39.906120+00:00",
+        "method": "agk.rd.generate(dry_run=True) / check_cost"
+      },
+      "quote_history": [
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-09T09:44:38.424994+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        },
+        {
+          "status": "ok",
+          "balance_cost": "0.18",
+          "checked_at": "2026-10-10T06:08:25.040385+00:00",
+          "method": "agk.rd.generate(dry_run=True) / check_cost"
+        }
+      ],
+      "request_sha256": "01cc12bbbc98c1c6d7b940b0835500838d1423acb272c7db7fd8ac7556f98a30",
+      "idempotency_key": "56bb974c-28d6-5da3-bf8d-ec9e866806ed",
+      "reserved_usd": "0.18",
+      "submission_attempts": 1,
+      "submitted_at": "2026-10-10T06:10:54.557741+00:00",
+      "cost_usd": "0.18",
+      "completed_at": "2026-10-10T06:18:10.228241+00:00",
+      "preview": "generated/victory-a-112x64.png",
+      "image_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+      "preview_sha256": "ba81f116890d34ea3f9e4dbff718c63da2f8c45cbc45f41e201298e8e3af24dd",
+      "preview_method": "nearest_neighbor_floor_112x64",
+      "provenance": "Retro Diffusion API original master; preview is a local derivative",
+      "durable_image": "victory-a.png",
+      "rgb_sha256": "1e351cdf4c0c01d8b1cfe26f821a9a67f8ea30f5c527017003764b59d80c6fd7"
+    }
+  ],
+  "conversion": "128x72 floor nearest sample (x*160//128,y*96//72); nearest squared RGB distance to palette.txt expanded nibble*17; lowest index tie; no dithering; runtime ink 0 sector override and ink 4 BDF retained"
+}
