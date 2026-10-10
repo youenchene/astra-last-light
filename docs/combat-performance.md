@@ -18,24 +18,28 @@ A500 sector 1, timing-ON fenced matrix, stable windows over the left/centre/righ
 bands. Each cell is the **mean per frame / max of one call** in elapsed PAL raster
 lines (audio and explicit waits sum 2 and 3 calls per frame in the mean), with the
 share of the 313-line (20 ms) frame. Baseline is `perf-loop4-it3c-on` (commit
-`973a764`); latest is `perf-loop5-it6-on` (it6, 48 stars). Earlier loop-3 figures
+`973a764`); latest is `perf-loop5-it7-on` (it7, fixed bullet streams, on top of
+it6's 48 stars). Earlier loop-3 figures
 used `perf-loop-base-on` (HEAD `3aae85b`) and per-call means.
 
-| Stage | PLAY dense, baseline it3c | PLAY dense, latest it6 | BOSS dense, baseline it3c | BOSS dense, latest it6 | Hardware involved |
+| Stage | PLAY dense, baseline it3c | PLAY dense, latest it7 | BOSS dense, baseline it3c | BOSS dense, latest it7 | Hardware involved |
 |---|---:|---:|---:|---:|---|
-| Restore + world animate | 92.9/124 (29.7%/39.6%) | 67.3/101 (21.5%/32.3%) | 54.4/85 (17.4%/27.2%) | 54.3/82 (17.3%/26.2%) | Blitter restores; 68000 stars/decor; Agnus chip-bus contention |
-| Logic, including admission and collisions | 135.9/471 (43.4%/150.5%) | 133.6/471 (42.7%/150.5%) | 70.1/200 (22.4%/63.9%) | 69.1/202 (22.1%/64.5%) | 68000 only (slow-RAM state); stalled by DMA and interrupts |
-| Audio, foreground | 4.8/9 (1.5%/2.9%) | 4.9/5 (1.6%/1.6%) | 5.0/9 (1.6%/2.9%) | 5.0/9 (1.6%/2.9%) | 68000; Paula DMA and interrupts are not isolated |
-| Render inclusive (contains the next four rows) | 307.2/353 (98.1%/112.8%) | 305.4/347 (97.6%/110.9%) | 318.0/362 (101.6%/115.7%) | 317.2/357 (101.3%/114.1%) | All of the below |
-| BOB submission (ACE internal blit waits included) | 169.1/200 (54.0%/63.9%) | 167.5/202 (53.5%/64.5%) | 205.1/245 (65.5%/78.3%) | 204.8/244 (65.4%/78.0%) | Blitter, 68000 setup, chip-bus contention |
-| Sprite stream preparation | 108.6/148 (34.7%/47.3%) | 108.3/142 (34.6%/45.4%) | 93.7/131 (29.9%/41.9%) | 93.8/133 (30.0%/42.5%) | 68000 writes to chip RAM; this is **not** sprite DMA time |
-| Copper list build | 13.9/34 (4.4%/10.9%) | 13.9/49 (4.4%/15.7%) | 3.7/26 (1.2%/8.3%) | 3.6/7 (1.2%/2.2%) | 68000 writes; Copper execution is not measured |
-| Publication | 10.6/38 (3.4%/12.1%) | 10.8/18 (3.5%/5.8%) | 10.9/33 (3.5%/10.5%) | 11.0/32 (3.5%/10.2%) | 68000, Copper pointers and palette |
-| Explicit `blitWait()` (overlaps restore/BOBs) | 5.1/7 (1.6%/2.2%) | 5.2/7 (1.7%/2.2%) | 5.3/24 (1.7%/7.7%) | 5.2/19 (1.7%/6.1%) | Blitter completion |
-| Fixture injection (diagnostic only, not shipped) | 79.5/107 (25.4%/34.2%) | 80.0/113 (25.6%/36.1%) | 75.1/107 (24.0%/34.2%) | 75.2/108 (24.0%/34.5%) | 68000 |
+| Restore + world animate | 92.9/124 (29.7%/39.6%) | 67.1/93 (21.4%/29.7%) | 54.4/85 (17.4%/27.2%) | 54.5/88 (17.4%/28.1%) | Blitter restores; 68000 stars/decor; Agnus chip-bus contention |
+| Logic, including admission and collisions | 135.9/471 (43.4%/150.5%) | 134.0/467 (42.8%/149.2%) | 70.1/200 (22.4%/63.9%) | 69.1/205 (22.1%/65.5%) | 68000 only (slow-RAM state); stalled by DMA and interrupts |
+| Audio, foreground | 4.8/9 (1.5%/2.9%) | 4.8/5 (1.5%/1.6%) | 5.0/9 (1.6%/2.9%) | 4.9/9 (1.6%/2.9%) | 68000; Paula DMA and interrupts are not isolated |
+| Render inclusive (contains the next four rows) | 307.2/353 (98.1%/112.8%) | 293.3/340 (93.7%/108.6%) | 318.0/362 (101.6%/115.7%) | 305.1/342 (97.5%/109.3%) | All of the below |
+| BOB submission (ACE internal blit waits included) | 169.1/200 (54.0%/63.9%) | 167.4/201 (53.5%/64.2%) | 205.1/245 (65.5%/78.3%) | 204.5/239 (65.3%/76.4%) | Blitter, 68000 setup, chip-bus contention |
+| Sprite stream preparation | 108.6/148 (34.7%/47.3%) | **96.4/136 (30.8%/43.5%)** | 93.7/131 (29.9%/41.9%) | **82.0/127 (26.2%/40.6%)** | 68000 writes to chip RAM; this is **not** sprite DMA time |
+| Copper list build | 13.9/34 (4.4%/10.9%) | 13.8/30 (4.4%/9.6%) | 3.7/26 (1.2%/8.3%) | 3.6/9 (1.1%/2.9%) | 68000 writes; Copper execution is not measured |
+| Publication | 10.6/38 (3.4%/12.1%) | 10.9/18 (3.5%/5.8%) | 10.9/33 (3.5%/10.5%) | 10.6/27 (3.4%/8.6%) | 68000, Copper pointers and palette |
+| Explicit `blitWait()` (overlaps restore/BOBs) | 5.1/7 (1.6%/2.2%) | 5.3/9 (1.7%/2.9%) | 5.3/24 (1.7%/7.7%) | 5.2/12 (1.7%/3.8%) | Blitter completion |
+| Fixture injection (diagnostic only, not shipped) | 79.5/107 (25.4%/34.2%) | 80.3/112 (25.7%/35.8%) | 75.1/107 (24.0%/34.2%) | 75.3/108 (24.1%/34.5%) | 68000 |
 
 Stars move only while the world scrolls (PLAY); bosses freeze the scroll, so BOSS
 restore/world cost is unchanged by the star count, as measured.
+Sprite preparation is mostly hostile bullets: a diagnostic split at it6 (copper
+counter retargeted to `renderBulletsDraw`, not shipped) measured bullets at
+77.2 of 112.0 PLAY-dense lines and 21.5 of 43.3 sparse; hero + enemies are the rest.
 
 Caveats:
 - These are **elapsed raster times**, not pure CPU cycles. They include Agnus
@@ -58,6 +62,29 @@ Ordinary production and the injected campaign are profiler-OFF; columns give
 | Iteration | Change | Restore+world PLAY dense / BOSS dense | ON matrix drops/peak, A500; AROS | Ordinary A500 (pause, transitions, gameover, manga, bob_restore) | Ordinary AROS (same order) | Campaign A500; AROS | Decision |
 |---|---|---|---|---|---|---|---|
 | it6 stars 96->48 | `STARS_PER_LAYER` 24→12, four interleaved layers (periods 16/8/4/2) and widths kept; rows respread over the play area | 92.9/124 → **67.3/101**; 54.4/85 → 54.3/82 (stars frozen in BOSS) | 8957/368% → **7465/352%**; 6008/346% → 5577/336% | 0/90, 0/90, 0/92, 0/92, 7/117 → **0/79, 0/79, 0/87, 0/81, 3/114** | 0/88, 0/88, 0/89, 0/89, 5/115 → 0/77, 0/77, 0/84, 0/78, 2/107 | **15/122% → 9/117%**; 11/119% → 7/112% | **Accepted.** Every gameplay window except `bob_restore` is now <=90% on A500; campaign gate still fails |
+| it7 fixed bullet streams | One hostile image fills all 16 slots of both buffers of each hostile channel once at creation (`spriteStreamFill`); frames write only control words (`spriteSlotPlace`) in Y order and terminate after the last used slot. Ordering keeps survivors' previous order and inserts on cached Y keys, carrying entity pointers (no per-compare pool-index multiply) | sprites 108.3/142 → **96.4/136**; 93.8/133 → **82.0/127** (render inclusive 305.4 → 293.3; 317.2 → 305.1) | 7465/352% → **6489/355%**; 5577/336% → 5501/324% | 0/79, 0/79, 0/87, 0/81, 3/114 → **0/79, 0/79, 0/85, 0/80, 3/114** | 0/77, 0/77, 0/84, 0/78, 2/107 → 0/76, 0/76, 0/82, 0/78, 2/107 | **9/117% → 8/116%**; 7/112% → 7/112% | **Accepted.** Output identical; every scenario equal or better; campaign gate still fails |
+
+it7 review and caveats:
+- The premise "bullet bitmaps are rewritten every frame" did not hold at it6: the
+  generic writer already skipped pixel copies when a slot's cached source matched
+  (`pLoaded`). The measured cost was per-bullet bookkeeping: source comparison,
+  writer state spilled to the stack, and ×18 pool-index multiplies in the sort and
+  draw loops. it7 removes those; the image was already single (strip frame 2) for
+  every level, so no pixel changes were needed.
+- Full-image identity holds: matrix **48/48 captures identical on both profiles**
+  (`compare-combat-performance.py` vs `perf-loop5-it6-on`); ordinary **38 captures
+  + 193 states** and campaign **53 + 246** per profile identical
+  (`compare-combat-production.py`). Order is the same stable insertion order as
+  before (survivors, then newcomers by pool index), so slot layout is unchanged.
+- Kept: double buffering by back copper list, one-blank-line `nextY` guard,
+  `bullet_hidden == 0` (campaign functional PASS both), PLAY 6/7 vs BOSS 4–7
+  handover (enemies still own 4/5 streams in PLAY; separate allocations), palette
+  25–27/29–31 mapping unchanged. Enemy/hero writers untouched (their pixel copies
+  are already cached per slot).
+- Production executable 487452 → **487536 bytes (+84)**; no new CHIP allocation
+  (same stream sizes), no frame-loop allocation.
+- Unit 1/1 PASS, Python 98/98 PASS. Evidence: `game/build/perf-loop5-it7-{on,prod,campaign}`
+  and the diagnostic split `game/build/diag7a` (A500 only, not a shipped build).
 
 it6 review and caveats:
 - A500 sparse PLAY restore+world is 67.3 → 41.4 lines. BOSS is unchanged because

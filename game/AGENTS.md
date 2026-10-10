@@ -28,7 +28,7 @@
 | `src/logic.c/.h` | Portable, deterministic rules and fixed-size pools; no ACE, hardware, allocation or I/O |
 | `src/main.c` | Lifecycle, input, sound events, telemetry and frame publication |
 | `src/render.c/.h` | Rendering coordinator, shared blank word and palette/copper ownership |
-| `src/render_stream.c/.h` | Double-buffered custom sprite DMA streams; cached pixels and inline control-word writer |
+| `src/render_stream.c/.h` | Double-buffered custom sprite DMA streams; cached pixels, fixed-image fill (hostiles) and inline control-word writer |
 | `src/render_hero.c/.h` | 32×24 hero: attached hardware channels0–3 |
 | `src/render_enemies.c/.h` | Attached enemies/asteroids on4/5; yields the pair during boss combat |
 | `src/render_bullets.c/.h` | Independent hostile streams on6/7 in PLAY,4–7 in BOSS |
