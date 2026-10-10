@@ -771,6 +771,33 @@ static void testFormationFireAndChargePriority(void) {
 	checkSchedule(&s);
 }
 
+/* Same-tick fans fill the pool's lowest free slots in ray order. A refused
+ * ray leaves its slot free for the next ray, across both enemies' fans. */
+static void testSameTickFansFillLowestFreeSlots(void) {
+	tGameState s;
+	uint8_t wasActive[HOSTILE_COUNT];
+	unsigned i, admitted = 0, freeSeen = 0;
+	start(&s); s.waveTimer = 60000; s.invulnerable = 2;
+	for(i = 0; i < 2; ++i) {
+		s.enemies[i] = entity(200, (int16_t)(i ? 140 : 100), 1);
+		s.enemies[i].kind = ENEMY_GUNNER; s.enemies[i].fireCountdown = 1;
+	}
+	/* Both PLAY channels block each centre ray; holes interleave the pool. */
+	for(i = 0; i < 4; ++i) {
+		s.hostile[i * 2] = entity(150, (int16_t)((i & 2 ? 140 : 100) + (ENEMY_H - HOSTILE_H) / 2), 1);
+		s.hostile[i * 2].vx = HOSTILE_VX; s.hostile[i * 2].channel = (uint8_t)(6 + (i & 1));
+	}
+	for(i = 0; i < HOSTILE_COUNT; ++i) wasActive[i] = s.hostile[i].active;
+	logicUpdate(&s, &idle);
+	for(i = 0; i < HOSTILE_COUNT; ++i) {
+		if(wasActive[i]) { CHECK(s.hostile[i].active); continue; }
+		++freeSeen;
+		if(s.hostile[i].active) { CHECK(freeSeen == ++admitted); }
+	}
+	CHECK(admitted > 0 && admitted < 2 * 5); /* Two sector-1 gunners, five rays each. */
+	checkSchedule(&s);
+}
+
 static unsigned hostileCount(const tGameState *s) {
 	unsigned count = 0;
 	for(unsigned i = 0; i < HOSTILE_COUNT; ++i) count += s->hostile[i].active;
@@ -2301,7 +2328,7 @@ int main(void) {
 	testSchedulingScanlineBoundaries();
 	testHalfSpeedMovement(); testHeroCoreAndCurtainGeometry();
 	testRepeatedDenseVolleys(); testBossHalfPhaseAndCadence();
-	testFormationFireAndChargePriority();
+	testFormationFireAndChargePriority(); testSameTickFansFillLowestFreeSlots();
 	testWaveRewards(); testBonusesAndPersistence(); testFairShootingAndBossBounds();
 	testChargedGeometry(); testHostileAdmission(); testWaveCadenceAndFormations();
 	testSectorSelection();
