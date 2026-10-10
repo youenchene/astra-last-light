@@ -9,6 +9,8 @@ from collections import Counter
 from importlib.util import module_from_spec, spec_from_file_location
 
 ROOT = Path(__file__).resolve().parents[1]
+STAR_COUNT = 48  # game/src/render_world.c: STARS_PER_LAYER * STAR_LAYERS
+MIN_PARALLAX_SAMPLES = 4
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
 from agk.image import Image
@@ -91,10 +93,12 @@ for profile in args.profiles:
     assert right_half >= 32, f"{profile}: hero does not extend visibly beyond16px"
     stars = sum(a.pixel(x,y) == star_color for y in range(56,216) for x in range(320)
         if not (32 <= x < 64 and 126 <= y < 150))
-    assert 120 <= stars <= 160, f"{profile}: unexpected dense star population: {stars} pixels"
+    expected_pixels = STAR_COUNT // 4 * (1 + 1 + 2 + 2)
+    assert expected_pixels * 5 // 6 <= stars <= expected_pixels * 7 // 6, \
+        f"{profile}: unexpected star population: {stars} pixels, expected about {expected_pixels}"
     checked = [0] * 4
-    for index in range(96):
-        y = 56 + index * 159 // 95
+    for index in range(STAR_COUNT):
+        y = 56 + index * 159 // (STAR_COUNT - 1)
         if 126 <= y < 150: continue  # hero may occlude a star
         positions = [x for x in range(320) if a.pixel(x,y) == star_color]
         width = 1 if (index & 3) < 2 else 2
@@ -105,7 +109,7 @@ for profile in args.profiles:
         actual = {x for x in range(240) if b.pixel(x,y) == star_color}
         assert actual == set(range(expected, expected + width)), f"{profile}: wrong parallax on layer{index & 3}, y{y}"
         checked[index & 3] += 1
-    assert all(n >= 8 for n in checked), f"{profile}: not enough independent parallax samples: {checked}"
+    assert all(n >= MIN_PARALLAX_SAMPLES for n in checked), f"{profile}: not enough independent parallax samples: {checked}"
     title = Image.load_png(str(Path(args.base) / profile / "boot/title.screen.png"))
     title_bg = title.pixel(0,60)
     for top in (29,220):

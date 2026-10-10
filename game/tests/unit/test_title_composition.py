@@ -48,7 +48,7 @@ typedef struct {
     UWORD BytesPerRow;
 } tBitMap;
 typedef struct { UWORD pPalette[32]; } tVPort;
-#define STAR_COUNT 96
+#define STAR_COUNT 48
 #define DECOR_HEIGHT 24
 #define DECOR_TOP 29
 #define DECOR_BOTTOM 220

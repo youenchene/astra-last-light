@@ -23,7 +23,7 @@ typedef uint16_t UWORD;
 typedef uint32_t ULONG;
 typedef struct { UBYTE pixels[256][320]; } tBitMap;
 typedef struct { UWORD pPalette[32]; } tVPort;
-#define STAR_COUNT 96
+#define STAR_COUNT 48
 #define MINTERM_COOKIE 0
 static tBitMap buffers[2], *s_pScreen, *s_pLabels;
 static tVPort viewport, *s_pVPort = &viewport;

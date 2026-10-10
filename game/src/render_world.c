@@ -8,7 +8,16 @@
 #include <ace/utils/custom.h>
 #include <ace/utils/fetchmode.h>
 
-#define STAR_COUNT 96
+/* Star index i belongs to parallax layer i & (STAR_LAYERS - 1); layer 0 is the
+ * farthest (period 16) and layers >= STAR_WIDE_LAYER draw two-pixel trails.
+ * Interleaving layers keeps the ascending rows in beam order. */
+#define STAR_LAYER_SHIFT 2
+#define STAR_LAYERS (1 << STAR_LAYER_SHIFT)
+#define STAR_WIDE_LAYER 2
+#define STARS_PER_LAYER 12
+#define STAR_COUNT (STARS_PER_LAYER * STAR_LAYERS)
+#define STAR_LAYER(index) ((index) & (STAR_LAYERS - 1))
+#define STAR_WIDE(index) (STAR_LAYER(index) >= STAR_WIDE_LAYER)
 #define DECOR_HEIGHT 24
 #define DECOR_TOP 29
 #define DECOR_BOTTOM 220
@@ -29,7 +38,7 @@ static tPhase s_ePhase;
 static UBYTE s_ubDecorTick, s_topScroll, s_bottomScroll;
 static UWORD s_pStarX[STAR_COUNT], s_pStarRow[STAR_COUNT];
 /* A frozen world still catches up both N-2 histories once. Thereafter its
- * unchanged 96-entry star arrays need no per-frame comparison. */
+ * unchanged STAR_COUNT-entry star arrays need no per-frame comparison. */
 static UBYTE s_starsDirty[2];
 static UWORD s_uwOriginalStarColor;
 /* Cache horizontal scaling only; vertical repetitions share their source row.
@@ -459,15 +468,15 @@ static void starsReset(void) {
 		s_pStarX[i] = starSeed % 316;
 		/* Unique ascending rows keep CPU writes in beam order. */
 		s_pStarRow[i] = (y << 7) + (y << 5);
+		/* Spread rows evenly over PLAY_TOP..PLAY_BOTTOM-1 without division. */
 		++y;
 		remainder += (PLAY_BOTTOM - PLAY_TOP - 1) - (STAR_COUNT - 1);
-		if(remainder >= STAR_COUNT - 1) { ++y; remainder -= STAR_COUNT - 1; }
+		while(remainder >= STAR_COUNT - 1) { ++y; remainder -= STAR_COUNT - 1; }
 	}
 }
 
 static void starToggle(UBYTE index, UWORD x) {
-	UBYTE layer = index & 3;
-	UWORD shape = layer >= 2 ? 0xc000 : 0x8000;
+	UWORD shape = STAR_WIDE(index) ? 0xc000 : 0x8000;
 	UWORD mask = shape >> (x & 7);
 	UWORD offset = s_pStarRow[index] + (x >> 3);
 	/* The gameplay corridor is empty behind these bright trails; XOR erases
@@ -481,11 +490,11 @@ static void starToggle(UBYTE index, UWORD x) {
  * former period preserve all four average speeds while halving CPU updates. */
 static void starsProcess(void) {
 	s_starsDirty[0] = s_starsDirty[1] = 1;
-	static const UBYTE periods[4] = {16, 8, 4, 2};
-	for(UBYTE layer = 0; layer < 4; ++layer) {
+	static const UBYTE periods[STAR_LAYERS] = {16, 8, 4, 2};
+	for(UBYTE layer = 0; layer < STAR_LAYERS; ++layer) {
 		UBYTE period = periods[layer];
-		for(UBYTE k = (UBYTE)(-s_ubDecorTick) & (period - 1); k < STAR_COUNT / 4; k += period) {
-			UBYTE index = (k << 2) | layer;
+		for(UBYTE k = (UBYTE)(-s_ubDecorTick) & (period - 1); k < STARS_PER_LAYER; k += period) {
+			UBYTE index = (k << STAR_LAYER_SHIFT) | layer;
 			UWORD x = s_pStarX[index];
 			s_pStarX[index] = x < 2 ? x + 314 : x - 2;
 		}
@@ -507,7 +516,7 @@ void renderWorldAnimate(const tGameState *pState) {
 		UWORD before = HISTORY.stars[i], after = s_pStarX[i];
 		if(before == after) continue;
 		if(before >= 2 && before - 2 == after) {
-			UWORD mask = ((i & 3) >= 2 ? 0xf000 : 0xa000) >> (after & 7);
+			UWORD mask = (STAR_WIDE(i) ? 0xf000 : 0xa000) >> (after & 7);
 			UBYTE *pixel = s_pScreen->Planes[2] + s_pStarRow[i] + (after >> 3);
 			pixel[0] ^= mask >> 8;
 			if(mask & 255) pixel[1] ^= mask & 255;
@@ -639,7 +648,7 @@ void renderWorldRestoreCorridor(UWORD x, UWORD y, UWORD width, UWORD rows) {
 	for(UBYTE i = 0; i < STAR_COUNT; ++i) {
 		if(s_pStarRow[i] < first || s_pStarRow[i] >= end) continue;
 		UWORD starX = HISTORY.stars[i];
-		UBYTE size = (i & 3) >= 2 ? 2 : 1;
+		UBYTE size = STAR_WIDE(i) ? 2 : 1;
 		for(UBYTE pixel = 0; pixel < size; ++pixel) {
 			UWORD sx = starX + pixel;
 			if(sx >= x && sx < x + width)

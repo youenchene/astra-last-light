@@ -15,23 +15,27 @@ measured iteration: [raw-counter tables](combat-performance-tables.md).
 ## Recap: where frame time is spent and which hardware is involved
 
 A500 sector 1, timing-ON fenced matrix, stable windows over the left/centre/right
-bands. Each cell is the **mean/max** elapsed PAL raster lines per call, with the
-share of the 313-line (20 ms) frame. Baseline is `perf-loop-base-on` (HEAD
-`3aae85b`). **Latest is the baseline**: no loop-3 candidate was accepted (see
-below), so the code is unchanged. The best rejected candidate is shown for scale.
+bands. Each cell is the **mean per frame / max of one call** in elapsed PAL raster
+lines (audio and explicit waits sum 2 and 3 calls per frame in the mean), with the
+share of the 313-line (20 ms) frame. Baseline is `perf-loop4-it3c-on` (commit
+`973a764`); latest is `perf-loop5-it6-on` (it6, 48 stars). Earlier loop-3 figures
+used `perf-loop-base-on` (HEAD `3aae85b`) and per-call means.
 
-| Stage | PLAY dense, baseline = latest | BOSS dense, baseline = latest | Best candidate it3, PLAY / BOSS dense (rejected) | Hardware involved |
-|---|---:|---:|---:|---|
-| Restore + world animate | 92.9/124 (29.7%/39.6%) | 54.5/88 (17.4%/28.1%) | 92.9/124 / 54.5/88 | Blitter restores; 68000 stars/decor; Agnus chip-bus contention |
-| Logic, including admission and collisions | 137.0/497 (43.8%/158.8%) | 70.7/192 (22.6%/61.3%) | 136.9/448 / 70.2/184 | 68000 only (slow-RAM state); stalled by DMA and interrupts |
-| Audio, foreground | 2.4/9 (0.8%/2.9%) | 2.5/9 (0.8%/2.9%) | unchanged | 68000; Paula DMA and interrupts are not isolated |
-| Render inclusive (contains the next four rows) | 307.2/353 (98.2%/112.8%) | 318.3/358 (101.7%/114.4%) | 307.6/354 / 318.2/358 | All of the below |
-| BOB submission (ACE internal blit waits included) | 169.1/200 (54.0%/63.9%) | 205.4/245 (65.6%/78.3%) | 169.3/200 / 205.2/245 | Blitter, 68000 setup, chip-bus contention |
-| Sprite stream preparation | 108.6/148 (34.7%/47.3%) | 93.7/133 (29.9%/42.5%) | 108.8/148 / 93.8/133 | 68000 writes to chip RAM; this is **not** sprite DMA time |
-| Copper list build | 13.8/34 (4.4%/10.9%) | 3.6/14 (1.2%/4.5%) | unchanged | 68000 writes; Copper execution is not measured |
-| Publication | 10.6/39 (3.4%/12.5%) | 10.8/34 (3.4%/10.9%) | unchanged | 68000, Copper pointers and palette |
-| Explicit `blitWait()` per call (overlaps restore/BOBs) | 1.7/7 (0.5%/2.2%) | 1.7/7 (0.6%/2.2%) | unchanged | Blitter completion |
-| Fixture injection (diagnostic only, not shipped) | 79.5/107 (25.4%/34.2%) | 75.0/108 (24.0%/34.5%) | unchanged | 68000 |
+| Stage | PLAY dense, baseline it3c | PLAY dense, latest it6 | BOSS dense, baseline it3c | BOSS dense, latest it6 | Hardware involved |
+|---|---:|---:|---:|---:|---|
+| Restore + world animate | 92.9/124 (29.7%/39.6%) | 67.3/101 (21.5%/32.3%) | 54.4/85 (17.4%/27.2%) | 54.3/82 (17.3%/26.2%) | Blitter restores; 68000 stars/decor; Agnus chip-bus contention |
+| Logic, including admission and collisions | 135.9/471 (43.4%/150.5%) | 133.6/471 (42.7%/150.5%) | 70.1/200 (22.4%/63.9%) | 69.1/202 (22.1%/64.5%) | 68000 only (slow-RAM state); stalled by DMA and interrupts |
+| Audio, foreground | 4.8/9 (1.5%/2.9%) | 4.9/5 (1.6%/1.6%) | 5.0/9 (1.6%/2.9%) | 5.0/9 (1.6%/2.9%) | 68000; Paula DMA and interrupts are not isolated |
+| Render inclusive (contains the next four rows) | 307.2/353 (98.1%/112.8%) | 305.4/347 (97.6%/110.9%) | 318.0/362 (101.6%/115.7%) | 317.2/357 (101.3%/114.1%) | All of the below |
+| BOB submission (ACE internal blit waits included) | 169.1/200 (54.0%/63.9%) | 167.5/202 (53.5%/64.5%) | 205.1/245 (65.5%/78.3%) | 204.8/244 (65.4%/78.0%) | Blitter, 68000 setup, chip-bus contention |
+| Sprite stream preparation | 108.6/148 (34.7%/47.3%) | 108.3/142 (34.6%/45.4%) | 93.7/131 (29.9%/41.9%) | 93.8/133 (30.0%/42.5%) | 68000 writes to chip RAM; this is **not** sprite DMA time |
+| Copper list build | 13.9/34 (4.4%/10.9%) | 13.9/49 (4.4%/15.7%) | 3.7/26 (1.2%/8.3%) | 3.6/7 (1.2%/2.2%) | 68000 writes; Copper execution is not measured |
+| Publication | 10.6/38 (3.4%/12.1%) | 10.8/18 (3.5%/5.8%) | 10.9/33 (3.5%/10.5%) | 11.0/32 (3.5%/10.2%) | 68000, Copper pointers and palette |
+| Explicit `blitWait()` (overlaps restore/BOBs) | 5.1/7 (1.6%/2.2%) | 5.2/7 (1.7%/2.2%) | 5.3/24 (1.7%/7.7%) | 5.2/19 (1.7%/6.1%) | Blitter completion |
+| Fixture injection (diagnostic only, not shipped) | 79.5/107 (25.4%/34.2%) | 80.0/113 (25.6%/36.1%) | 75.1/107 (24.0%/34.2%) | 75.2/108 (24.0%/34.5%) | 68000 |
+
+Stars move only while the world scrolls (PLAY); bosses freeze the scroll, so BOSS
+restore/world cost is unchanged by the star count, as measured.
 
 Caveats:
 - These are **elapsed raster times**, not pure CPU cycles. They include Agnus
@@ -42,6 +46,42 @@ Caveats:
 - Maxima above 313 lines are multi-frame overruns in the **injected** density.
   They are not ordinary-play values.
 - Timing ON is itself intrusive; acceptance uses the profiler-OFF runs.
+
+## Optimization loop 5 (user-approved visual simplifications): per-iteration table
+
+Base `973a764` (it3c accepted). Pixels change on purpose, so full-image identity
+no longer applies; each step is reviewed against base captures instead.
+Timing-ON stage means are A500 sector 1, dense (mean per frame / max of one call).
+Ordinary production and the injected campaign are profiler-OFF; columns give
+**drops/peak%**, base → candidate.
+
+| Iteration | Change | Restore+world PLAY dense / BOSS dense | ON matrix drops/peak, A500; AROS | Ordinary A500 (pause, transitions, gameover, manga, bob_restore) | Ordinary AROS (same order) | Campaign A500; AROS | Decision |
+|---|---|---|---|---|---|---|---|
+| it6 stars 96->48 | `STARS_PER_LAYER` 24→12, four interleaved layers (periods 16/8/4/2) and widths kept; rows respread over the play area | 92.9/124 → **67.3/101**; 54.4/85 → 54.3/82 (stars frozen in BOSS) | 8957/368% → **7465/352%**; 6008/346% → 5577/336% | 0/90, 0/90, 0/92, 0/92, 7/117 → **0/79, 0/79, 0/87, 0/81, 3/114** | 0/88, 0/88, 0/89, 0/89, 5/115 → 0/77, 0/77, 0/84, 0/78, 2/107 | **15/122% → 9/117%**; 11/119% → 7/112% | **Accepted.** Every gameplay window except `bob_restore` is now <=90% on A500; campaign gate still fails |
+
+it6 review and caveats:
+- A500 sparse PLAY restore+world is 67.3 → 41.4 lines. BOSS is unchanged because
+  the world does not scroll there. Logic, BOB and sprite means move by ≤2 lines
+  (noise); no non-star stage regressed in mean.
+- All 42 ordinary A500 captures were compared with base-HEAD captures from the
+  same harness (`game/build/perf-loop5-head-captures`). Star pixels in the play
+  area halve, for example 144 → 72, in every combat capture. Non-star differences
+  are limited to animation phase: hero exhaust (14 px), charge-ready blink (400 px)
+  and lance frame (75 px). World preparation now takes six fewer star steps per
+  bitmap (`cut_work` 136 → 130), so each cut publishes six vblanks earlier.
+- Star seeding uses an exact division-free row spread. Dirty flags, per-bitmap
+  `HISTORY.stars` and the N−2 catch-up iterate `STAR_COUNT`. The layer helpers
+  (`STAR_LAYER`, `STAR_WIDE`, `STAR_LAYERS`) keep dropping layer 0 (period 16)
+  a local change for the planned static galaxy plane.
+- `tools/verify-scrolling.py` now derives its 48-star row layout. Parallax is
+  checked on each layer (8/8/8/6 samples) with exactly 72 star pixels.
+- **Pre-existing, not caused by it6:** the shared goldens were already stale at
+  base. Base HEAD passes only 6/19 `agk test` scenarios on A500, the same 13 fail
+  with it6, and `verify-scrolling.py`'s title-decor assertion fails on base
+  captures too. The goldens were last refreshed in `4e3e3bc`. Later art
+  commits did not refresh them. No golden was updated in this step: a refresh would also
+  accept that unreviewed earlier drift. It needs its own scoped review.
+- Evidence: `game/build/perf-loop5-it6-{on,prod,campaign}`; logs alongside.
 
 ## Optimization loop 3 (HEAD `3aae85b`): per-iteration table
 
