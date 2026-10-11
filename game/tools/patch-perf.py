@@ -39,6 +39,21 @@ void astraPerfFinish(ULONG logicFrame) {
     agkEnd();
 }
 '''
+    replace('#define PAL_LINES 313', '''#define PAL_LINES 313
+#ifdef ASTRA_PRESENTATION_TIMING
+ULONG astraTraceAgkStart;
+UBYTE astraTraceAgkReport;
+extern void astraTraceAgkEnd(ULONG end, UWORD whole);
+#endif''')
+    replace('\tif(s_uwFrames >= REPORT_EVERY) agkPerfReport();', '''#ifdef ASTRA_PRESENTATION_TIMING
+    astraTraceAgkStart = ulVblank * PAL_LINES + uwLine;
+    astraTraceAgkReport = s_uwFrames >= REPORT_EVERY;
+#endif
+\tif(s_uwFrames >= REPORT_EVERY) agkPerfReport();''')
+    replace('\ts_ulSumLines += uwLines;', '''#ifdef ASTRA_PRESENTATION_TIMING
+    astraTraceAgkEnd(astraTraceAgkStart + uwLines, uwLines);
+#endif
+\ts_ulSumLines += uwLines;''')
     return source
 
 

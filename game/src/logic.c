@@ -742,6 +742,14 @@ void logicTogglePause(tGameState *s) {
 	s->sceneArmed = 0;
 }
 
+/* Optional portable callback; production has no hardware dependency or calls. */
+#ifdef ASTRA_FRAME_BREAKDOWN
+extern unsigned char galaxyTraceTarget;
+extern void galaxyTraceMarkTarget(unsigned char mark);
+#define logicTrace(mark) do { if(galaxyTraceTarget) galaxyTraceMarkTarget(mark); } while(0)
+#else
+#define logicTrace(mark) ((void)0)
+#endif
 uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	static const tInput neutral = {0, 0, 0};
 	tInput filtered;
@@ -799,6 +807,7 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	uint8_t enemyStep = s->enemyAccumulator >= 20;
 	if(enemyStep) { s->enemyAccumulator -= 20; ++s->enemyMotionFrame; }
 	updateHero(s, input);
+	logicTrace(26);
 	if(s->phase == PLAY) {
 		++s->stageFrame;
 		if(s->waveTimer) --s->waveTimer;
@@ -810,15 +819,21 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 		if(s->boss.cooldown) --s->boss.cooldown;
 		if(!s->boss.cooldown) bossVolley(s);
 	}
+	logicTrace(27);
 	moveProjectiles(s->shots, SHOT_COUNT, 1, s->simFrame);
 	moveProjectiles(s->hostile, HOSTILE_COUNT, 0, s->simFrame);
+	logicTrace(28);
 	updatePickups(s);
+	logicTrace(29);
 	/* Collide only entities shown on the preceding frame, before rescheduling.
 	 * Thus mux drops (including extra renderer drops) are never lethal. */
 	collideShots(s);
 	if(s->phase == PLAY || s->phase == BOSS) collideHero(s);
+	logicTrace(30);
 	if(logicCombatActive(s)) scheduleSprites(s);
+	logicTrace(31);
 	/* Collisions/death have precedence; a death tick cannot advance the gate. */
 	if(s->phase == PLAY) updateBossGate(s, wasQuiet);
+	logicTrace(32);
 	return 1;
 }

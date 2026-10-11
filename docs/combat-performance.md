@@ -3,11 +3,26 @@
 Baseline: parent commit `52a37a1`. Target remains PAL A500 7 MHz OCS,
 512 KiB CHIP + 512 KiB slow, zero drops and <=90% peak. AROS is supplementary.
 
-**Current it11b: physical score-digit cache and packed BOSS label accepted.**
+**Current it13: score candidate A2 accepted and applied after the user's “go A”.**
+The non-inlined opaque writer hoists plane pointers/masks and removes its inner
+byte loop. Repeated complete OFF results: A500 campaign5/109%, ordinary BOB1/104%;
+AROS campaign3/100%, ordinary BOB0/97%. All other ordinary drops/peaks are unchanged.
+Both profiles pass full pixel/state equivalence and the final exact OFF ADF boot.
+Global0-drop/90% acceptance remains **FAIL**. See the
+[dated A refinement report](score-A-refinement-2026-10-11-110133.md) and
+[it13 iteration summary](#it13--user-selected-score-a-refined-to-a2).
+
+**Historical it11b: physical score-digit cache and packed BOSS label accepted.**
 Complete campaign improves6/116%→5/115% A500 and4/107%→3/107% AROS versus it10.
 Ordinary BOB remains2/107% A500; AROS improves1/101%→1/100%. No scoped peak
 regresses. Global0-drop/90% acceptance remains **FAIL**.
 See [it11 complete results](#it11--physical-score-cache-and-packed-boss-label).
+Latest measurement-only follow-up: [disjoint burst-frame breakdown](#it11b--disjoint-burst-frame-measurements).
+Nested follow-up: [HUD blocks and BOB submission/flush](#it11b--nested-hud-and-bob-measurements).
+Preceding native comparison: [opaque score cells and effect source-pair guard](hud-bob-native-comparison-2026-10-11-102053.md).
+Both standalone candidates were tested twice; neither met the conservative
+no-regression selection at that time. The later explicit “go A” supersedes that
+selection; the full earlier decision/evidence remains preserved below.
 All older tables without an explicit completion marker cover **emitted windows
 only**, not complete replays; they remain historical evidence, not full-run gates.
 
@@ -20,12 +35,18 @@ Historical failed capture trials and the original stop remain recorded below.
 Full numerical tables for all 48 cases, ten stages, both profiles and each
 measured iteration: [raw-counter tables](combat-performance-tables.md).
 
+**Loop 5 / it8: no runtime candidate accepted.** Three trajectory models and two
+bounded reservation caches were evaluated below. The restored production runtime
+is it7 (`de9b415`); A500 acceptance remains **8 drops / 116% campaign** and
+**3 drops / 114% ordinary BOB replay**. No 50fps gain is claimed for it8.
+
 ## Recap: where frame time is spent and which hardware is involved
 
-**Latest accepted HUD step is it11b, with unchanged complete accounting.**
-A500 complete campaign is5/115%, ordinary BOB2/107%; AROS3/107%,1/100%.
-The it11 target-only hardware table below is attribution evidence; its complete
-OFF table controls acceptance. The older dense48-case matrix is historical.
+**Latest accepted HUD step is it13 A2, with unchanged complete accounting.**
+A500 complete campaign is5/109%, ordinary BOB1/104%; AROS3/100%,0/97%.
+The [A refinement report](score-A-refinement-2026-10-11-110133.md) contains the
+controlling complete OFF results. The it11 target-only hardware table and older
+dense48-case matrix below remain historical attribution evidence.
 
 **Latest accepted Step D is it9j:** fixed galaxies + 36 moving stars. Campaign
 drops improve **8→7 A500, 7→6 AROS**; ordinary BOB improves **3→0, 2→0**. Global
@@ -128,6 +149,165 @@ it6 review and caveats:
   commits did not refresh them. No golden was updated in this step: a refresh would also
   accept that unreviewed earlier drift. It needs its own scoped review.
 - Evidence: `game/build/perf-loop5-it6-{on,prod,campaign}`; logs alongside.
+
+### it8 — sustained admission and rejected native trials
+
+All evidence paths below are relative to `game/build/`. No enemy counts, boss HP,
+fire periods, origins, 22px Y spacing, 6px X stagger, ray counts, vx−3, pool32,
+hero geometry, display/collision gate, DMA ownership or publication bounds changed.
+Only new rays used trial velocities; existing/injected mixed rays retained their
+trajectories and analytic reservation fallback. Parallel pairs required |dy|>=11.
+The lazy lifetime-bound trials did not use age as a retirement clock.
+
+`tools/measure-hostile-admission.py` instruments a temporary **host-only** copy of
+logic, counting acceptance immediately at spawn (including same-update exits), not
+inferring it from end-of-tick pool differences. PLAY runs every sector's complete
+quota without shooting; BOSS runs 20,000 ticks. The hero sweeps up/down every 100
+ticks and receives invulnerability to prevent death clearing the pool. No live
+bullet, enemy, countdown or trajectory is reset. This is sustained public-logic
+density evidence, **not ordinary no-hit play or native timing**. The native stress
+matrix still resets its actors every tick and cannot establish sustained density.
+
+#### Opportunity and baseline table
+
+An opportunity is an actual visible enemy fan or boss volley; eligible rays have
+origins inside the corridor. All three trajectory trials and the measured per-fan
+cache retain the exact opportunity/eligible counts and PLAY durations below.
+Full-pool refusals are **zero in every measured row and trial**; therefore
+`conflicts = eligible − accepted`. The raw JSON also retains explicit full/conflict
+counts, mean occupancy and peak occupancy. Admitted rays per volley are accepted
+divided by opportunities (including completely refused volleys).
+
+| Sector / phase | Ticks | Opportunities | Eligible | Baseline accepted | Baseline conflicts | Accepted/volley | Baseline active bullet-ticks / peak pool |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 PLAY | 6877 | 252 | 768 | 313 | 455 | 1.24 | 26783 / 13 |
+| 1 BOSS | 20000 | 312 | 1342 | 1342 | 0 | 4.30 | 137720 / 11 |
+| 2 PLAY | 7480 | 312 | 1244 | 513 | 731 | 1.64 | 39343 / 14 |
+| 2 BOSS | 20000 | 384 | 2258 | 2258 | 0 | 5.88 | 179472 / 14 |
+| 3 PLAY | 8018 | 395 | 1795 | 593 | 1202 | 1.50 | 45752 / 15 |
+| 3 BOSS | 20000 | 454 | 2979 | 2979 | 0 | 6.56 | 202370 / 16 |
+| 4 PLAY | 7547 | 418 | 2125 | 684 | 1441 | 1.64 | 48371 / 16 |
+| 4 BOSS | 20000 | 555 | 3145 | 2685 | 460 | 4.84 | 308280 / 24 |
+
+#### Trial admission / sustained pool density
+
+Each cell is **accepted rays (candidate/baseline %) ; active bullet-ticks / peak
+pool**. Duration is identical, so bullet-tick ratios also give mean-density ratios.
+The per-fan cache preserves every baseline value exactly. Shared-tick cache native
+images/states match baseline, but it did not receive a separate sustained host run.
+
+| Sector / phase | Horizontal vy0 | Parallel vy=aim | Parallel2 vy=2×aim |
+|---|---|---|---|
+| 1 PLAY | 388 (123.96%); 44651 / 18 | 315 (100.64%); 31580 / 14 | 361 (115.34%); 28765 / 15 |
+| 1 BOSS | 1342 (100%); 218578 / 15 | 1250 (93.14%); 169844 / 14 | 1336 (99.55%); 114971 / 10 |
+| 2 PLAY | 511 (99.61%); 58637 / 18 | 436 (84.99%); 41778 / 16 | 567 (110.53%); 45453 / 18 |
+| 2 BOSS | 2258 (100%); 371669 / 28 | 2258 (100%); 371669 / 28 | 2258 (100%); 371669 / 28 |
+| 3 PLAY | 555 (93.59%); 65854 / 19 | 464 (78.25%); 45810 / 16 | 671 (113.15%); 51831 / 18 |
+| 3 BOSS | 2979 (100%); 427481 / 28 | 2676 (89.83%); 284804 / 21 | 2794 (93.79%); 199280 / 16 |
+| 4 PLAY | 578 (84.50%); 68277 / 20 | 490 (71.64%); 47235 / 17 | 720 (105.26%); 54942 / 20 |
+| 4 BOSS | 2993 (111.47%); 479278 / 31 | 2531 (94.26%); 338484 / 26 | 2441 (90.91%); 273284 / 24 |
+
+Horizontal S4 PLAY loses **15.50%** of admissions. The original 85% planning floor
+was explicitly relaxed to 84% for this row only, allowing native evaluation; the
+ultimate rejection is for native regressions, not that initial floor. All three
+models double sector-2 BOSS mean occupancy **8.9736→18.58345 (+107.09%)** because
+that boss's level fan no longer diverges out of the corridor. Horizontal sector-3
+BOSS also rises **10.1185→21.37405 (+111.24%)**. Increases are not treated as free.
+
+Raw host evidence: `it8-admission-{baseline,horizontal,parallel,parallel2,cache}.json`.
+
+#### Iteration decisions (drops / peak%)
+
+Ordinary columns list pause / transitions / GAMEOVER / manga / BOB, in that order.
+`†` means the unchanged BOB input no longer meets its kill/death/pickup timeline
+and pixel assertions: raw timing is retained, **not an accepted BOB result or a
+like-for-like benefit**. Replays were not replaced for rejected models; genuine
+six-kill/pickup requirements and all goldens remain intact.
+
+| Trial | Timing-ON matrix A500; AROS | Ordinary A500 | Ordinary AROS | Campaign OFF A500; AROS | Decision |
+|---|---|---|---|---|---|
+| it7 reference | 6489/355; 5501/324 | 0/79, 0/79, 0/85, 0/80, 3/114 | 0/76, 0/76, 0/82, 0/78, 2/107 | 8/116; 7/112 | Retained runtime |
+| it8 parallel | Not run | Not run | Not run | Not run | Rejected on sustained admissions: S3/S4 PLAY 78.25%/71.64% |
+| it8p2 parallel2 | 6521/369; 5468/342 | 0/79, 0/79, 0/88, 0/80, 2/128† | 0/76, 0/76, 0/86, 0/78, 1/124† | 9/116; 7/112 | Rejected: A500 campaign drops +1; doubled S2 BOSS occupancy; no gate improvement |
+| it8h horizontal | 6455/345; 5444/316 | 0/79, 0/79, 0/92, 0/80, 3/105† | 0/76, 0/76, 0/90, 0/78, 1/99† | 12/116; 8/112 | Rejected: campaign drops +4/+1, GAMEOVER peak +7/+8 pp despite scoped admission exception |
+| it8c per-fan cache, original curves | 6595/352; 5431/322 | 0/79, 0/79, 0/85, 0/80, 3/114 | 0/76, 0/76, 0/83, 0/78, 2/107 | 8/116; 6/112 | Rejected: no A500 gate gain; dense logic mean increases; AROS GAMEOVER +1 pp |
+| it8c2 shared-tick cache, original curves | 6540/333; 5388/314 | 0/79, 0/79, 0/86, 0/80, 3/114 | 0/76, 0/76, 0/84, 0/78, 2/107 | 8/116; 6/112 | Rejected: dense logic improves only 0.76% across all sectors/phases on A500; no A500 gate gain; GAMEOVER +1/+2 pp |
+
+Every executed campaign and timing matrix passes functional checks on both
+profiles, including zero hidden bullets. Ordinary first-four-scenario source and
+lifecycle checks pass for all four native candidates. Both cache trials also pass
+the original BOB replay/source restoration checks. Native directories:
+`perf-loop5-{it8p2,it8h,it8c,it8c2}-{on,prod,campaign}`. Strict campaign output says
+budget FAIL even though this runner's existing process exit status is zero; the
+recorded performance verdict, not exit status, determines acceptance.
+
+#### Hardware-time recap for it8
+
+Same A500 sector-1 dense windows and units as the main recap: **mean per frame /
+maximum call raster lines**, with percentage of 313 lines. Latest attempted is
+**rejected it8c2**, not the selected runtime; the main it7 hardware recap remains
+the accepted reference. Audio sums two foreground calls; wait sums three. Inclusive
+rows overlap, timing ON is intrusive, and matrix injection is not ordinary play.
+
+| Stage / hardware | PLAY it7 → rejected it8c2 | BOSS it7 → rejected it8c2 |
+|---|---|---|
+| Restore/world — Blitter, 68000, chip-bus DMA | 67.07/93 (21.43%/29.71%) → 67.44/96 (21.55%/30.67%) | 54.49/88 (17.41%/28.12%) → 54.39/83 (17.38%/26.52%) |
+| Logic — 68000, DMA/interrupt stalls included | 134.01/467 (42.82%/149.20%) → 133.15/430 (42.54%/137.38%) | 69.06/205 (22.06%/65.50%) → 69.32/185 (22.15%/59.11%) |
+| Audio — foreground 68000, not isolated Paula IRQ | 4.82/5 (1.54%/1.60%) → 4.84/8 (1.55%/2.56%) | 4.95/9 (1.58%/2.88%) → 4.97/9 (1.59%/2.88%) |
+| Render inclusive — all render hardware below | 293.28/340 (93.70%/108.63%) → 293.50/329 (93.77%/105.11%) | 305.11/342 (97.48%/109.27%) → 305.98/344 (97.76%/109.90%) |
+| BOB — Blitter plus 68000 setup/internal waits | 167.41/201 (53.48%/64.22%) → 167.47/201 (53.50%/64.22%) | 204.52/239 (65.34%/76.36%) → 205.28/245 (65.58%/78.27%) |
+| Sprite prep — 68000 CHIP writes, not DMA time | 96.42/136 (30.81%/43.45%) → 96.52/127 (30.84%/40.58%) | 82.03/127 (26.21%/40.58%) → 81.81/111 (26.14%/35.46%) |
+| Copper build — 68000 CHIP writes | 13.79/30 (4.41%/9.58%) → 13.78/29 (4.40%/9.27%) | 3.57/9 (1.14%/2.88%) → 3.46/7 (1.11%/2.24%) |
+| Publication — 68000 palette/pointers | 10.86/18 (3.47%/5.75%) → 10.77/33 (3.44%/10.54%) | 10.61/27 (3.39%/8.63%) → 10.61/21 (3.39%/6.71%) |
+| Explicit wait — Blitter completion, overlapping | 5.27/9 (1.68%/2.88%) → 5.33/7 (1.70%/2.24%) | 5.19/12 (1.66%/3.83%) → 5.18/7 (1.66%/2.24%) |
+| Injection — diagnostic 68000 only | 80.29/112 (25.65%/35.78%) → 79.94/112 (25.54%/35.78%) | 75.30/108 (24.06%/34.50%) → 75.18/108 (24.02%/34.50%) |
+
+S1 PLAY/BOSS dense logic means/max for the other rejected trials are parallel2
+**135.43/511, 69.96/208**, horizontal **132.66/445, 68.46/192**, per-fan cache
+**135.53/486, 69.29/175**. These small changes do not resolve the large inclusive
+BOB/render cost. All sectors/stages/raw samples are retained in `it8-stage-tables.md`
+and each matrix's `{a500,a500-aros}-stages.json`, generated by
+`tools/summarize-combat-performance.py`.
+
+#### Validation and final state
+
+- The known parallel2 pool-hole fixture was corrected without weakening it:
+  gunner Y100/144, hero Y192, blockers Y104/148 on both channels, all vy2.
+  Fan1 admits Y60/82/126 on channels6/7/6; fan2 admits Y126/170/192 on7/6/7.
+  Four genuine refusals leave exactly six accepted rays in slots1/3/5/7/8/9;
+  exact moved coordinates and channels passed. Horizontal used the same oracle
+  with vy0. Rejected generators were then removed and the original mixed-curve
+  fixture/oracles restored. New injected-trajectory checks remain separate from
+  generator expectations: 10/11/12 separation, both parities, vy−2..2, pool holes,
+  mixed convergence and lifetime bounds, and partial-left reservation until x<=−6.
+  Existing pause, handover, visibility and collision-semantics tests remain.
+- Parallel2 passed host C and all 98 Python tests before native evaluation.
+  Horizontal and both caches passed host C. Both caches match **96/96 matrix
+  images**, plus **182/182 ordinary/campaign captures and 878 state records**
+  against it7. Visual review included native parallel2/horizontal boss2 curtains,
+  both models' AROS boss1 trajectories, parallel2 dense PLAY and the restored
+  ordinary bonus-drop image. No masking or golden refresh was used; the known
+  pre-it6 stale shared goldens still require their own review.
+- The runtime source is restored exactly to it7 (`git diff -- game/src/logic.c`
+  is empty). No trajectory or cache is selected. Final host **1/1**, Python
+  **98/98**, build and `git diff --check` pass. All four diagnostic flags are OFF.
+  The fresh **487536-byte** production executable is byte-identical (`cmp`) to
+  `perf-loop5-it7-prod/a500/astra`, SHA256
+  `9168c261b88d734c2d9fa9b4d5de8f7d348d9bd403701661d2c26661683c2960`.
+  Fresh ADF SHA256:
+  `9fece8d458f5e81a823d813b29c4d0cf25984271e0f3ad47b4850b083ebc356d`.
+  `perf-loop5-it8-restored-prod` reruns all five ordinary scenarios on both
+  profiles, with functional/source checks PASS; A500 results exactly reproduce
+  it7's drops/peaks. AROS GAMEOVER reports 83% versus archived it7's 82% despite
+  the identical executable: one-point differences are not conclusive source
+  regressions. BOB remains 3/114 A500, 2/107 AROS. Startup free CHIP/total RAM is
+  **51616/64072 A500**, **152248/1374808 AROS**, not a worst-case bound.
+  The host measurement harness and additional tests are retained as investigation
+  work, not a claimed runtime optimization; no rejected candidate is committed.
+- **Net accepted gain: zero.** Baseline hardware remains A500 7MHz OCS PAL,
+  512KiB CHIP + 512KiB slow. Campaign still needs 8 drops removed and 26 percentage
+  points of peak headroom; ordinary BOB needs 3 drops removed and 24 points. AROS
+  has supplementary memory and cannot establish A500 feasibility.
 
 ### it10 — complete-window accounting and accepted HUD step
 
@@ -411,6 +591,621 @@ above90; ordinary BOB2 drops and17 points. AROS campaign3/107%, BOB1/100%.
 The six-effect BOB bursts dominate the measured selected HUD/BOB costs; the
 S4 tick86 report/firing window and ordinary spawn/kill tail remain unresolved.
 Two bounded candidates are measured; this accepted increment is not viability.
+
+### it11b — disjoint burst-frame measurements
+
+Measurement-only follow-up at HEAD `10f4f47`, in the isolated `astra-perf`
+checkout. No optimization or gameplay change. **The previous 216-line / 13.80 ms
+residual was not all sprite work:** it included logic, fixture injection, audio,
+world work, state reporting and publication. The following are **new native
+measurements**, not a proportional allocation of that old residual.
+
+#### Boundary contract and units
+
+`ASTRA_FRAME_BREAKDOWN` selects fixed timestamp stores on campaign frames
+751/2817/4879/6927 only, or ordinary frames816/954/977/981. It requires the existing
+presentation trace to be enabled for the experiment. Other frames perform no
+trace clock reads. Arrays are fixed-size; diagnostic output is deferred to F8,
+after the original replay's complete performance boundary. The full combat
+profiler and stress matrix are OFF throughout.
+
+The 24 successive intervals share endpoints: trace begin → main bookkeeping →
+BOB restoration → world animation → music controller → input/pre-logic → fixture
+injection → logic/filter → sound events → renderer setup → HUD → BOB submission →
+display gate → copper build → pause overlay → hero → enemy → hostile streams →
+renderer return → post-render bookkeeping → fixture QA → state report → final
+blit wait → publish → trace end. The main table groups only the small bookkeeping
+intervals; each interval appears once. Nested logic and score-format timestamps
+are **inside** their parent and never added again to the frame sum.
+
+Raw timestamps and parsed partitions are in
+`game/build/it11b-frame-breakdown/report.json`, with original `serial.txt` files
+under `{split,light,off}/{campaign,bob_restore}/{a500,a500-aros}`. The parser
+`tools/frame_breakdown.py` rejects missing/duplicate frames, duplicate or backward
+timestamps, nested boundaries outside their parent, and disagreement with AGK's
+whole-iteration identity. Three host tests exercise sum identities and rejection
+paths. All selected native split traces pass the identities.
+
+Units: elapsed PAL raster lines; **ms = lines × 20 / 313**, **% of the 20 ms
+budget = lines × 100 / 313**. Percentages are budget shares, not shares of an
+overrunning frame. Rounding applies only to display, not to the exact integer sum.
+
+#### A500 primary: four campaign bursts, disjoint table
+
+Baseline hardware is 68000 7 MHz, OCS PAL, 512 KiB CHIP + 512 KiB slow. Each burst
+is PLAY stage51 immediately after the fixture injects six collision shots.
+
+| Segment | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms | Hardware/work covered |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| Restoration | 8 | 5 | 5 | 5 | 5.75 | 0.367 | 1.84% | 68000 setup, N−2 Blitter restore and its wait |
+| World animation | 25 | 25 | 25 | 25 | 25 | 1.597 | 7.99% | 68000 star writes to CHIP; no galaxy decode |
+| Logic/filter, inclusive | 78 | 80 | 79 | 81 | 79.5 | 5.080 | 25.40% | 68000 rules; nested split below |
+| Foreground music controller | 3 | 3 | 3 | 3 | 3 | 0.192 | 0.96% | 68000 controller call |
+| Sound events + call setup | 14 | 14 | 15 | 15 | 14.5 | 0.927 | 4.63% | 68000 SFX dispatch |
+| HUD, inclusive of formatting | 27 | 41 | 41 | 53 | 40.5 | 2.588 | 12.94% | CPU glyph work, clears, waits, contention |
+| BOB submission | 96 | 105 | 108 | 93 | 100.5 | 6.422 | 32.11% | CPU queue/setup, save/masked Blitter DMA, internal waits |
+| Copper build | 3 | 3 | 3 | 4 | 3.25 | 0.208 | 1.04% | CPU builds back-list commands |
+| Hero sprite preparation | 10 | 17 | 9 | 9 | 11.25 | 0.719 | 3.59% | CPU writes back CHIP streams |
+| Enemy sprite preparation | 7 | 7 | 8 | 7 | 7.25 | 0.463 | 2.32% | CPU prepares empty streams after six kills |
+| Hostile sprite preparation | 12 | 12 | 11 | 12 | 11.75 | 0.751 | 3.75% | CPU sorts/places hostile streams |
+| Fixture injection | 22 | 22 | 22 | 22 | 22 | 1.406 | 7.03% | Snapshot copies, six artificial shots, injection serial marker |
+| Fixture after-frame QA | 6 | 5 | 6 | 6 | 5.75 | 0.367 | 1.84% | CPU lifecycle/visibility checks and capture predicates |
+| State-report interval | 29 | 30 | 29 | 30 | 29.5 | 1.885 | 9.42% | Report predicate, state counting/formatting and debug output |
+| Final explicit blit wait | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | Final wait only; earlier waits stay in their own stages |
+| Publication | 10 | 10 | 10 | 10 | 10 | 0.639 | 3.19% | CPU palette/pointers, view/copper publication |
+| Other bookkeeping/instrumentation | 30 | 30 | 30 | 30 | 30 | 1.917 | 9.58% | Binding/ack/input, routing, pause check, call returns and trace bookkeeping |
+| **Exact target sum** | **382** | **411** | **406** | **407** | **401.5** | **25.655** | **128.27%** | Every main interval counted once |
+
+In this new trace, the non-HUD/non-BOB sum is **260.5 lines / 16.645 ms**, not
+the old216/13.80. Its main components are logic5.080 ms; restore/world1.965 ms;
+sprite preparation1.933 ms; foreground audio1.118 ms; fixture injection/QA plus
+state reporting3.658 ms; copper0.208 ms; final wait/publication0.767 ms; and
+bookkeeping1.917 ms. This fully accounts for the **new** residual. Probe overhead
+and shifted DMA/IRQ phase prevent assigning these numbers retrospectively to
+the old336/372/367/366-line samples.
+
+#### Nested logic: projectile calculations versus other rules
+
+These rows partition the79.5-line parent above; **do not add them to the main
+table**. Collisions include player shots versus enemies and hero interactions,
+plus their kill/effect/reward consequences. Visibility scheduling is logical
+admission/display bookkeeping, separate from hardware-stream rendering.
+
+| Within logic | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Setup, effects, clocks, hero | 7 | 6 | 6 | 6 | 6.25 | 0.399 | 2.00% |
+| Enemy spawn/move/fire, including any hostile trajectory admission | 5 | 13 | 12 | 14 | 11 | 0.703 | 3.51% |
+| Player + hostile projectile movement | 9 | 9 | 9 | 9 | 9 | 0.575 | 2.88% |
+| Pickups update | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% |
+| Shot + hero collisions, inclusive | 34 | 30 | 30 | 30 | 31 | 1.981 | 9.90% |
+| Visibility scheduling | 17 | 16 | 16 | 17 | 16.5 | 1.054 | 5.27% |
+| Boss-entry gate | 2 | 2 | 2 | 1 | 1.75 | 0.112 | 0.56% |
+| Logic return/filter tail | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% |
+| **Inclusive parent** | **78** | **80** | **79** | **81** | **79.5** | **5.080** | **25.40%** |
+
+Thus straight projectile movement is0.575 ms in these samples, whereas collision
+resolution is1.981 ms. The0.703 ms enemy block is **not an isolated admission
+benchmark**: it also includes spawn, motion and firing decisions; no claim that
+admission was called or consumed that entire interval is made. A dense firing
+frame may have a very different breakdown. Nested timestamps add their own cost.
+
+#### AROS supplement: same four IDs and partition
+
+AROS has additional fast RAM and cannot establish baseline A500 memory feasibility.
+Columns retain the same frame order and units. Hardware interpretation is the
+same as the primary table.
+
+| Segment | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Restoration | 8 | 6 | 6 | 5 | 6.25 | 0.399 | 2.00% |
+| World | 25 | 24 | 25 | 25 | 24.75 | 1.581 | 7.91% |
+| Logic/filter | 75 | 77 | 77 | 79 | 77 | 4.920 | 24.60% |
+| Music controller | 2 | 3 | 2 | 2 | 2.25 | 0.144 | 0.72% |
+| Sound events | 18 | 18 | 18 | 18 | 18 | 1.150 | 5.75% |
+| HUD | 26 | 40 | 39 | 51 | 39 | 2.492 | 12.46% |
+| BOBs | 70 | 80 | 88 | 73 | 77.75 | 4.968 | 24.84% |
+| Copper | 4 | 4 | 4 | 3 | 3.75 | 0.240 | 1.20% |
+| Hero sprites | 9 | 18 | 10 | 10 | 11.75 | 0.751 | 3.75% |
+| Enemy sprites | 7 | 8 | 8 | 7 | 7.5 | 0.479 | 2.40% |
+| Hostile sprites | 12 | 11 | 11 | 11 | 11.25 | 0.719 | 3.59% |
+| Injection | 22 | 22 | 22 | 22 | 22 | 1.406 | 7.03% |
+| QA | 7 | 5 | 5 | 5 | 5.5 | 0.351 | 1.76% |
+| State report | 29 | 29 | 29 | 29 | 29 | 1.853 | 9.27% |
+| Final wait | 1 | 2 | 2 | 2 | 1.75 | 0.112 | 0.56% |
+| Publish | 11 | 10 | 10 | 10 | 10.25 | 0.655 | 3.27% |
+| Other bookkeeping/instrumentation | 27 | 32 | 29 | 32 | 30 | 1.917 | 9.58% |
+| **Exact target sum** | **353** | **389** | **385** | **384** | **377.75** | **24.137** | **120.69%** |
+
+#### AGK edges and ordinary wave-tail contrast
+
+The build-local AGK transform exposes its **already sampled** Begin/End endpoints
+under the presentation diagnostic flag; the installed AGK remains untouched.
+`AGK whole = Begin-to-trace prefix + target sum + trace-to-End suffix` holds
+exactly for every selected frame. Prefix includes ordinary periodic reporting
+when it occurs. Suffix includes trace-record copying, the F10 check and the path
+to AGK's endpoint. It is not silently dropped from whole-frame accounting.
+
+| Frame | A500 prefix + target + suffix = AGK whole | AROS same identity | Regular AGK report in prefix? |
+|---|---|---|---|
+| 751 | 2 + 382 + 5 = 389 | 2 + 353 + 5 = 360 | No |
+| 2817 | 3 + 411 + 5 = 419 | 2 + 389 + 4 = 395 | No |
+| 4879 | 3 + 406 + 5 = 414 | 2 + 385 + 4 = 391 | No |
+| 6927 | 2 + 407 + 5 = 414 | 2 + 384 + 5 = 391 | No |
+| Ordinary954 | 10 + 384 + 5 = 399 | 10 + 362 + 5 = 377 | **Yes**, included in whole |
+
+Campaign AGK whole means are409 lines /26.134 ms A500 and384.25 /24.553 ms AROS.
+The10-line ordinary954 prefix is an **inclusive Begin/report interval**, not a
+claim of10 isolated serial lines. The AGK sample begins after its harness tick;
+that pre-sample tick and the vblank wait after End are outside both intervals.
+F8's final report/marker/hold and deferred trace dump remain outside the completed
+replay, as before; ordinary reports followed by gameplay stay inside it.
+
+Ordinary954 is a real input-driven wave-spawn tail, not the six-shot fixture:
+A500 logic95 lines (6.070 ms), including spawn/move/fire26, projectile movement9,
+collisions14 and scheduling25; enemy sprite preparation40 lines (2.556 ms),
+versus7–8 after the fixture kills every enemy. Hero/enemy/hostile preparation
+totals62 lines (3.962 ms); restore/world38, HUD32, BOB63, copper14, music/SFX5,
+state report31, wait/publication12, bookkeeping30. The remaining injection/QA
+boundary slots are1+1 lines of **measurement overhead around compiled-out hooks**,
+not fixture work. Sum384 lines exactly. AROS954 logic85, enemy sprites39, total362.
+Both ordinary source-artwork/restoration checks pass. Raw816/977/981 records are
+retained as additional ordinary kill/pickup evidence.
+
+#### Instrumentation cost and measurement limitations
+
+Two builds use identical selected IDs and deferred storage: `split` enables all
+internal cuts; `light` sets `ASTRA_FRAME_BREAKDOWN=OFF`, retaining only selected
+outer endpoints and the AGK edge capture. The latter is **not fully uninstrumented**.
+The separate `off` runs disable the presentation trace too; campaign injection
+remains ON only for campaign coverage. No exact per-frame timing is invented for
+a fully OFF executable from window maxima.
+
+| Campaign frame | A500 light → split target lines | Added lines | AROS light → split | Added lines |
+|---|---:|---:|---:|---:|
+| 751 | 329 → 382 | 53 | 299 → 353 | 54 |
+| 2817 | 364 → 411 | 47 | 336 → 389 | 53 |
+| 4879 | 359 → 406 | 47 | 333 → 385 | 52 |
+| 6927 | 359 → 407 | 48 | 331 → 384 | 53 |
+| **Mean** | **352.75 → 401.5** | **48.75 / 3.115 ms** | **324.75 → 377.75** | **53 / 3.387 ms** |
+
+Ordinary954 light→split is330→384 A500 and309→362 AROS. The extra timestamps
+materially perturb the selected frames and can change missed-vblank counts;
+there is **no constant overhead subtraction** or claim that the larger split
+totals represent a production regression. Even individual HUD/BOB intervals move
+because later work starts at a different raster/interrupt phase.
+
+Complete replay results below are **drops / peak load%**, with actual counted
+frames and final partial windows. `OFF` means all timing/stress diagnostics OFF;
+the campaign's state-injection flag necessarily remains ON for that fixture.
+
+| Replay/profile | Frames / final window | Timing OFF | Light endpoints | Detailed split |
+|---|---:|---:|---:|---:|
+| Campaign A500 | 9172 /22 | **5 /115%** | 5 /118% | 5 /133% |
+| Campaign AROS | 9172 /22 | **3 /107%** | 3 /109% | 4 /126% |
+| Ordinary BOB A500 | 1247 /47 | **2 /107%** | 2 /110% | 5 /127% |
+| Ordinary BOB AROS | 1247 /47 | **1 /100%** | 1 /103% | 3 /120% |
+
+Each mode has identical completion IDs8925 (campaign) and1000 (ordinary BOB).
+OFF reproduces the accepted it11b results exactly. The light trace itself adds
+whole-run overhead; its per-frame values must not be called pure OFF timings.
+Strict zero-drop/90% acceptance remains FAIL, as before.
+
+All entries measure **elapsed intervals, not pure CPU time or isolated DMA
+occupancy**. The CPU can stall behind bitplane, sprite, Copper, Blitter and Paula
+DMA; music interrupts can occur in any interval. Sprite preparation measures CPU
+stream construction, not sprite DMA; copper build is not Copper execution.
+BOB elapsed time combines CPU setup, masked transfers and waits. Foreground
+audio is not the entire audio subsystem. Injection and state-report intervals
+include their serial/debug calls, but do not isolate serial transmission from
+formatting/copying. Subtracting fixture cost cannot reconstruct an ordinary
+six-kill frame: both state provenance and bus phase differ.
+
+#### Validation and restored production
+
+- All six campaign profile/mode runs pass functional, lifecycle, channel and
+  source-pixel checks. All six ordinary BOB runs pass the source artwork and
+  restoration verifier. Every run matches the retained accepted it11b captures
+  and every emitted gameplay-state field: **348 complete-image comparisons and
+  1764 state-record comparisons**, with zero differences (per mode/profile:
+  campaign53 images/255 states; BOB5 images/39 states). This covers the requested
+  campaign and ordinary contrast, not a rerun of every unrelated scenario.
+- Host C1/1, existing Python108/108 with Python3.12, and new partition tests3/3
+  pass. Exact native sums, nested nonoverlap and AGK prefix/target/suffix identities
+  pass for all16 detailed selected-frame records; light identities pass too.
+  `git diff --check` passes. No thresholds, goldens or gameplay tests were relaxed.
+- Two invocation mistakes are retained, not disguised as native failures: the
+  first Python run used system3.9 and its `ast.literal_eval` rejected the existing
+  indented font fixture; unchanged tests pass on required3.12. The first ordinary
+  validator invocation omitted required `--drop`/`--restored` arguments and exited2
+  before validation; the runner restored OFF, then resumed from retained captures
+  with the correct arguments. `commands.log`, `.tmp/frame-breakdown-run.log` and
+  `prior_invocation_failure` preserve that history. No actual new functional,
+  image, lifecycle or timing-accounting assertion failed.
+- The serialized runner `.tmp/measure-frame-breakdown.py` rebuilt all flags OFF
+  in `finally`. `CMakeCache.txt` confirms **CAMPAIGN_PROBE, COMBAT_STRESS,
+  COMBAT_TIMING, PRESENTATION_TIMING and FRAME_BREAKDOWN all OFF**. The final
+  501636-byte executable SHA256 is unchanged:
+  `b105cfd770f07089252652179023771f8f93908066e705c1fb226d9e3e0b9c06`.
+  Fresh fully-OFF ordinary replays booted that same executable on both profiles.
+  Guarded instrumentation remains available; it has zero binary effect when OFF.
+- Source SHA256s, full commit ID, per-mode executable hashes, complete window
+  records, raw timestamps and equivalence results are retained in `report.json`.
+  The pre-existing pending it8 tests/docs/admission harness remain preserved.
+  No optimization, commit, GUI session or installed-kit change was performed.
+
+### it11b — nested HUD and BOB measurements
+
+**Measurement only, still HEAD `10f4f47`, isolated `astra-perf`.** This follows up
+the preceding A500 HUD2.588 ms and BOB6.422 ms figures with new native samples.
+No rendering algorithm, submission order, gameplay, wait placement or asset was
+optimized. The new cuts and operation counters perturb timing, so their sums
+are not forced to equal those earlier numbers.
+
+Main finding: on each six-kill burst, **only score digits redraw in the HUD**;
+there are **seven successful BOB submissions: six small explosions plus one
+newly dropped bonus**, not six BOBs. The large BOB intervals are the effects
+submission path and the common queue flush. Neither is pure effect-DMA time.
+
+#### Measurement contract, source paths and execution validity
+
+- Selected campaign frames751/2817/4879/6927 retain the same PLAY stage51 identity.
+  Added7704 (ordinary report/BOSS tick86) and7780 (second-bitmap BOSS HUD return).
+  Ordinary input-driven frames816/954/977/981 cover kills, wave spawn and pickup.
+- `ASTRA_HUD_BOB_TIMING=ON` retains the HUD/BOB parent endpoints and extended
+  campaign IDs. `ASTRA_HUD_BOB_DETAIL=ON` adds internal cuts and operation counts.
+  The former with DETAIL OFF is the **light control**, not an uninstrumented
+  executable. `ASTRA_FRAME_BREAKDOWN` is OFF in both modes to avoid running the
+  earlier full-main-loop cuts. Fully OFF runs disable all timing diagnostics.
+- Fixed storage: ten record slots,49 timestamp positions with explicit validity
+  bytes,16 HUD operation counters and seven BOB category count/alignment pairs.
+  Only selected frames read clocks. Counts use guarded increments, no per-entity
+  clock reads, allocations or printing. The final F8 dump is deferred; the replay
+  waits for its final marker **after** the completed performance boundary.
+- `render_world.c`: `renderWorldHud` → `hudDraw`; its ordered blocks are DAMAGE,
+  SPEED, SHIELD, FIRE, score, lives, charge labels/instructions, charge bar,
+  boss label/bar, then physical-buffer history updates/return. `scoreDraw` nests
+  `numberText` and counts actual changed digits, glyph draws and clear calls.
+- `render_bobs.c`: HUD-end → BOB-call entry → boss queue → effects queue → pickup
+  queue → shots queue → `bobEnd()` → the existing terminal `blitWait()` → close/
+  return. `render_boss.c` and `render_effects.c` count **after** eligible `bobPush`
+  calls; pickups/shots count after their actual push helpers. Rejected/offscreen,
+  occluded and excess-lance objects are not counted. Seven categories are boss,
+  small effect, hero effect, boss effect, pickup, normal shot and lance.
+- No new flush or wait was inserted between categories. Earlier N−2 background
+  restoration in `renderBobsBegin()` remains outside the BOB interval here.
+- `tools/hud_bob_breakdown.py` requires the complete49/16/7 vectors, unique IDs,
+  zero native bounds/duplicate faults and the exact executed timestamp set.
+  A skipped formatter is **unmeasured/null**, not a zero-duration call. Light-mode
+  operation counters are invalid/null, not evidence of zero work. A block with
+  zero redraw operations still has a valid predicate/timestamp interval.
+- The two partition identities are exact: sum(HUD blocks)=HUD-end−HUD-begin;
+  sum(BOB blocks)=BOB-end−HUD-end. A separate disjoint outer partition is
+  before-HUD + HUD + BOB + after-BOB = target. AGK's sampled prefix + target +
+  suffix = whole also remains exact. Nested formatting is never added twice.
+
+All timing below is **elapsed PAL raster lines**: ms=lines×20/313,
+%20 ms=lines×100/313. Intervals include their diagnostic stores, CPU setup,
+interrupts and chip-bus stalls; they are not isolated CPU cycles or DMA occupancy.
+
+#### A500 HUD: ordered, disjoint blocks
+
+Baseline hardware remains68000 7 MHz, OCS PAL,512 KiB CHIP +512 KiB slow.
+
+| HUD block | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms | Actual work in these bursts |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| DAMAGE counter / entry | 3 | 3 | 3 | 2 | 2.75 | 0.176 | 0.88% | Predicate only;0 redraws |
+| SPEED counter | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | Predicate only;0 redraws |
+| SHIELD counter | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | Predicate only;0 redraws |
+| FIRE counter | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | Predicate only;0 redraws |
+| **Score, inclusive** | **25** | **40** | **40** | **49** | **38.5** | **2.460** | **12.30%** | One format call;1/2/2/2 glyphs and clears |
+| Lives | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | Predicate only;0 redraws |
+| Charge labels/instructions | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% | No label-pair blits |
+| Charge bar | 2 | 2 | 2 | 3 | 2.25 | 0.144 | 0.72% | No clear/fill |
+| Boss label/bar | 3 | 2 | 2 | 2 | 2.25 | 0.144 | 0.72% | No clear, label draw or fill |
+| Physical history + return | 2 | 3 | 3 | 5 | 3.25 | 0.208 | 1.04% | CPU cache writes and return |
+| **Exact HUD parent** | **45** | **60** | **60** | **71** | **59** | **3.770** | **18.85%** | Instrumented parent, not old2.588 ms |
+
+The score dominates the **actual redraw work**, not every instrumented predicate.
+The1–3-line inactive-block intervals must not be described as text/bar rendering
+costs. Their timestamp/predicate overhead is a material fraction of the sample.
+
+Nested within the score row, not additive to HUD:
+
+| Score subinterval | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Predicate/call/count setup | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% |
+| Eight-digit `numberText` format | 4 | 4 | 4 | 4 | 4 | 0.256 | 1.28% |
+| Compare/history, dirty clears, glyph writes, return | 19 | 34 | 34 | 43 | 32.5 | 2.077 | 10.38% |
+| **Inclusive score** | **25** | **40** | **40** | **49** | **38.5** | **2.460** | **12.30%** |
+| Changed digits = glyph calls = clear calls | 1 | 2 | 2 | 2 | 1.75 | — | — |
+
+Source sequence: convert eight decimal digits on the68000; compare against this
+physical bitmap's eight cached characters; for each changed digit clear a6×7
+rectangle to ink1 using the Blitter; `textDraw` waits for that blit, then applies
+cached5×7 glyph masks with CPU byte writes across four interleaved CHIP planes.
+The full48×7 score clear is not used in these dirty updates. The32.5-line row
+does **not** isolate clears from glyph writing or CPU from Blitter waits.
+The four numeric upgrade counters and lives use the same general number/text
+writer when dirty. Charge labels are pre-rendered bitmap blits; charge and HP
+bars use rectangular clears/fills. BOSS lettering uses the packed14 aligned
+OR.L writes after its clear/wait, rather than the general glyph loop.
+
+#### A500 BOBs: submission versus shared completion
+
+| Ordered BOB interval | 751 | 2817 | 4879 | 6927 | Mean lines | Mean ms | %20 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| HUD return / BOB call setup | 3 | 2 | 2 | 3 | 2.5 | 0.160 | 0.80% |
+| Boss eligibility/queue | 2 | 3 | 3 | 3 | 2.75 | 0.176 | 0.88% |
+| **Effects queue** | **43** | **42** | **61** | **45** | **47.75** | **3.051** | **15.26%** |
+| Pickup queue | 8 | 16 | 8 | 8 | 10 | 0.639 | 3.19% |
+| Normal-shot/lance queue | 5 | 9 | 5 | 6 | 6.25 | 0.399 | 2.00% |
+| **Common `bobEnd()` flush** | **45** | **43** | **39** | **38** | **41.25** | **2.636** | **13.18%** |
+| Existing terminal `blitWait()` | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% |
+| Close queue / return | 2 | 2 | 2 | 2 | 2 | 0.128 | 0.64% |
+| **Exact BOB parent** | **110** | **119** | **122** | **107** | **114.5** | **7.316** | **36.58%** |
+
+Pinned ACE `game/vendor/ACE/src/ace/managers/bob.c` explains the boundary:
+
+1. `bobPush` (lines221–228) enqueues unconditionally, then calls
+   `bobProcessNext()` if the Blitter is idle. The measured application eligibility
+   checks precede the push; the counter executes after it has returned.
+2. `bobProcessNext` first saves pending backgrounds (lines315–367), with CPU
+   pointer/modulo setup, internal waits and A→D Blitter copies. Until pushing is
+   finished it returns before the masked drawing branch (lines369–371).
+3. `bobEnd` (lines580–585) marks pushing finished and drains the shared queue.
+   Remaining saves precede all masked draws. The latter use A mask, B image,
+   C destination and D result, with the cookie-cut minterm (lines374–446).
+4. The application's existing final wait completes the last launched operation.
+   N−2 restoration already occurred earlier on the actual back bitmap.
+
+Therefore effectsQueue3.051 ms includes effect frame selection, coordinates,
+queue setup, opportunistic background saves and stalls. It is **not** the total
+cost of drawing six explosions. The shared2.636 ms flush includes remaining
+saves and masked drawing for **all seven objects**. Even a later pickup push may
+advance an earlier explosion's save. No honest per-category complete drawing
+time can be inferred from this unchanged asynchronous queue.
+
+Actual successful pushes on **each** of the four frames, identical on AROS:
+
+| Category | Pushes/frame | Source size | Non-16-aligned X | Save word-area | Masked-draw word-area |
+|---|---:|---|---:|---:|---:|
+| Boss | 0 | 64×48 | 0 | 0 | 0 |
+| Small explosions | **6** | 16×16 | **6** | **768** | **768** |
+| Hero explosion | 0 | 32×32 | 0 | 0 | 0 |
+| Boss explosion | 0 | 64×48 | 0 | 0 | 0 |
+| Newly dropped bonus | **1** | 16×16 | **1** | **128** | **128** |
+| Normal shots | 0 | 16×4 | 0 | 0 | 0 |
+| Charged lance | 0 | 16×10 | 0 | 0 | 0 |
+| **Total** | **7** | Four planes | **7** | **896** | **896** |
+
+The injected collision shots have been consumed by logic; the resulting bonus
+is still drawn this tick. The fixture clears that pickup on the following
+stage51-before-update hook, not before this stage51 image is rendered.
+
+Word-areas are derived **offline** from observed successful pushes/alignment and
+the actual ACE formulas: save width=`ceil(width/16)+1`; masked draw width=
+`ceil((width+(x&15))/16)`; multiply by height×4 planes. Thus each small shifted
+BOB covers128 word positions per operation. Each896-word destination area is
+1792 bytes; this is neither measured DMA time nor total bus traffic. The six
+explosions account for6/7 of these areas, not a proven6/7 of elapsed BOB time.
+
+#### AROS supplement and ordinary/BOSS contrasts
+
+AROS's additional fast RAM makes it supplementary to the baseline A500. These
+are the same disjoint blocks, frame order751/2817/4879/6927:
+
+| Block | Four AROS line samples | Mean lines | Mean ms | %20 ms |
+|---|---|---:|---:|---:|
+| HUD DAMAGE | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD SPEED | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD SHIELD | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD FIRE | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD score | 24/38/39/48 | 37.25 | 2.380 | 11.90% |
+| HUD lives | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD charge labels | 2/3/2/2 | 2.25 | 0.144 | 0.72% |
+| HUD charge bar | 3/2/2/2 | 2.25 | 0.144 | 0.72% |
+| HUD boss label/bar | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| HUD history/return | 2/2/2/6 | 3 | 0.192 | 0.96% |
+| **HUD total** | **43/57/57/70** | **56.75** | **3.626** | **18.13%** |
+| BOB call setup | 3/3/3/2 | 2.75 | 0.176 | 0.88% |
+| Boss queue | 2/2/3/3 | 2.5 | 0.160 | 0.80% |
+| Effects queue | 31/31/50/33 | 36.25 | 2.316 | 11.58% |
+| Pickup queue | 6/6/6/6 | 6 | 0.383 | 1.92% |
+| Shots queue | 5/5/5/5 | 5 | 0.319 | 1.60% |
+| Common flush | 34/46/30/31 | 35.25 | 2.252 | 11.26% |
+| Terminal wait | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| Close/return | 2/2/2/2 | 2 | 0.128 | 0.64% |
+| **BOB total** | **85/97/101/84** | **91.75** | **5.863** | **29.31%** |
+
+AROS score formatting is4 lines every sample; comparison/clear/glyph/return is
+18/32/33/42 lines, mean31.25 /1.997 ms. Operation counts match A500 exactly.
+
+| Contrast frame | A500 HUD / BOB lines | AROS HUD / BOB lines | Observed operations |
+|---|---:|---:|---|
+| Ordinary816, kill | 63 /59 | 61 /50 | One score glyph/clear; one small effect +3 normal shots |
+| Ordinary954, wave tail | 57 /78 | 56 /63 | One score glyph/clear; one small effect +one bonus +4 normal shots |
+| Ordinary977, pickup | 38 /47 | 36 /41 | **DAMAGE redraw only**;3 normal shots |
+| Ordinary981, kill | 69 /53 | 62 /44 | Two score glyphs/clears; one small effect +2 normal shots |
+| Campaign7704, BOSS tick86 | 22 /73 | 21 /69 | **No HUD redraw at all**; one64×48 boss BOB |
+| Campaign7780, BOSS label return | 48 /73 | 46 /69 | One label clear/draw +one HP clear/fill; one64×48 boss BOB |
+
+At977, the active DAMAGE interval is18 lines /1.150 ms A500 (17 /1.086 AROS).
+At7780, the active boss-label/bar interval is28 lines /1.789 ms (26 /1.661 AROS),
+including146×7 label clearing, packed lettering, HP width calculation and112×4
+bar clearing/filling. BOSS submission/common flush is21/33 lines on both selected
+A500 boss frames (20/31 AROS); the shifted boss has960 save and960 masked-draw
+word positions. Charge-label/bar **redraws were not exercised** in these selected
+frames; their predicate-only timings do not establish active-update costs.
+
+An important elapsed-time caveat is visible at ordinary816: DAMAGE takes15 A500
+lines despite **zero** redraws; AROS instead has14 lines in the inactive SPEED
+block. Interrupt/bus phase can dominate tiny intervals. This is not evidence of
+an expensive number renderer executing there, and no isolated IRQ duration is
+claimed.
+
+#### Light controls, whole-iteration edges and production OFF
+
+Parent measurements from a matched light trace versus detailed trace. Each cell
+is **light→detail raster lines**; no timing is normalized to the earlier run.
+
+| Frame | A500 HUD | A500 BOB | A500 target | AROS HUD | AROS BOB | AROS target |
+|---|---:|---:|---:|---:|---:|---:|
+| 751 | 24→45 | 96→110 | 337→371 | 22→43 | 70→85 | 310→345 |
+| 2817 | 38→60 | 109→119 | 371→403 | 36→57 | 70→97 | 344→379 |
+| 4879 | 38→60 | 113→122 | 367→398 | 36→57 | 92→101 | 344→374 |
+| 6927 | 38→71 | 110→107 | 366→396 | 36→70 | 89→84 | 342→371 |
+| **Burst mean** | **34.5→59** | **107→114.5** | **360.25→392** | **32.5→56.75** | **80.25→91.75** | **335→367.25** |
+| 7704 | 5→22 | 60→73 | 317→346 | 4→21 | 51→69 | 299→335 |
+| 7780 | 30→48 | 59→73 | 301→333 | 29→46 | 49→69 | 292→322 |
+
+Detailed cuts/counters add a net31.75 lines /2.029 ms per A500 burst and32.25
+/2.061 ms on AROS versus this light control. The queue counters and timestamps
+also change when the Blitter becomes idle: e.g. S4's BOB parent can get shorter
+while its HUD gets longer. Do not subtract a fixed probe cost or assign the
+flush to categories by proportional arithmetic. Light HUD/BOB means are2.204 /
+6.837 ms A500; detailed means are3.770 /7.316 ms. Both differ from the prior
+full-main-loop diagnostic's2.588 /6.422 ms for legitimate measurement reasons.
+
+AGK edges stay explicit. A500 detailed burst identities are
+`3+371+10=384`, `2+403+10=415`, `2+398+9=409`, `3+396+9=408` lines.
+At7704 the regular-report prefix is included: `10+346+9=365` A500,
+`10+335+9=354` AROS. The prefix is inclusive Begin/report bookkeeping, not
+isolated serial cost. Record-copy/return work accounts for a measured suffix;
+the post-End vblank wait and F8 final dump are outside the completed interval.
+
+Complete replay controls, **dropped vblanks / peak load%**:
+
+| Replay/profile | Actual frames / final window | Fully timing-OFF | Light parents | Detailed HUD/BOB |
+|---|---:|---:|---:|---:|
+| Campaign A500 | 9172 /22 | **5 /115%** | 5 /122% | 6 /132% |
+| Campaign AROS | 9172 /22 | **3 /107%** | 3 /113% | 6 /124% |
+| Ordinary BOB A500 | 1247 /47 | **2 /107%** | 2 /114% | 5 /125% |
+| Ordinary BOB AROS | 1247 /47 | **1 /100%** | 1 /107% | 3 /118% |
+
+Completion IDs remain8925 and1000. Campaign injection is enabled only for the
+campaign fixture, including its timing-OFF control. These diagnostic overruns
+quantify instrumentation impact, not a gameplay regression. Fresh timing-OFF
+results exactly reproduce accepted it11b. The unchanged zero-drop/90% gate still
+fails. No pure OFF per-frame values are inferred from aggregate windows.
+
+#### Validation, reproducibility and final binary
+
+- **All12 native profile/mode/replay runs pass functional checks.** Campaign
+  source pixels, scene/death lifecycle and channel assertions pass; ordinary BOB
+  artwork/restoration checks pass. Every complete image and emitted gameplay
+  state matches accepted it11b: **348 image comparisons and1764 state-record
+  comparisons**, no masks, ignored fields or golden updates.
+- All20 detailed selected-frame records pass exact HUD/BOB/nested/outer sums and
+  timestamp validity checks. Another20 light records pass parent and AGK edge
+  identities. HUD operation vectors and all seven BOB count/alignment/work-area
+  vectors are identical across profiles for all10 selected identities.
+- C1/1 and Python3.12 **116/116** pass. New regression coverage includes invalid/
+  missing/duplicate timestamps and vectors, native fault rejection, absent
+  formatter validity, light counters reported as unavailable, and different
+  save/masked alignment areas. A host test executes actual `scoreDraw` and BOB
+  pickup/shot eligibility functions with counters enabled: unchanged digits do
+  not draw, actual clear/glyph counts agree with spies, offscreen/invalid/hidden
+  objects and excess lances do not inflate successful pushes. Existing source
+  pixel oracles still pass with the diagnostic header compiled OFF.
+- Runner `.tmp/measure-hud-bobs.py` serializes native commands and restores OFF
+  in `finally`. `.tmp/finalize-hud-bobs.py` independently re-parses the retained
+  serial evidence and asserts hashes, cross-profile counts and all flags. Final
+  **all seven flags OFF**: COMBAT_TIMING, COMBAT_STRESS, CAMPAIGN_PROBE,
+  PRESENTATION_TIMING, FRAME_BREAKDOWN, HUD_BOB_TIMING, HUD_BOB_DETAIL.
+- Restored executable is the same **501636 bytes**, SHA256
+  `b105cfd770f07089252652179023771f8f93908066e705c1fb226d9e3e0b9c06`.
+  Fresh OFF ordinary replays booted that identical executable on both profiles.
+  Native-measured source hashes, vendored ACE BOB sources and installed AGK perf
+  source remain unchanged throughout the measurements. No unexpected functional
+  or accounting validation failure occurred; no assertion was weakened.
+- Evidence: `game/build/it11b-hud-bob-breakdown/report.json`, `commands.log`,
+  `scenarios/`, and `{detail,light,off}/{campaign,bob_restore}/{a500,a500-aros}/`
+  contain full windows, raw valid timestamps, operation vectors, complete
+  captures/serial, executable copies, source hashes and final integrity results.
+  `.tmp/summarize-hud-bobs.py` reproduces the tables from the report.
+  Prior frame-breakdown evidence/tooling and unrelated pending it8 work are
+  preserved. No optimization, GUI, commit, cleanup or paid generation was done.
+
+### it13 — user-selected score A refined to A2
+
+The user explicitly selected original A despite its known mean-load tradeoff,
+prioritizing deadline gains. Original A was the fallback, not the older blitter
+baseline. Fresh baseline controls and both refinements were measured on both
+profiles; no B/source guard or combined change was applied. All earlier pending
+diagnostics, tests, reports and rejected-trial evidence remain preserved.
+
+| Variant | Ordinary BOB A500; AROS (drops/peak%) | Campaign A500; AROS | Decision |
+|---|---|---|---|
+| Fresh baseline | 2/107; 1/100 | 5/115; 3/107 | Control only |
+| Original A, retained two runs | 1/106; 1/100 | 5/112; 3/103 | User-approved fallback, superseded |
+| A1: non-inlined cell helper | 1/105; 0/99 | 5/111; 3/103 | Fully validated, superseded by A2 |
+| A2: hoisted pointers/masks, explicit second byte, two runs | 1/104; 0/97 | 5/109; 3/100 | **Accepted and applied** |
+
+All other ordinary drops/peaks remain unchanged. Original A→A2 campaign mean load
+is34.688399→34.541212% A500 and33.404928→33.214130% AROS. AROS remains0.005451pp
+above the fresh baseline mean, explicitly accepted under the deadline-first
+selection. Both A2 runs reproduce every drop/peak; all full windows/tails count.
+
+Actual68000 audit: HUD entry locals/saved registers return from48+44 bytes in
+original A to12+40 in both refinements. A1 helper locals/saves are20+44; A2 is4+44,
+with remaining mask spills. GCC unrolls A2, growing its helper308→1036 bytes.
+Destination writes are bytes, glyph WORD/LONG loads are aligned, and no audited
+module imports32-bit multiply/divide helpers. These are generated-code facts,
+not isolated cycle measurements. Changed-score helper calls still add stack depth.
+
+Final executable502740 bytes (+428 vs original A); startup free CHIP/total is
+41104/49392 A500 and152248/1360128 AROS, 480 fewer total free bytes than original A.
+No new cache/CHIP allocation; startup is not a worst-case memory bound. The
+formatter, physical histories, sixth background column, hooks, one-wait batch,
+dirty repaint, initial composition, gameplay and BOB order remain intact.
+
+A1/A2 actual-source ASAN/UBSAN pixel oracles each pass2880 cell cases,5019 score
+transitions and10038 unchanged redraws. Each native trial passes182 full-image
+and908 state comparisons, C1/1 andPython3.12 116/116. Final exact ADF boots both
+profiles with BOB source/restoration checks; all seven flags explicitly OFF.
+Executable SHA256`3288785797373564ef654946f610163a33d406e084363e39dc7d7c9fa900bf6d`;
+ADF SHA256`62456751103ec296e267a042f710a1145ca5e54d5b3a40c6745f7d8ab41f6878`.
+
+Full per-run means, coverage, code/stack/memory tradeoffs, source hashes and open
+gates: [dated report](score-A-refinement-2026-10-11-110133.md). Raw evidence and
+candidate patches: `.tmp/score-refinement/`. Accepted source/build remain only
+in isolated`astra-perf`, HEAD`10f4f47`; no main edit, GUI, commit or cleanup.
+Global50fps, full ordinary campaign, real-hardware/OOM and formal memory/stack
+proofs remain open.
+
+### it12 — native score-cell and effect-source comparisons, baseline retained
+
+Executed on isolated `astra-perf`, HEAD `10f4f47`, preserving the existing dirty
+diagnostic/test/documentation baseline. Full dated results, repeated mean loads,
+coverage, source hashes, actual 68000 audit and all pending gates are in the
+[native comparison report](hud-bob-native-comparison-2026-10-11-102053.md).
+
+| Trial | Ordinary BOB A500; AROS (drops/peak%) | Campaign A500; AROS | Decision |
+|---|---|---|---|
+| Fresh it11b baseline, two runs | 2/107; 1/100 | 5/115; 3/107 | Retained |
+| A: opaque CPU score cells, two runs | 1/106; 1/100 | 5/112; 3/103 | Rejected under no-regression selection: reliable deadline gain, but campaign mean load rises to34.688399%/33.404928%; AROS GAMEOVER also rises |
+| B: equal effect image/mask guard, two runs | 2/107; 1/100 | 5/115; 3/107 | Rejected: unchanged drops/peaks, tiny mixed mean changes; no credible overall timing gain |
+
+All first-four ordinary peaks remain76/76/83/78% A500 and74/74/81/76% AROS,
+with zero drops. A adds676 executable bytes and costs616 startup free bytes;
+B removes124 executable bytes and restores104 startup free bytes. CHIP free
+remains41104 A500 and152248 AROS. These are startup observations, not worst-case
+bounds. The combined trial was not justified by the standalone prerequisites.
+
+Each candidate/repeat passes182 full-image and908 state comparisons, C1/1 and
+Python3.12 116/116. Actual integrated-source sanitizer oracles cover A's2880
+cell cases/5019 score transitions/10038 unchanged draws and B's65617 queue
+cases. Complete original replay accounting and strict zero-drop/90% gate remain
+unchanged; strict campaign failures are expected performance failures only.
+
+Only candidate-owned hunks were reversed. Before this publication note, all321
+frozen files matched the initial dirty baseline. Final501636-byte executable
+SHA256 remains`b105cfd770f07089252652179023771f8f93908066e705c1fb226d9e3e0b9c06`;
+all seven ASTRA flags are explicitly OFF. Exact final ADF SHA256
+`0f327e0e130edecb5f6807afc54a75c372949210bda450bd2add82fe5d7e344d` booted both
+profiles with full BOB replay/source-restoration checks. Raw trials and rejected
+patches remain in`.tmp/native-comparisons/`. No runtime optimization is selected;
+global50fps remains blocked at the it11b baseline numbers.
 
 ### it10 — HUD trials and new measurement blocker
 

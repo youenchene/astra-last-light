@@ -18,6 +18,7 @@ class DamageHudTests(unittest.TestCase):
 #include <stdint.h>
 #include <string.h>
 #include "logic.h"
+#include "hud_bob_trace.h"
 typedef uint8_t UBYTE;
 typedef uint16_t UWORD;
 typedef uint32_t ULONG;

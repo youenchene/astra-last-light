@@ -1,6 +1,7 @@
 #include "render_boss.h"
 #include "render_internal.h"
 #include "art.h"
+#include "hud_bob_trace.h"
 #include <ace/managers/bob.h>
 
 static tBitMap *s_pFrames, *s_pMask, *s_pFlash;
@@ -61,6 +62,7 @@ void renderBossQueue(tGameState *pState, UBYTE show) {
 	s_sBob.sPos.uwX = pBoss->x;
 	s_sBob.sPos.uwY = pBoss->y;
 	bobPush(&s_sBob);
+	hudBobPushed(HB_BOSS, pBoss->x);
 	pBoss->visible = 1;
 }
 

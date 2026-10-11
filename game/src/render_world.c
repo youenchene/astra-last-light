@@ -311,25 +311,54 @@ static void numberDraw(UWORD x, UWORD y, ULONG value, UBYTE digits) {
 	textDraw(x, y, text, 1, 6);
 }
 
+/* Opaque ink-1 cell / ink-6 glyph; byte RMW preserves exterior bits even at
+ * odd addresses. The caller waits once before the first cell in the batch. */
+static void __attribute__((noinline)) scoreCellDraw(UWORD x, UWORD y, UBYTE digit) {
+	UBYTE shift = x & 7;
+	UWORD cell = (UWORD)(0xfc00u >> shift);
+	UWORD offset = y * 160u + (x >> 3);
+	UBYTE high = cell >> 8, low = cell;
+	UBYTE keepHigh = (UBYTE)~high, keepLow = (UBYTE)~low;
+	UBYTE *p0 = s_pScreen->Planes[0] + offset;
+	UBYTE *p1 = s_pScreen->Planes[1] + offset;
+	UBYTE *p2 = s_pScreen->Planes[2] + offset;
+	UBYTE *p3 = s_pScreen->Planes[3] + offset;
+	const ULONG *pGlyph = s_pGlyphMasks[0][26 + digit];
+	for(UBYTE row = 0; row < 7; ++row) {
+		UWORD glyph = (UWORD)(*pGlyph++ >> 16) >> shift;
+		UBYTE ink = glyph >> 8;
+		*p0 = (*p0 & keepHigh) | (high & (UBYTE)~ink);
+		*p1 = (*p1 & keepHigh) | ink;
+		*p2 = (*p2 & keepHigh) | ink;
+		*p3 &= keepHigh;
+		if(low) {
+			ink = glyph;
+			p0[1] = (p0[1] & keepLow) | (low & (UBYTE)~ink);
+			p1[1] = (p1[1] & keepLow) | ink;
+			p2[1] = (p2[1] & keepLow) | ink;
+			p3[1] &= keepLow;
+		}
+		p0 += 160; p1 += 160; p2 += 160; p3 += 160;
+	}
+}
+
 static void scoreDraw(ULONG score, UBYTE dirty) {
-	char after[9], glyph[2] = {0, 0};
+	char after[9];
+	UBYTE synchronized = 0;
+	hudBobOperation(HO_SCORE_CALLS, 1);
 	galaxyTraceMark(7);
 	numberText(after, score, 8);
 	galaxyTraceMark(8);
-	if(dirty) {
-		blitRect(s_pScreen, 162, 6, 48, 7, 1);
-		textDraw(162, 6, after, 1, 6);
-	}
 	/* Updating all eight digits here can delay player-shot BOBs past the beam.
 	 * Keep the actual digits with their physical bitmap, including composition. */
 	for(UBYTE i = 0; i < 8; ++i) {
-		if(HISTORY.scoreText[i] == after[i]) continue;
+		UBYTE changed = HISTORY.scoreText[i] != after[i];
+		if(!dirty && !changed) continue;
+		if(changed) hudBobOperation(HO_SCORE_CHANGED, 1);
+		if(!synchronized) { blitWait(); synchronized = 1; }
+		scoreCellDraw(162 + i * 6, 6, after[i] - '0');
 		HISTORY.scoreText[i] = after[i];
-		if(dirty) continue;
-		UWORD x = 162 + i * 6;
-		blitRect(s_pScreen, x, 6, 6, 7, 1);
-		glyph[0] = after[i];
-		textDraw(x, 6, glyph, 1, 6);
+		hudBobOperation(HO_SCORE_GLYPHS, 1);
 	}
 }
 
@@ -621,48 +650,69 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	if(dirty || s_ubWeapon != pState->weaponLevel) {
 		blitRect(s_pScreen, 50, 249, 6, 7, 0);
 		numberDraw(50, 249, pState->weaponLevel, 1);
+		hudBobOperation(HO_DAMAGE, 1);
 	}
+	hudBobMark(HB_DAMAGE_END);
 	if(dirty || s_ubSpeed != pState->speedLevel) {
 		blitRect(s_pScreen, 98, 249, 6, 7, 0);
 		numberDraw(98, 249, pState->speedLevel, 1);
+		hudBobOperation(HO_SPEED, 1);
 	}
+	hudBobMark(HB_SPEED_END);
 	if(dirty || s_ubShield != pState->shield) {
 		blitRect(s_pScreen, 158, 249, 6, 7, 0);
 		numberDraw(158, 249, pState->shield, 1);
+		hudBobOperation(HO_SHIELD, 1);
 	}
+	hudBobMark(HB_SHIELD_END);
 	if(dirty || s_ubShotLevel != pState->shotLevel) {
 		blitRect(s_pScreen, 206, 249, 6, 7, 0);
 		numberDraw(206, 249, pState->shotLevel + 1, 1);
+		hudBobOperation(HO_FIRE, 1);
 	}
+	hudBobMark(HB_FIRE_END);
 	if(dirty || s_ulScore != pState->score) {
 		scoreDraw(pState->score, dirty);
 	}
+	hudBobMark(HB_SCORE_END);
 	if(dirty || s_ubLives != pState->lives) {
 		blitRect(s_pScreen, 254, 6, 6, 7, 1);
 		numberDraw(254, 6, pState->lives, 1);
+		hudBobOperation(HO_LIVES, 1);
 	}
+	hudBobMark(HB_LIVES_END);
 	UBYTE ready = pState->charge >= CHARGE_FRAMES;
 	if(!pState->manualPause && (dirty || ready != (s_ubCharge >= CHARGE_FRAMES))) {
 		blitCopy(s_pLabels, 0, ready ? 7 : 0, s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
 		blitCopyAligned(s_pLabels, 0, ready ? 21 : 14, s_pScreen, 224, 249, 96, 7);
+		hudBobOperation(HO_LABEL_PAIRS, 1);
 	}
+	hudBobMark(HB_LABELS_END);
 	if(dirty || s_ubCharge != pState->charge ||
 		(ready && HISTORY.chargeInk != (pState->frame & 8))) {
 		blitRect(s_pScreen, 44, 19, 100, 4, 2);
+		hudBobOperation(HO_CHARGE_CLEAR, 1);
 		if(pState->charge) blitRect(s_pScreen, 44, 19,
 			ready ? 100 : pState->charge << 1, 4, ready ? ((pState->frame & 8) ? 7 : 14) : 15);
+		if(pState->charge) { hudBobOperation(HO_CHARGE_FILL, 1); }
 	}
+	hudBobMark(HB_CHARGE_END);
 	UBYTE bossHud = pState->phase == BOSS;
 	if(dirty || s_uwHp != pState->boss.hp || HISTORY.bossHud != bossHud) {
 		UBYTE labelChanged = dirty || !s_uwHp || !pState->boss.hp || HISTORY.bossHud != bossHud;
 		if(labelChanged) blitRect(s_pScreen, 166, 18, 146, 7, 1);
+		if(labelChanged) { hudBobOperation(HO_BOSS_LABEL_CLEAR, 1); }
 		if(pState->phase == BOSS && pState->boss.maxHp) {
 			if(labelChanged) bossLabelDraw();
+			if(labelChanged) { hudBobOperation(HO_BOSS_LABEL_DRAW, 1); }
 			UWORD width = (UWORD)(pState->boss.hp * 112u) / pState->boss.maxHp;
 			blitRect(s_pScreen, 198, 19, 112, 4, 2);
+			hudBobOperation(HO_BOSS_BAR_CLEAR, 1);
 			if(width) blitRect(s_pScreen, 198, 19, width, 4, 11);
+			if(width) { hudBobOperation(HO_BOSS_BAR_FILL, 1); }
 		}
 	}
+	hudBobMark(HB_BOSS_HUD_END);
 	s_ulScore = pState->score;
 	s_ubLives = pState->lives;
 	s_ubCharge = pState->charge;

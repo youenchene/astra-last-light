@@ -380,13 +380,13 @@ static void testHostileAdmission(void) {
 	tGameState s;
 	unsigned i;
 	/* Two parallel bullets share a channel only HOSTILE_H + HOSTILE_GAP apart. */
-	for(unsigned gap = HOSTILE_H + HOSTILE_GAP - 1; gap <= HOSTILE_H + HOSTILE_GAP; ++gap) {
+	for(unsigned gap = HOSTILE_H + HOSTILE_GAP - 1; gap <= HOSTILE_H + HOSTILE_GAP + 1; ++gap) {
 		start(&s); s.waveTimer = 60000;
 		s.hostile[0] = entity(200, 100, 1); s.hostile[0].channel = 6;
 		s.hostile[1] = entity(200, 100, 1); s.hostile[1].channel = 7;
 		s.hostile[2] = entity(260, (int16_t)(100 + gap), 1);
 		logicUpdate(&s, &idle);
-		CHECK(s.hostile[2].active == (gap == HOSTILE_H + HOSTILE_GAP));
+		CHECK(s.hostile[2].active == (gap >= HOSTILE_H + HOSTILE_GAP));
 		CHECK(s.hostile[2].visible == s.hostile[2].active);
 		checkSchedule(&s);
 	}
@@ -422,6 +422,51 @@ static void testHostileAdmission(void) {
 			s.invulnerable = 2; logicUpdate(&s, &idle);
 		}
 	}
+	/* Equal velocities keep exact separation on both half-step parities;
+	 * interleaved holes must not affect low-channel tie breaking. */
+	for(int vy = -2; vy <= 2; ++vy) for(unsigned parity = 0; parity < 2; ++parity)
+	for(int gap = 10; gap <= 12; ++gap) {
+		start(&s); s.waveTimer = 60000; s.simFrame = parity;
+		for(unsigned slot = 4; slot <= 8; slot += 4) {
+			s.hostile[slot] = entity(200, 100, 1);
+			s.hostile[slot].channel = slot == 4 ? 6 : 7;
+			s.hostile[slot].vx = HOSTILE_VX; s.hostile[slot].vy = vy;
+		}
+		s.hostile[13] = entity(250, 100 + gap, 1);
+		s.hostile[13].vx = HOSTILE_VX; s.hostile[13].vy = vy;
+		logicUpdate(&s, &idle);
+		CHECK(s.hostile[13].active == (gap >= 11));
+		CHECK(s.hostile[13].channel == (gap >= 11 ? 6 : 0));
+		CHECK(s.hostile[4].vy == vy && s.hostile[8].vy == vy);
+		if(gap >= 11) CHECK(s.hostile[13].y - s.hostile[4].y == gap);
+	}
+	/* Mixed trajectories force conservative bounds without changing velocity. */
+	start(&s); s.waveTimer = 60000;
+	s.hostile[0] = entity(300, 100, 1); s.hostile[0].channel = 6;
+	s.hostile[0].vx = HOSTILE_VX;
+	s.hostile[9] = entity(300, 170, 1); s.hostile[9].vy = -1;
+	s.hostile[9].vx = HOSTILE_VX;
+	logicUpdate(&s, &idle);
+	CHECK(s.hostile[0].age > 0 && s.hostile[9].age > 0);
+	CHECK(s.hostile[9].channel == 7 && s.hostile[9].vy == -1);
+	while(s.hostile[9].active) {
+		CHECK(s.hostile[9].age > 0);
+		s.invulnerable = 2; logicUpdate(&s, &idle);
+	}
+	/* Partial-left reservations survive until the whole 6px body retires. */
+	start(&s); s.waveTimer = 60000;
+	for(unsigned slot = 0; slot < 2; ++slot) {
+		s.hostile[slot] = entity(-4, 100, 1);
+		s.hostile[slot].channel = 6 + slot;
+		s.hostile[slot].vx = HOSTILE_VX;
+	}
+	s.simFrame = 1;
+	s.hostile[8] = entity(200, 100, 1);
+	logicUpdate(&s, &idle);
+	CHECK(s.hostile[0].active && s.hostile[0].x == -5 && !s.hostile[8].active);
+	s.hostile[8] = entity(200, 100, 1);
+	logicUpdate(&s, &idle);
+	CHECK(!s.hostile[0].active && s.hostile[8].active);
 	/* A renderer-dropped shot still cannot cause damage. */
 	start(&s);
 	s.shots[0] = entity(100, 100, 6); s.shots[0].kind = SHOT_CHARGED;

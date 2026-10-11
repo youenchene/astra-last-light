@@ -320,6 +320,7 @@ void genericProcess(void) {
 	UBYTE pausePressed = keyUse(KEY_P);
 	if(s_isIntroDone && pausePressed) logicTogglePause(&s_sState);
 	combatPerfBegin(CP_RESTORE);
+	galaxyTraceMark(9);
 	if(s_isIntroDone) renderAnimate(&s_sState);
 	combatPerfEnd(CP_RESTORE);
 	galaxyTraceMark(0);
@@ -336,6 +337,7 @@ void genericProcess(void) {
 		}
 	}
 	combatPerfEnd(CP_AUDIO);
+	galaxyTraceMark(12);
 	tInput input = readInput();
 
 	if(!s_isIntroDone && !introProcess(input.fire)) {
@@ -352,9 +354,11 @@ void genericProcess(void) {
 		UBYTE oldLevel = s_sState.level;
 		UWORD oldWave = s_sState.wave;
 		UBYTE wasPreparing = s_sState.presentationBusy;
+		galaxyTraceMark(13);
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeBeforeUpdate(&s_sState);
 #endif
+		galaxyTraceMark(14);
 		combatPerfBegin(CP_LOGIC);
 		UBYTE confirming = 0;
 		if(escapePressed) {
@@ -393,9 +397,11 @@ void genericProcess(void) {
 			agkState("title_begin", renderRevision());
 			agkState("from", oldPhase); agkState("vblank", acceptedAt); agkEnd();
 		}
+		galaxyTraceMark(21);
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeAfterFrame(&s_sState);
 #endif
+		galaxyTraceMark(22);
 		if(oldPhase == GAMEOVER && s_sState.phase == TITLE)
 			agkPrint("AGK gameover_title\n");
 		if(wasPreparing != s_sState.presentationBusy ||
@@ -404,12 +410,15 @@ void genericProcess(void) {
 			oldPhase != s_sState.phase || oldWave != s_sState.wave || pausePressed ||
 			heartbeat) reportState();
 	}
+	galaxyTraceMark(23);
 	combatPerfBegin(CP_WAIT);
 	blitWait();
 	combatPerfEnd(CP_WAIT);
+	galaxyTraceMark(24);
 	combatPerfBegin(CP_PUBLISH);
 	publishFrame();
 	combatPerfEnd(CP_PUBLISH);
+	galaxyTraceMark(25);
 	combatPerfFrame(&s_sState);
 	/* If performance reporting itself crosses the next vblank, that already
 	 * acknowledges this list: do not accidentally wait for a second blank. */

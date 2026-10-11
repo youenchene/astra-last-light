@@ -20,19 +20,15 @@ typedef uint8_t UBYTE;
 typedef uint16_t UWORD;
 typedef uint32_t ULONG;
 static struct { char scoreText[9]; } history[2];
-static unsigned buffer, clears;
+static unsigned buffer, waits;
 static char pixels[2][9];
-static void *s_pScreen;
 #define HISTORY history[buffer]
 #define galaxyTraceMark(mark) ((void)0)
-static void blitRect(void *screen,UWORD x,UWORD y,UWORD w,UWORD h,UBYTE ink) {
-    (void)screen; assert(y==6 && h==7 && ink==1 && (w==6 || w==48));
-    assert(x>=162 && x+w<=210); ++clears;
-    memset(pixels[buffer]+(x-162)/6, ' ', w/6);
-}
-static void textDraw(UWORD x,UWORD y,const char *text,UBYTE scale,UBYTE ink) {
-    assert(y==6 && scale==1 && ink==6);
-    memcpy(pixels[buffer]+(x-162)/6,text,strlen(text));
+static void blitWait(void) { ++waits; }
+/* History unit spy; the native-comparison oracle executes the real cell C. */
+static void scoreCellDraw(UWORD x,UWORD y,UBYTE digit) {
+    assert(y==6 && digit<10 && x>=162 && x<210 && (x-162)%6==0);
+    pixels[buffer][(x-162)/6]='0'+digit;
 }
 '''
         exercise = r'''
@@ -46,9 +42,9 @@ int main(void) {
         scoreDraw(values[i],i<2 || i==10);
         assert(!strcmp(pixels[buffer],expected));
         assert(!strcmp(HISTORY.scoreText,expected));
-        clears=0;
+        waits=0;
         scoreDraw(values[i],0);
-        assert(clears==0);
+        assert(waits==0);
     }
     /* Composition copies the frozen score into both bitmap histories. */
     for(buffer=0;buffer<2;++buffer) {
@@ -63,7 +59,7 @@ int main(void) {
 '''
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)
-            (path / 'cache.c').write_text(prelude + function(source, 'numberText') +
+            (path / 'cache.c').write_text('#include "' + str(ROOT/'game/src/hud_bob_trace.h') + '"\n' + prelude + function(source, 'numberText') +
                                          function(source, 'scoreDraw') + exercise)
             subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
                             str(path / 'cache.c'), '-o', str(path / 'cache')], check=True)
