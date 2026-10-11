@@ -1,4 +1,8 @@
 # Timing comes from title_input/cut_visible vblank clocks, never these waits.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 screenshot title1
 press right 1

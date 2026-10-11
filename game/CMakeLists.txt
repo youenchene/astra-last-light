@@ -85,11 +85,12 @@ add_custom_target(presentation_check
 	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py --check
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py
 		${CMAKE_CURRENT_SOURCE_DIR}/tools/selected_rd.py
+		${CMAKE_CURRENT_SOURCE_DIR}/tools/localization.py
+		${CMAKE_CURRENT_SOURCE_DIR}/art/localization.json
+		${CMAKE_CURRENT_SOURCE_DIR}/art/localization.h
 		${CMAKE_CURRENT_SOURCE_DIR}/art/selected-rd/manifest.json
 		${CMAKE_CURRENT_SOURCE_DIR}/art/palette.txt
-		${CMAKE_CURRENT_SOURCE_DIR}/src/render_scenes.c
 		${CMAKE_CURRENT_SOURCE_DIR}/src/scene_font.h
-		${CMAKE_CURRENT_SOURCE_DIR}/src/logic.c
 		${CMAKE_CURRENT_SOURCE_DIR}/art/font.txt
 		${CMAKE_CURRENT_SOURCE_DIR}/art/presentation-rows.h
 	VERBATIM)

@@ -1,0 +1,45 @@
+# Production French UI. Inspect captures; no blind golden updates.
+wait-serial "AGK language_ready" 600
+press fire 1
+wait-serial "AGK title_ready" 600
+screenshot fr_title1
+press right 1
+wait 400
+screenshot fr_title2
+press right 1
+wait 400
+screenshot fr_title3
+press right 1
+wait 400
+screenshot fr_title4
+key 0x58
+wait-serial "AGK scene_ready" 1000
+screenshot fr_ending
+key 0x45
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK scene_ready" 1000
+screenshot fr_opening
+wait-serial "AGK combat_ready" 1000
+screenshot fr_hud
+hold fire
+wait 52
+screenshot fr_ready
+key 0x19
+wait 4
+screenshot fr_pause
+release fire
+key 0x19
+wait 4
+screenshot fr_release
+key 0x45
+wait-serial "AGK title_ready" 600
+screenshot fr_return_title
+press fire 1
+wait-serial "AGK gameover_ready" 12000
+screenshot fr_gameover
+wait-serial "AGK gameover_title" 200
+wait-serial "AGK title_ready" 600
+screenshot fr_after_gameover
+expect-serial "AGK language_selected=0"
+expect-no-serial "qa_NON_SHIPPING|ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

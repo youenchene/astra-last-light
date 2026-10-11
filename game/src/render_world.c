@@ -4,6 +4,7 @@
 #include "render.h"
 #include "presentation_rows.h"
 #include "../art/title-plates.h"
+#include "../art/localization.h"
 #include <ace/managers/blit.h>
 #include <ace/utils/custom.h>
 #include <ace/utils/fetchmode.h>
@@ -34,7 +35,7 @@ static UBYTE s_starsDirty[2];
 static UWORD s_uwOriginalStarColor, s_uwOriginalRoseColor;
 /* Cache horizontal scaling only; vertical repetitions share their source row.
  * This removes 9072 bytes of redundant resident storage at cold-load time. */
-static ULONG s_pGlyphMasks[3][36][7];
+static ULONG s_pGlyphMasks[3][LOCALIZATION_GLYPHS][7];
 static UBYTE s_hasScroll;
 /* Physical pixel provenance, deliberately outside the copied command history.
  * Partial plate/caption repair cannot damage the stable title exterior. */
@@ -94,11 +95,12 @@ static UBYTE pixelRead(const tBitMap *pBitmap, UWORD x, UWORD y) {
 static void fontMasksCreate(void) {
 	for(UBYTE size = 0; size < 3; ++size) {
 		UBYTE scale = 1 << size;
-		for(UBYTE glyph = 0; glyph < 36; ++glyph)
+		for(UBYTE glyph = 0; glyph < LOCALIZATION_GLYPHS; ++glyph)
 			for(UBYTE row = 0; row < 7; ++row) {
 				ULONG mask = 0;
 				for(UBYTE col = 0; col < 5; ++col)
-					if(pixelRead(s_pFont, col, glyph * 7 + row))
+					if(glyph < 36 ? pixelRead(s_pFont, col, glyph * 7 + row) :
+						(s_extraGlyphs[glyph - 36][row] & (16 >> col)))
 						for(UBYTE dx = 0; dx < scale; ++dx)
 							mask |= 0x80000000UL >> (col * scale + dx);
 				s_pGlyphMasks[size][glyph][row] = mask;
@@ -106,29 +108,27 @@ static void fontMasksCreate(void) {
 	}
 }
 
-/* Startup only: rasterize cached glyph masks without touching blitter/DMA.
- * Four 96x7 rows: LANCE, READY, HOLD TO CHARGE, RELEASE FIRE. */
+/* Startup precedes language selection. Cache both languages in one allocation;
+ * select the source bank at draw time, never freeze the startup preference. */
 static UBYTE labelsCreate(void) {
-	static const char *const labels[4] = {
-		"LANCE", "READY", "HOLD TO CHARGE", "RELEASE FIRE"
-	};
+	static const UBYTE labels[4] = {TEXT_LANCE, TEXT_READY, TEXT_HOLD, TEXT_RELEASE};
 	static const UBYTE colors[4] = {4, 7, 4, 14};
-	s_pLabels = bitmapCreate(96, 28, 4, BMF_INTERLEAVED);
+	s_pLabels = bitmapCreate(96, 56, 4, BMF_INTERLEAVED);
 	if(!s_pLabels) return 0;
-	for(UWORD y = 0; y < 28; ++y)
+	for(UWORD y = 0; y < 56; ++y)
 		for(UBYTE plane = 0; plane < 4; ++plane) {
 			UBYTE *dest = s_pLabels->Planes[plane] + y * 48;
-			UBYTE background = y < 14 && plane == 0 ? 0xff : 0;
+			UBYTE background = y % 28 < 14 && plane == 0 ? 0xff : 0;
 			for(UBYTE byte = 0; byte < 12; ++byte) dest[byte] = background;
 		}
-	for(UBYTE label = 0; label < 4; ++label) {
-		const char *text = labels[label];
+	for(UBYTE label = 0; label < 8; ++label) {
+		const char *text = s_localizedText[label / 4][labels[label % 4]];
 		UWORD x = 0;
 		while(*text) {
-			char letter = *text++;
-			if(letter >= 'A' && letter <= 'Z') {
+			UBYTE glyph = localizedGlyph((UBYTE)*text++);
+			if(glyph != 255) {
 				for(UBYTE row = 0; row < 7; ++row) {
-					ULONG bits = s_pGlyphMasks[0][letter - 'A'][row] >> (x & 7);
+					ULONG bits = s_pGlyphMasks[0][glyph][row] >> (x & 7);
 					UWORD y = label * 7 + row;
 					UWORD offset = y * 48 + (x >> 3);
 					UBYTE bytes = ((x & 7) + 12) >> 3;
@@ -136,7 +136,7 @@ static UBYTE labelsCreate(void) {
 						UBYTE mask = bits >> 24;
 						for(UBYTE plane = 0; plane < 4; ++plane) {
 							UBYTE *dest = &s_pLabels->Planes[plane][offset + byte];
-							if(colors[label] & (1 << plane)) *dest |= mask;
+							if(colors[label % 4] & (1 << plane)) *dest |= mask;
 							else *dest &= ~mask;
 						}
 						bits <<= 8;
@@ -186,10 +186,7 @@ static void textDraw(UWORD x, UWORD y, const char *pText, UBYTE scale, UBYTE col
 	blitWait();
 	UBYTE size = scale == 4 ? 2 : (scale == 2 ? 1 : 0);
 	while(*pText) {
-		char letter = *pText++;
-		if(letter >= 'a' && letter <= 'z') letter -= 'a' - 'A';
-		UBYTE glyph = letter >= 'A' && letter <= 'Z' ? letter - 'A' :
-			(letter >= '0' && letter <= '9' ? letter - '0' + 26 : 255);
+		UBYTE glyph = localizedGlyph((UBYTE)*pText++);
 		if(glyph != 255) {
 			for(UWORD row = 0; row < 7 * scale; ++row) {
 				ULONG bits = s_pGlyphMasks[size][glyph][row >> size];
@@ -525,22 +522,31 @@ static void panelQueue(tPhase phase) {
 		queueRect(24, 128, 272, 88, 1);
 		queueRect(24, 128, 272, 1, 15);
 		queueRect(24, 215, 272, 1, 3);
-		queueCentered(134, "ASTRA", 4, 6);
-		queueCentered(168, "LAST LIGHT", 2, 14);
-		queueCentered(190, "FIRE TO DEFEND THE DAWN", 1, 7);
+		queueCentered(134, localizedText(TEXT_ASTRA), 4, 6);
+		queueCentered(168, localizedText(TEXT_LAST_LIGHT), 2, 14);
+		queueCentered(190, localizedText(TEXT_DEFEND), 1, 7);
 		/* 144 visible pixels centered on screen; icons straddle the text baseline. */
-		queueText(88, 202, "", 255, 0);
-		queueText(105, 203, "OR", 1, 4);
-		queueText(122, 202, "", 255, 1);
-		queueText(137, 203, "TO CHANGE SECTOR", 1, 4);
+		UBYTE shift = languageGet() == LANGUAGE_FR ? 6 : 0;
+		queueText(88 - shift, 202, "", 255, 0);
+		queueText(105 - shift, 203, localizedText(TEXT_OR), 1, 4);
+		queueText(122 - shift, 202, "", 255, 1);
+		queueText(137 - shift, 203, localizedText(TEXT_CHANGE_SECTOR), 1, 4);
 	}
 	else {
 		queueRect(24, 81, 272, 94, 1);
 		queueRect(24, 81, 272, 1, 15);
 		queueRect(24, 174, 272, 1, 3);
-		queueText(106, 101, "GAME OVER", 2, 11);
-		queueText(70, 128, "THE FLEET WILL REMEMBER YOU", 1, 6);
-		queueText(103, 155, "RETURNING TO TITLE", 1, 7);
+		if(languageGet() == LANGUAGE_EN) {
+			/* Preserve the historical English pixels, including off-center copy. */
+			queueText(106, 101, localizedText(TEXT_GAME_OVER), 2, 11);
+			queueText(70, 128, localizedText(TEXT_REMEMBER), 1, 6);
+			queueText(103, 155, localizedText(TEXT_RETURN_TITLE), 1, 7);
+		}
+		else {
+			queueCentered(101, localizedText(TEXT_GAME_OVER), 2, 11);
+			queueCentered(128, localizedText(TEXT_REMEMBER), 1, 6);
+			queueCentered(155, localizedText(TEXT_RETURN_TITLE), 1, 7);
+		}
 	}
 }
 
@@ -565,8 +571,9 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	}
 	UBYTE ready = pState->charge >= CHARGE_FRAMES;
 	if(!pState->manualPause && (dirty || ready != (s_ubCharge >= CHARGE_FRAMES))) {
-		blitCopy(s_pLabels, 0, ready ? 7 : 0, s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
-		blitCopyAligned(s_pLabels, 0, ready ? 21 : 14, s_pScreen, 224, 249, 96, 7);
+		UWORD bank = languageGet() * 28;
+		blitCopy(s_pLabels, 0, bank + (ready ? 7 : 0), s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
+		blitCopyAligned(s_pLabels, 0, bank + (ready ? 21 : 14), s_pScreen, 224, 249, 96, 7);
 	}
 	if(dirty || s_ubCharge != pState->charge ||
 		(ready && HISTORY.chargeInk != (pState->frame & 8))) {
@@ -579,7 +586,7 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 		UBYTE labelChanged = dirty || !s_uwHp || !pState->boss.hp || HISTORY.bossHud != bossHud;
 		if(labelChanged) blitRect(s_pScreen, 166, 18, 146, 7, 1);
 		if(pState->phase == BOSS && pState->boss.maxHp) {
-			if(labelChanged) textDraw(166, 18, "BOSS", 1, 11);
+			if(labelChanged) textDraw(166, 18, localizedText(TEXT_BOSS), 1, 11);
 			UWORD width = (UWORD)(pState->boss.hp * 112u) / pState->boss.maxHp;
 			blitRect(s_pScreen, 198, 19, 112, 4, 2);
 			if(width) blitRect(s_pScreen, 198, 19, width, 4, 11);
@@ -606,9 +613,9 @@ void renderWorldPause(const tGameState *state) {
 	HISTORY.paused = state->manualPause;
 	if(state->manualPause) {
 		blitRect(s_pScreen, 8, 18, 32, 7, 1);
-		textDraw(8, 18, "PAUSE", 1, 14);
+		textDraw(8, 18, localizedText(TEXT_PAUSE), 1, 14);
 	}
-	else blitCopy(s_pLabels, 0, state->charge >= CHARGE_FRAMES ? 7 : 0,
+	else blitCopy(s_pLabels, 0, languageGet() * 28 + (state->charge >= CHARGE_FRAMES ? 7 : 0),
 		s_pScreen, 8, 18, 32, 7, MINTERM_COOKIE);
 }
 
@@ -667,7 +674,7 @@ void renderWorldBegin(const tGameState *pState) {
 	s_pVPort->pPalette[11] = s_ePhase == WIN ? 0xfa9 : s_uwOriginalRoseColor;
 	if(s_ePhase == TITLE) {
 		queueRect(0, 224, WORLD_W, 8, 0);
-		queueCentered(224, g_stageNames[level], 1, 5);
+		queueCentered(224, localizedSector(level), 1, 5);
 	}
 	else if(s_ePhase != WIN) {
 	queueNumber(308, 6, level + 1, 1);
@@ -681,7 +688,7 @@ void renderWorldBegin(const tGameState *pState) {
 	if(pState->charge) queueRect(44, 19,
 		pState->charge >= CHARGE_FRAMES ? 100 : pState->charge << 1, 4, 15);
 	if(s_ePhase == BOSS && pState->boss.maxHp) {
-		queueText(166, 18, "BOSS", 1, 11);
+		queueText(166, 18, localizedText(TEXT_BOSS), 1, 11);
 		queueRect(198, 19, 112, 4, 2);
 		UWORD width = (UWORD)(pState->boss.hp * 112u) / pState->boss.maxHp;
 		if(width) queueRect(198, 19, width, 4, 11);

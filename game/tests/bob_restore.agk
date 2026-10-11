@@ -2,6 +2,10 @@
 # Host verified; emulator/pixel verification pending.
 # First-wave first kill=58, final kill=252 (six members); drop capture=270; pickup=276; power capture=278.
 # Final scenario input tick=298; ready acknowledgement consumes 1 neutral update; restoration ROI in game/tests/bonus-flight.json
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 press fire 1
 wait-serial "AGK combat_ready" 1000

@@ -5,6 +5,7 @@ word wrapping. It never imports the generator or reads its packed tables.
 Every byte outside the requested rows must retain its sentinel, on each step.
 """
 import ast
+import json
 import ctypes
 from pathlib import Path
 import re
@@ -17,6 +18,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tools'))
 from selected_rd_oracle import original_panels
+
+
+def catalog():
+    return json.loads((ROOT / 'game/art/localization.json').read_text(encoding='utf-8'))
 
 
 def source_fonts():
@@ -39,25 +44,26 @@ def paint_text(image, message, x, y, color, font, width):
         # Production textDraw folds ASCII lowercase before indexing the atlas.
         if 'a' <= letter <= 'z':
             letter = chr(ord(letter) - 32)
-        if letter not in alphabet:
+        if letter == ' ':
             continue
-        glyph = font[alphabet.index(letter)]
+        glyph = (font[alphabet.index(letter)] if letter in alphabet else
+                 catalog()['glyphs'][letter]['regular' if width == 5 else 'small'])
         for row, bits in enumerate(glyph):
             for bit in range(width):
                 if bits >> (width - bit - 1) & 1:
                     image[y + row][x + column * (width + 1) + bit] = color
 
 
-def reference_card(index):
-    entries = re.findall(r'\{"([^"]+)", "([^"]+)", "([^"]+)", (\d), (\d)\}',
-                         (ROOT / 'game/src/render_scenes.c').read_text())
-    title, caption, reply, panel, style = entries[index]
-    accent = (5, 11, 7, 14)[int(style)]
+def reference_card(index, language='en'):
+    entry = catalog()['scenes'][index]
+    title, caption, reply = entry[language]
+    accent = (5, 11, 7, 14)[entry['style']]
     if index == 12:
         image = [[0] * 320 for _ in range(256)]
         _, font = source_fonts()
-        paint_text(image, 'DAWN RESTORED', 121, 12, 14, font, 5)
-        paint_text(image, 'FIRE TO RESTART', 115, 237, 6, font, 5)
+        prompt = catalog()['ui']['RESTART'][language == 'en']
+        paint_text(image, title, (321 - len(title) * 6) // 2, 12, 14, font, 5)
+        paint_text(image, prompt, (321 - len(prompt) * 6) // 2, 237, 6, font, 5)
         return image
     image = [[accent if 142 <= x < 306 and 66 <= y < 166 else 0
               for x in range(320)] for y in range(256)]
@@ -71,18 +77,19 @@ def reference_card(index):
     return image
 
 
-def reference_hud(variant):
-    source = (ROOT / 'game/src/logic.c').read_text()
-    names = re.findall(r'"([^"]+)"', re.search(r'g_stageNames[^=]*=\s*\{([^}]+)', source)[1])
+def reference_hud(variant, language='en'):
+    data = catalog()
+    names = [data['scenes'][i][language][0] for i in (0, 3, 6, 9)]
+    ui = {key: pair[language == 'en'] for key, pair in data['ui'].items()}
     image = [[15 if y == 28 else 3 if y == 245 else 1 if y < 28 else 0
               for _ in range(320)] for y in range(256)]
     _, font = source_fonts()
     ready = variant % 2
-    labels = [(names[variant // 2], 8, 6, 5), ('SCORE', 126, 6, 5), ('LIVES', 218, 6, 5),
-              ('SECTOR', 266, 6, 5), ('READY' if ready else 'LANCE', 8, 18, 7 if ready else 4),
-              ('DAMAGE', 8, 249, 4), ('SPEED', 62, 249, 4),
-              ('SHIELD', 116, 249, 4), ('FIRE', 176, 249, 4),
-              ('RELEASE FIRE' if ready else 'HOLD TO CHARGE', 224, 249, 14 if ready else 4)]
+    labels = [(names[variant // 2], 8, 6, 5), (ui['SCORE'], 126, 6, 5), (ui['LIVES'], 218, 6, 5),
+              (ui['SECTOR'], 266, 6, 5), (ui['READY' if ready else 'LANCE'], 8, 18, 7 if ready else 4),
+              (ui['DAMAGE'], 8, 249, 4), (ui['SPEED'], 62, 249, 4),
+              (ui['SHIELD'], 116, 249, 4), (ui['FIRE'], 176, 249, 4),
+              (ui['RELEASE' if ready else 'HOLD'], 224, 249, 14 if ready else 4)]
     for message, x, y, color in labels:
         paint_text(image, message, x, y, color, font, 5)
     return image
@@ -95,7 +102,11 @@ class PresentationRowsTests(unittest.TestCase):
         library = Path(cls.temp.name) / 'rows.so'
         wrapper = Path(cls.temp.name) / 'rows.c'
         wrapper.write_text('#include "' + str(ROOT / 'game/src/presentation_rows.c') + '"\n' + r'''
+static tLanguage selected;
+tLanguage languageGet(void) { return selected; }
+void selectLanguage(unsigned language) { selected = language; }
 unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end) {
+    if(card != 2) id += selected * (card ? 13 : 8);
     unsigned operations = 0;
     for(unsigned row = first; row < end; ++row) {
         unsigned rowId = card == 2 ? s_mangaRows[s_mangaLayouts[id].first + row] :
@@ -166,22 +177,26 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
         self.assertEqual(bytes(memory), expected)
 
     def test_all_thirteen_cards_exact_pixels_and_write_bounds(self):
-        for scene in range(13):
-            with self.subTest(scene=scene):
-                ending = scene == 12
-                self.check_layer(self.lib.presentationCardStep, scene, reference_card(scene),
-                                 0 if ending else 136, 320 if ending else 176,
-                                 list(range(32)) + list(range(224, 256)) if ending else list(range(56, 208)),
-                                 2 if ending else 3, 1)
+        for language in ('fr', 'en'):
+            self.lib.selectLanguage(language == 'en')
+            for scene in range(13):
+                with self.subTest(language=language, scene=scene):
+                    ending = scene == 12
+                    self.check_layer(self.lib.presentationCardStep, scene, reference_card(scene, language),
+                                     0 if ending else 136, 320 if ending else 176,
+                                     list(range(32)) + list(range(224, 256)) if ending else list(range(56, 208)),
+                                     2 if ending else 3, 1)
 
     def test_shared_hud_all_sectors_and_charge_labels(self):
-        for variant in range(8):
-            with self.subTest(variant=variant):
-                self.check_layer(self.lib.presentationHudStep, variant, reference_hud(variant),
-                                 0, 320, list(range(29)) + list(range(245, 256)), 2, 0)
+        for language in ('fr', 'en'):
+            self.lib.selectLanguage(language == 'en')
+            for variant in range(8):
+                with self.subTest(language=language, variant=variant):
+                    self.check_layer(self.lib.presentationHudStep, variant, reference_hud(variant, language),
+                                     0, 320, list(range(29)) + list(range(245, 256)), 2, 0)
 
     def test_generator_is_current(self):
-        subprocess.run(['python3', str(ROOT / 'tools/make-presentation.py'), '--check'], check=True)
+        subprocess.run([sys.executable, str(ROOT / 'tools/make-presentation.py'), '--check'], check=True)
 
     def test_enlarged_panels_and_all_narrative_fit(self):
         master = (ROOT / 'game/art/campaign_manga.txt').read_text().split('\nframe\n')[1:]
@@ -193,26 +208,27 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
             for y, row in enumerate(rows):
                 self.assertEqual(len(row), 112)
                 self.assertEqual(row, ''.join(source[y * 3 // 2][x * 10 // 7] for x in range(112)))
-        entries = re.findall(r'\{"([^"]+)", "([^"]+)", "([^"]+)", (\d), (\d)\}',
-                             (ROOT / 'game/src/render_scenes.c').read_text())
+        entries = catalog()['scenes']
         self.assertEqual(len(entries), 13)
-        self.assertEqual([entry[0] for i, entry in enumerate(entries) if i not in (0, 3, 6, 9)],
+        self.assertEqual([entry['en'][0] for i, entry in enumerate(entries) if i not in (0, 3, 6, 9)],
                          ['SALVAGE CLAW', 'WRECK FIELD FREED', 'THE MANTA WAKES', 'VEIL PIERCED',
                           'FURNACE CARRIER', 'FURNACES SILENCED', 'REACTOR CROWN',
                           'THE CROWN FALLS', 'DAWN RESTORED'])
-        for title, caption, reply, _, _ in entries[:12]:
-            for message, y, bottom in ((title, 60, 66), (caption, 168, 184), (reply, 186, 208)):
-                lines = textwrap.wrap(message, 28)
-                self.assertEqual(' '.join(lines), message)
-                self.assertLessEqual(y + (len(lines) - 1) * 8 + 6, bottom)
-                self.assertTrue(all(144 + len(line) * 5 - 1 < 312 for line in lines))
+        for language in ('fr', 'en'):
+            for entry in entries[:12]:
+                title, caption, reply = entry[language]
+                for message, y, bottom in ((title, 60, 66), (caption, 168, 184), (reply, 186, 208)):
+                    lines = textwrap.wrap(message, 28)
+                    self.assertEqual(' '.join(lines), message)
+                    self.assertLessEqual(y + (len(lines) - 1) * 8 + 6, bottom)
+                    self.assertTrue(all(144 + len(line) * 5 - 1 < 312 for line in lines))
 
     def test_selected_png_pixels_all_thirteen_mappings(self):
-        entries = re.findall(r'\{"[^"]+", "[^"]+", "[^"]+", (\d), (\d)\}',
-                             (ROOT / 'game/src/render_scenes.c').read_text())
-        self.assertEqual([int(e[0]) for e in entries], [0]*3 + [1]*3 + [2]*3 + [3]*3 + [4])
+        entries = catalog()['scenes']
+        self.assertEqual([e['panel'] for e in entries], [0]*3 + [1]*3 + [2]*3 + [3]*3 + [4])
         for scene, entry in enumerate(entries):
-            panel = int(entry[0])
+            panel = entry['panel']
+            self.assertEqual(self.lib.presentationScenePanel(scene), panel)
             image = [[0]*320 for _ in range(256)]
             x0, y0 = (0, 32) if panel == 4 else (144, 68)
             for y, row in enumerate(original_panels()[panel]):

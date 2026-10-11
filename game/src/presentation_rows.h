@@ -9,6 +9,7 @@
 #define PRESENTATION_BYTE_BUDGET 320
 #define PRESENTATION_OP_BUDGET 64
 unsigned short presentationCardHeight(unsigned char id);
+unsigned char presentationScenePanel(unsigned char id);
 unsigned short presentationMangaHeight(unsigned char panel);
 unsigned short presentationCardStep(unsigned char *const planes[4],
 	unsigned short stride, unsigned char id, unsigned short row);

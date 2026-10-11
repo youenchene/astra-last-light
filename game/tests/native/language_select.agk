@@ -1,0 +1,20 @@
+# Focused complete images: inspect before any scoped golden additions.
+# Held intro fire cannot choose a language or start gameplay.
+wait 5
+press fire 550
+wait-serial "AGK language_ready" 600
+screenshot language_french
+press right 1
+wait 24
+screenshot language_english
+press left 1
+wait 24
+screenshot language_french_again
+press right 1
+wait 24
+press fire 80
+expect-serial "AGK language=0"
+wait-serial "AGK title_ready" 600
+screenshot language_title
+expect-serial "AGK language_selected=1"
+expect-no-serial "phase=1|ERR|STACK SMASHED|allocation failure"

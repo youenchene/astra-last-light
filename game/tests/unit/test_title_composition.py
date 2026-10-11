@@ -40,6 +40,8 @@ class TitleCompositionTests(unittest.TestCase):
 #include <stdio.h>
 #include <string.h>
 #include "logic.h"
+#include "../art/localization.h"
+tLanguage languageGet(void) { return LANGUAGE_EN; }
 typedef uint8_t UBYTE;
 typedef uint16_t UWORD;
 typedef uint32_t ULONG;

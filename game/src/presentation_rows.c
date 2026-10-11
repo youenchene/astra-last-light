@@ -1,4 +1,5 @@
 #include "presentation_rows.h"
+#include "language_select.h"
 #include "../art/presentation-rows.h"
 
 #ifdef ASTRA_PRESENTATION_TIMING
@@ -108,6 +109,10 @@ unsigned short presentationCardHeight(unsigned char id) {
 	return id < 13 ? s_cardLayouts[id].height : 0;
 }
 
+unsigned char presentationScenePanel(unsigned char id) {
+	return id < 13 ? s_scenePanels[id] : 255;
+}
+
 unsigned short presentationMangaHeight(unsigned char panel) {
 	return panel < 5 ? s_mangaLayouts[panel].height : 0;
 }
@@ -115,6 +120,7 @@ unsigned short presentationMangaHeight(unsigned char panel) {
 unsigned short presentationCardStep(unsigned char *const planes[4],
 	unsigned short stride, unsigned char id, unsigned short row) {
 	if(id >= 13 || row >= s_cardLayouts[id].height) return row;
+	id += languageGet() * 13;
 	timingBegin(0, row);
 	row = layerStep(planes, stride, &s_cardLayouts[id], s_cardRows, row);
 	timingEnd(0, id, row, s_cardLayouts[id].height);
@@ -124,6 +130,7 @@ unsigned short presentationCardStep(unsigned char *const planes[4],
 unsigned short presentationHudStep(unsigned char *const planes[4],
 	unsigned short stride, unsigned char variant, unsigned short row) {
 	if(variant >= 8 || row >= 40) return row;
+	variant += languageGet() * 8;
 	timingBegin(1, row);
 	unsigned short end = row + PRESENTATION_BYTE_BUDGET / 160;
 	if(end > 40) end = 40;

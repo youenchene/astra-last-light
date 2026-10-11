@@ -16,6 +16,7 @@
 #include "intro.h"
 #include "campaign_audio.h"
 #include "title_confirm.h"
+#include "language_select.h"
 #include "combat_perf.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
 #include "../tests/native/campaign_probe.h"
@@ -39,6 +40,8 @@ static UWORD s_cutRevision, s_lastRevision = 0xffff, s_holdFrames;
 static UBYTE s_lastBoth;
 static tTitleConfirm s_confirm;
 static UBYTE s_confirmSubmitted;
+static tLanguageSelect s_language;
+static UBYTE s_isLanguage, s_languageSubmitted, s_languageTarget, s_languageReported;
 
 static tInput readInput(void) {
 	tInput input = {0};
@@ -205,6 +208,15 @@ static void reportCut(const char *tag) {
 }
 
 static void acknowledgeFrame(void) {
+	if(s_languageSubmitted) {
+		s_languageSubmitted = 0;
+		languageSelectPresented(&s_language, s_languageTarget);
+		if(languageSelectReady(&s_language) && !s_languageReported) {
+			s_languageReported = 1;
+			agkState("language", s_language.selected); agkEnd();
+			agkPrint("AGK language_ready\n");
+		}
+	}
 	if(!s_submitted) return;
 	s_submitted = 0;
 	combatStressAcknowledged(s_pBuffer->pFront != s_firstBitmap,
@@ -234,6 +246,19 @@ static void acknowledgeFrame(void) {
 }
 
 static void publishFrame(void) {
+	if(s_isLanguage) {
+		UBYTE target = s_pBuffer->pBack != s_firstBitmap;
+		if(!languageSelectTargetReady(&s_language, target)) return;
+		for(UBYTE ink = 0; ink < 16; ++ink)
+			s_pVPort->pPalette[ink] = ink < 4 ? g_languagePalette[ink] : 0;
+		renderSyncPalette();
+		s_pBuffer->ubDirtyCounter = 1;
+		viewProcessManagers(s_pView);
+		copProcessBlocks();
+		s_languageTarget = target;
+		s_languageSubmitted = 1;
+		return;
+	}
 	if(s_isIntroDone && !renderTargetReady()) {
 		if(!s_holdFrames) {
 			agkState("cut_hold", renderRevision());
@@ -328,12 +353,27 @@ void genericProcess(void) {
 	combatPerfEnd(CP_AUDIO);
 	tInput input = readInput();
 
-	if(!s_isIntroDone && !introProcess(input.fire)) {
-		s_isIntroDone = 1;
-		renderPreparePalette();
+	if(!s_isIntroDone && !s_isLanguage && !introProcess(input.fire)) {
+		s_isLanguage = 1;
+		languageSelectBegin(&s_language);
 		agkPrint("AGK intro_released\n");
-		/* A fire used to skip an intro must not also skip the title. */
-		s_sState.fireWasDown = input.fire;
+	}
+	if(s_isLanguage) {
+		UBYTE dirs = (keyCheck(KEY_LEFT) || joyCheck(JOY1_LEFT) ? 1 : 0) |
+			(keyCheck(KEY_RIGHT) || joyCheck(JOY1_RIGHT) ? 2 : 0);
+		if(languageSelectInput(&s_language, dirs, input.fire || keyCheck(KEY_RETURN))) {
+			s_isLanguage = 0;
+			s_isIntroDone = 1;
+			s_sState.titleInputBlocked = 1;
+			renderPreparePalette();
+			agkState("language_selected", languageGet()); agkEnd();
+		}
+		else {
+			UBYTE target = s_pBuffer->pBack != s_firstBitmap;
+			blitWait();
+			languageSelectStep(&s_language, target, s_pBuffer->pBack->Planes,
+				s_pBuffer->pBack->BytesPerRow);
+		}
 	}
 	if(s_isIntroDone) {
 		UBYTE heartbeat = ++s_ubReportTicks == 50;

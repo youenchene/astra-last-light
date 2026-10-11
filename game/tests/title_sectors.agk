@@ -1,4 +1,8 @@
 # Both buffers must finish bounded composition after each selection.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 screenshot title1
 press right 1

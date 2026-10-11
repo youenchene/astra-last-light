@@ -82,7 +82,8 @@ def main():
     LOG = args.out/'commands.log'
     report = {'scope': 'injected matrix; not ordinary play', 'timing': args.timing, 'profiles': {}}
     scenario = args.out/'matrix.agk'
-    lines = ['wait-serial "AGK title_ready" 600', 'press fire 1',
+    lines = ['wait-serial "AGK language_ready" 600', 'press right 1', 'wait 24', 'press fire 1',
+             'wait-serial "AGK title_ready" 600', 'press fire 1',
              'wait-serial "AGK combat_ready" 1000']
     for i in range(48):
         lines += [f'wait-serial "AGK stress_case={i} tick=100 " 1000', f'screenshot case{i:02}',

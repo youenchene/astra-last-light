@@ -4,6 +4,10 @@ wait 45
 screenshot ace
 wait 120
 screenshot micrix
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 screenshot title
 expect-serial "AGK ready"

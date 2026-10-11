@@ -5,28 +5,7 @@
 #include "presentation_rows.h"
 #include <ace/managers/blit.h>
 
-typedef struct {
-	const char *title, *caption, *reply;
-	UBYTE panel, style;
-} tScene;
-
-/* IDs are the portable logic contract, not art-frame numbers. These are five
- * selected Retro Diffusion plates, reused with thirteen narrative treatments. */
-static const tScene s_scenes[13] = {
-	{"ORBITAL GRAVEYARD", "THE WRECKS STILL CALL OUR NAMES", "KEEP THE LAST LIGHT ALIVE", 0, 0},
-	{"SALVAGE CLAW", "A REACTOR WAKES AMONG THE DEAD", "THOSE JAWS WILL NOT TAKE US", 0, 1},
-	{"WRECK FIELD FREED", "THE CLAW FALLS SILENT", "SET COURSE FOR THE VEIL", 0, 2},
-	{"VEIL NEBULA", "SOMETHING MOVES IN THE CLOUDS", "FOLLOW THE SIGNAL THROUGH", 1, 0},
-	{"THE MANTA WAKES", "THAT SHADOW IS ALIVE", "WATCH THE FINS AND HOLD FAST", 1, 1},
-	{"VEIL PIERCED", "THE GREAT SHADOW BREAKS APART", "THE FOUNDRY LIES AHEAD", 1, 2},
-	{"IMPERIAL FOUNDRY", "THEIR FURNACES NEVER SLEEP", "WE WILL END THIS WAR MACHINE", 2, 0},
-	{"FURNACE CARRIER", "THE FACTORY SHIP TURNS TO FIRE", "STAY CLEAR OF ITS GUN DECKS", 2, 1},
-	{"FURNACES SILENCED", "NO MORE SHIPS FROM THESE FIRES", "ONE LAST JUMP TO THE CITADEL", 2, 2},
-	{"STELLAR CITADEL", "THE CROWN ECLIPSES OUR STAR", "THIS IS WHERE WE MAKE OUR STAND", 3, 0},
-	{"REACTOR CROWN", "ITS HALO IS GATHERING LIGHT", "BREAK THE CROWN BEFORE THE DAWN", 3, 1},
-	{"THE CROWN FALLS", "THE REACTOR GOES DARK", "LOOK BEYOND THE FALLING TOWERS", 3, 2},
-	{"DAWN RESTORED", "THE LAST LIGHT BURNS AGAIN", "WE MADE IT HOME", 4, 3}
-};
+/* Text/style/panel mapping is authored once in art/localization.json. */
 static tBitMap *s_screen;
 static tBitMap *s_buffers[2];
 static UBYTE s_id, s_active, s_buffer;
@@ -66,7 +45,7 @@ void renderScenesBegin(UBYTE id, UWORD epoch) {
 
 void renderScenesStep(void) {
 	if(!s_active) return;
-	const tScene *scene = &s_scenes[s_id];
+	UBYTE panel = presentationScenePanel(s_id);
 	if(s_ready) return;
 	if(s_stage == 0) {
 		blitWait();
@@ -75,8 +54,8 @@ void renderScenesStep(void) {
 	}
 	else if(s_stage == 1) {
 		blitWait();
-		s_row = presentationMangaStep(s_screen->Planes, s_screen->BytesPerRow, scene->panel, s_row);
-		if(s_row == presentationMangaHeight(scene->panel)) s_ready = 1;
+		s_row = presentationMangaStep(s_screen->Planes, s_screen->BytesPerRow, panel, s_row);
+		if(s_row == presentationMangaHeight(panel)) s_ready = 1;
 	}
 }
 

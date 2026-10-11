@@ -1,4 +1,8 @@
 # Ordinary input: hold-only must never emit a shot, even after full charge.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 press fire 1
 wait-serial "AGK combat_ready" 1000

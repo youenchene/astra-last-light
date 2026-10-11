@@ -1,4 +1,8 @@
 # Normal production build: F9 only on a fully prepared TITLE.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
 wait-serial "AGK title_ready" 600
 screenshot ending_preview_initial_title
 key 0x58

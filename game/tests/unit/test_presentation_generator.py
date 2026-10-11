@@ -8,7 +8,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = ('tools/make-presentation.py', 'src/render_scenes.c', 'src/scene_font.h',
-          'src/logic.c', 'art/font.txt', 'art/palette.txt', 'tools/selected_rd.py')
+          'src/logic.c', 'art/font.txt', 'art/palette.txt', 'tools/selected_rd.py',
+          'tools/localization.py', 'art/localization.json')
 
 
 class PresentationGeneratorTests(unittest.TestCase):
@@ -40,6 +41,8 @@ class PresentationGeneratorTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual((game / 'art/presentation-rows.h').read_bytes(),
                              (ROOT / 'game/art/presentation-rows.h').read_bytes())
+            self.assertEqual((game / 'art/localization.h').read_bytes(),
+                             (ROOT / 'game/art/localization.h').read_bytes())
             self.assertEqual(self.invoke(script, temp).returncode, 0)
 
     def test_missing_check_fails_without_writing(self):
