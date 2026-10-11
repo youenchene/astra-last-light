@@ -1,0 +1,11 @@
+{
+  "description": "Locked original two-minute score. Cue timing is independent of picture edits.",
+  "seed": 861002,
+  "shots": [
+    {"seconds": 8}, {"seconds": 5}, {"seconds": 6}, {"seconds": 4},
+    {"seconds": 10}, {"seconds": 4}, {"seconds": 5}, {"seconds": 12},
+    {"seconds": 5}, {"seconds": 5}, {"seconds": 12}, {"seconds": 4},
+    {"seconds": 5}, {"seconds": 12}, {"seconds": 5}, {"seconds": 14},
+    {"seconds": 4}
+  ]
+}
