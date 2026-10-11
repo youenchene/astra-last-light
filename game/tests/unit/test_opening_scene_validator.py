@@ -15,7 +15,7 @@ class Image:
     def __init__(self, scene, hero=None):
         self.pixels = {}
         panel = scene_rgb(scene)
-        x0, y0 = (0, 32) if scene == 12 else (162, 68)
+        x0, y0 = (0, 32) if scene == 12 else (144, 68)
         for y, row in enumerate(panel):
             for x, color in enumerate(row):
                 self.pixels[x0 + x, y0 + y] = color

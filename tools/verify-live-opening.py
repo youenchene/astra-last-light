@@ -30,7 +30,7 @@ def verify(folder):
     CHECK.require(positions[1] - positions[0] == 24, "shot did not move six pixels over four ticks")
     for name in ("moved", "shot", "shot_later", "settled"):
         CHECK.require(all(images["idle"].pixel(x, y) == images[name].pixel(x, y)
-                          for y in range(56, 192) for x in range(152, 312)),
+                          for y in range(56, 208) for x in range(136, 312)),
                       f"{name}: opaque window corrupted")
     # The settled bitmap must restore the entire aligned shot save corridor;
     # it is outside both hero positions and contains the former shot positions.

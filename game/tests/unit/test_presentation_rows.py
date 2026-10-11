@@ -59,15 +59,15 @@ def reference_card(index):
         paint_text(image, 'DAWN RESTORED', 121, 12, 14, font, 5)
         paint_text(image, 'FIRE TO RESTART', 115, 237, 6, font, 5)
         return image
-    image = [[accent if 158 <= x < 306 and 66 <= y < 154 else 0
+    image = [[accent if 142 <= x < 306 and 66 <= y < 166 else 0
               for x in range(320)] for y in range(256)]
     font, _ = source_fonts()
-    messages = [(caption, 156, 6), (reply, 174, 14)]
+    messages = [(caption, 168, 6), (reply, 186, 14)]
     if index not in (0, 3, 6, 9):
         messages.insert(0, (title, 60, accent))
     for message, y, color in messages:
         for row, line in enumerate(textwrap.wrap(message, 28)):
-            paint_text(image, line, 160, y + row * 8, color, font, 4)
+            paint_text(image, line, 144, y + row * 8, color, font, 4)
     return image
 
 
@@ -170,9 +170,9 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
             with self.subTest(scene=scene):
                 ending = scene == 12
                 self.check_layer(self.lib.presentationCardStep, scene, reference_card(scene),
-                                 0 if ending else 152, 320 if ending else 160,
-                                 list(range(32)) + list(range(224, 256)) if ending else list(range(56, 192)),
-                                 2 if ending else 4, 1)
+                                 0 if ending else 136, 320 if ending else 176,
+                                 list(range(32)) + list(range(224, 256)) if ending else list(range(56, 208)),
+                                 2 if ending else 3, 1)
 
     def test_shared_hud_all_sectors_and_charge_labels(self):
         for variant in range(8):
@@ -201,11 +201,11 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
                           'FURNACE CARRIER', 'FURNACES SILENCED', 'REACTOR CROWN',
                           'THE CROWN FALLS', 'DAWN RESTORED'])
         for title, caption, reply, _, _ in entries[:12]:
-            for message, y, bottom in ((title, 60, 66), (caption, 156, 172), (reply, 174, 192)):
+            for message, y, bottom in ((title, 60, 66), (caption, 168, 184), (reply, 186, 208)):
                 lines = textwrap.wrap(message, 28)
                 self.assertEqual(' '.join(lines), message)
                 self.assertLessEqual(y + (len(lines) - 1) * 8 + 6, bottom)
-                self.assertTrue(all(160 + len(line) * 5 - 1 < 312 for line in lines))
+                self.assertTrue(all(144 + len(line) * 5 - 1 < 312 for line in lines))
 
     def test_selected_png_pixels_all_thirteen_mappings(self):
         entries = re.findall(r'\{"[^"]+", "[^"]+", "[^"]+", (\d), (\d)\}',
@@ -214,13 +214,13 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
         for scene, entry in enumerate(entries):
             panel = int(entry[0])
             image = [[0]*320 for _ in range(256)]
-            x0, y0 = (0, 32) if panel == 4 else (162, 68)
+            x0, y0 = (0, 32) if panel == 4 else (144, 68)
             for y, row in enumerate(original_panels()[panel]):
                 image[y0+y][x0:x0+len(row)] = row
             with self.subTest(scene=scene):
                 self.check_layer(self.lib.presentationMangaStep, panel, image,
-                                 0 if panel == 4 else 160, 320 if panel == 4 else 144,
-                                 list(range(y0, y0 + (192 if panel == 4 else 84))),
+                                 0 if panel == 4 else 144, 320 if panel == 4 else 160,
+                                 list(range(y0, y0 + (192 if panel == 4 else 96))),
                                  2 if panel == 4 else 4, 2)
 
     def test_invalid_panel_and_finished_cursor_do_not_write(self):
@@ -228,9 +228,20 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
         planes = (ctypes.POINTER(ctypes.c_ubyte) * 4)(*[
             ctypes.cast(ctypes.byref(memory, plane*40), ctypes.POINTER(ctypes.c_ubyte))
             for plane in range(4)])
-        for panel, row in ((5,0), (255,0), (0,84), (4,192), (0,65535)):
+        for panel, row in ((5,0), (255,0), (0,96), (4,192), (0,65535)):
             self.assertEqual(self.lib.presentationMangaStep(planes,160,panel,row),row)
             self.assertEqual(bytes(memory), bytes([0xa5])*40960)
+
+    def test_ending_border_is_two_white_pixels_inside_image(self):
+        image = [[0]*320 for _ in range(256)]
+        for y, row in enumerate(original_panels()[4]):
+            image[y+32] = row
+        self.assertTrue(all(image[y][x] == 7
+                            for y in range(32, 224) for x in range(320)
+                            if x < 2 or x >= 318 or y < 34 or y >= 222))
+        self.assertTrue(all(ink == 0 for row in image[:32] + image[224:] for ink in row))
+        self.check_layer(self.lib.presentationMangaStep, 4, image,
+                         0, 320, list(range(32, 224)), 2, 2)
 
     def test_mixed_case_sector_caption_preserves_lowercase_letters(self):
         # The second character is lowercase 'r' in the authored stage name.

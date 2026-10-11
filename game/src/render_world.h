@@ -10,8 +10,8 @@
  * and one 6144-byte CHIP title staging bitmap shared by four read-only plates. */
 UBYTE renderWorldCreate(tVPort *pVPort, tBitMap *pFront, tBitMap *pScreen);
 void renderWorldBind(tBitMap *pScreen);
-/* Capture base palette color 4 before scene-specific viewport changes. */
-void renderWorldSetStarColor(UWORD color);
+/* Capture base inks 4 and 11 before scene-specific viewport changes. */
+void renderWorldSetBaseColors(UWORD star, UWORD rose);
 /* Dirty HUD history is independent for each pixel buffer. */
 void renderWorldHud(const tGameState *pState);
 void renderWorldPause(const tGameState *pState);

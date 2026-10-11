@@ -2,6 +2,52 @@
 
 ## Status
 
+### Current story-eye consistency — focused checks passed
+
+All four ordinary pictures now share blue irises, dark pupils and small highlights
+matching the ending's design at160×96. Only28 localized pixels changed; originals
+and ending are unchanged.111 Python tests, C rules and all13 native scene checks
+pass on both profiles. Production probe OFF restored; global performance and
+prior broad-suite failures remain open. See
+[current artwork evidence](selected-rd-story-images.md).
+
+### Current almond-eye correction — focused checks passed
+
+The ending eyes are now narrower and almond-shaped through an offline masked
+reshape of the corrected identity artwork. No pixels outside the eye masks
+changed; peach skin, hair and ending palette are preserved.105 Python tests,
+C rules and both-profile ending/source/restoration checks pass. A500 peak92%
+and prior broad-suite failures remain open. See
+[current visual evidence](selected-rd-story-images.md).
+
+### Current ending character correction — focused checks passed
+
+The high-definition ending now restores a rounded side-swept purple bob and
+peach skin. A WIN-only ink11 override prevents the shared orange ink from
+turning the face yellow; the ordinary palette is restored on exit. Both-profile
+skin/sky/restoration checks,103 Python tests and C rules pass. Prior broad-suite
+failures and global performance acceptance remain open. See
+[current artwork and palette evidence](selected-rd-story-images.md).
+
+### Current higher-definition ending — focused checks passed, broad suite blocked
+
+The ending now uses a **480×288 Retro Diffusion redraw** of the original,
+converted offline to320×192 with the existing2px white border. Both-profile
+production ending replay and source-pixel checks pass;102 Python tests and C
+rules pass. Broad regressions report12/38 passing (26 failures), not yet isolated
+against prior dirty work. No golden updates; validation stopped. Full-game and
+50fps acceptance remain blocked. See [current evidence](selected-rd-story-images.md).
+
+### Current native-size stories / RD ending — functional scope passed
+
+Ordinary story images now display at **160×96**, with repositioned frames/text.
+The **320×192** ending uses an original-source Retro Diffusion image-to-image
+enlargement and a **2px white inset border**. Production F9 previews WIN from
+TITLE. All 13 scene source-pixel checks and ending lifecycle pass on both native
+profiles; 99 Python tests and C rules pass. Production probe OFF is restored.
+See [geometry, provenance and evidence](selected-rd-story-images.md).
+Global 50fps acceptance remains blocked; prior revision notes follow.
+
 ### Current larger selected images / dedicated WIN — functional scope passed
 
 Ordinary selected manga is **140×84**, with a dedicated **320×192** ending and

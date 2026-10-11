@@ -70,13 +70,13 @@ def layers():
             text(image, (320 - len(prompt) * 6 + 1) // 2, 237, prompt, 6, font, 5)
             cards.append(image[:32] + image[224:])
             continue
-        image = [[0] * 160 for _ in range(136)]
+        image = [[0] * 176 for _ in range(152)]
         accent = [5, 11, 7, 14][int(style)]
-        rect(image, 6, 10, 148, 88, accent)
+        rect(image, 6, 10, 164, 100, accent)
         if index % 3:
             wrapped(image, 4, title, accent, small)
-        wrapped(image, 100, caption, 6, small)
-        wrapped(image, 118, reply, 14, small)
+        wrapped(image, 112, caption, 6, small)
+        wrapped(image, 130, reply, 14, small)
         cards.append(image)
     for name in names:
         for ready in range(2):
@@ -164,11 +164,11 @@ def generate():
             for row_index, pixels in enumerate(image):
                 raw = planar(pixels)
                 if group is cards:
-                    y, x = (row_index + (192 if row_index >= 32 else 0), 0) if image_index == 12 else (56 + row_index, 19)
+                    y, x = (row_index + (192 if row_index >= 32 else 0), 0) if image_index == 12 else (56 + row_index, 17)
                 elif group is hud:
                     y, x = row_index + (216 if row_index >= 29 else 0), 0
                 else:
-                    y, x = (32 + row_index, 0) if image_index == 4 else (68 + row_index, 20)
+                    y, x = (32 + row_index, 0) if image_index == 4 else (68 + row_index, 18)
                 # The two margin/HUD bands are not adjacent in the framebuffer.
                 if (group is hud and row_index == 29) or (group is cards and len(image) == 64 and row_index == 32):
                     previous = None
@@ -236,9 +236,9 @@ def generate():
         first = 0
         for index, image in enumerate(table):
             if name == 's_card':
-                y, x, span, split, gap = (0, 0, 40, 32, 192) if index == 12 else (56, 19, 20, 136, 0)
+                y, x, span, split, gap = (0, 0, 40, 32, 192) if index == 12 else (56, 17, 22, 152, 0)
             else:
-                y, x, span, split, gap = (32, 0, 40, 192, 0) if index == 4 else (68, 20, 18, 84, 0)
+                y, x, span, split, gap = (32, 0, 40, 192, 0) if index == 4 else (68, 18, 20, 96, 0)
             assert span * 4 <= 320 and x + span <= 40
             assert y + len(image) + gap <= 256
             literals = index + 1 if name == 's_manga' else 0

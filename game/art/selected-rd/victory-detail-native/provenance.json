@@ -1,0 +1,18 @@
+{
+  "method": "Retro Diffusion image-to-image enlargement (not nearest-neighbor)",
+  "original": "../victory-a.png",
+  "input_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "task_id": "0213c234-6f9b-4cf2-97cc-1928656cda36",
+  "balance_cost": 0.06,
+  "model": "rd_plus",
+  "width": 320,
+  "height": 192,
+  "master_width": 320,
+  "master_height": 192,
+  "master_sha256": "4b6d36c5fcc575c67b83bf219e31af40bb8a447ee0347b8513fdb9bd28a8fcb2",
+  "runtime_conversion": "pixel-center nearest sampling to320x192; no enlargement",
+  "image_sha256": "2e546eb4a33c1ad6a2c47d20b4246b0452ab47ea380039562bf26a25124d5ab2",
+  "rgb_sha256": "6c518a4a49cab887ba2165abcef136e9fc3258a8c46a7c19413caf9f123c1c20",
+  "request_file": "request.json",
+  "api_docs": "https://github.com/Retro-Diffusion/api-examples"
+}

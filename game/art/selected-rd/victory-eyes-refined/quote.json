@@ -1,0 +1,14 @@
+{
+  "tool_id": "inpainting",
+  "balance_cost": 0.18,
+  "credit_cost": 20,
+  "estimate_seconds": 150,
+  "scheduled_region_summary": null,
+  "region_plan": null,
+  "toolId": "inpainting",
+  "balanceCost": 0.18,
+  "creditCost": 20,
+  "estimateSeconds": 150,
+  "scheduledRegionSummary": null,
+  "regionPlan": null
+}

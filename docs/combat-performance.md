@@ -12,6 +12,83 @@ Historical failed capture trials and the original stop remain recorded below.
 Full numerical tables for all 48 cases, ten stages, both profiles and each
 measured iteration: [raw-counter tables](combat-performance-tables.md).
 
+## Recap: where frame time is spent and which hardware is involved
+
+A500 sector 1, timing-ON fenced matrix, stable windows over the left/centre/right
+bands. Each cell is the **mean/max** elapsed PAL raster lines per call, with the
+share of the 313-line (20 ms) frame. Baseline is `perf-loop-base-on` (HEAD
+`3aae85b`). **Latest is the baseline**: no loop-3 candidate was accepted (see
+below), so the code is unchanged. The best rejected candidate is shown for scale.
+
+| Stage | PLAY dense, baseline = latest | BOSS dense, baseline = latest | Best candidate it3, PLAY / BOSS dense (rejected) | Hardware involved |
+|---|---:|---:|---:|---|
+| Restore + world animate | 92.9/124 (29.7%/39.6%) | 54.5/88 (17.4%/28.1%) | 92.9/124 / 54.5/88 | Blitter restores; 68000 stars/decor; Agnus chip-bus contention |
+| Logic, including admission and collisions | 137.0/497 (43.8%/158.8%) | 70.7/192 (22.6%/61.3%) | 136.9/448 / 70.2/184 | 68000 only (slow-RAM state); stalled by DMA and interrupts |
+| Audio, foreground | 2.4/9 (0.8%/2.9%) | 2.5/9 (0.8%/2.9%) | unchanged | 68000; Paula DMA and interrupts are not isolated |
+| Render inclusive (contains the next four rows) | 307.2/353 (98.2%/112.8%) | 318.3/358 (101.7%/114.4%) | 307.6/354 / 318.2/358 | All of the below |
+| BOB submission (ACE internal blit waits included) | 169.1/200 (54.0%/63.9%) | 205.4/245 (65.6%/78.3%) | 169.3/200 / 205.2/245 | Blitter, 68000 setup, chip-bus contention |
+| Sprite stream preparation | 108.6/148 (34.7%/47.3%) | 93.7/133 (29.9%/42.5%) | 108.8/148 / 93.8/133 | 68000 writes to chip RAM; this is **not** sprite DMA time |
+| Copper list build | 13.8/34 (4.4%/10.9%) | 3.6/14 (1.2%/4.5%) | unchanged | 68000 writes; Copper execution is not measured |
+| Publication | 10.6/39 (3.4%/12.5%) | 10.8/34 (3.4%/10.9%) | unchanged | 68000, Copper pointers and palette |
+| Explicit `blitWait()` per call (overlaps restore/BOBs) | 1.7/7 (0.5%/2.2%) | 1.7/7 (0.6%/2.2%) | unchanged | Blitter completion |
+| Fixture injection (diagnostic only, not shipped) | 79.5/107 (25.4%/34.2%) | 75.0/108 (24.0%/34.5%) | unchanged | 68000 |
+
+Caveats:
+- These are **elapsed raster times**, not pure CPU cycles. They include Agnus
+  chip-bus DMA contention (bitplanes, sprites, Blitter, Copper, Paula) and
+  interrupt time.
+- Stages overlap: render inclusive contains BOBs, sprites, copper and HUD; the
+  explicit wait overlaps restore and BOBs. Do not sum the rows.
+- Maxima above 313 lines are multi-frame overruns in the **injected** density.
+  They are not ordinary-play values.
+- Timing ON is itself intrusive; acceptance uses the profiler-OFF runs.
+
+## Optimization loop 3 (HEAD `3aae85b`): per-iteration table
+
+All runs use the identical fenced matrix (timing ON and OFF), the ordinary
+production scenarios and the profiler-OFF injected campaign, with full images
+compared fail-closed. Baselines: `perf-loop-base-{on,off,prod,campaign}`.
+
+| Iteration | Change | Pixels/states | Logic mean/max, A500, ON (sparse; dense) | OFF matrix drops/peak (A500; AROS) | Decision |
+|---|---|---|---|---|---|
+| Base | HEAD | reference | 36.20/130; 105.71/589 | 5807/361%; 5270/339% | reference |
+| it1, it2 (crashed session) | Code not retained in the tree | 96/96 images identical in both | it1: BOB stage +116%; it2: logic −0.9% | it1 5925/355%; it2 5729/350% | Not accepted; the code is not recoverable, so not re-evaluated |
+| **it3** (logic.c, all three parts) | `staysApart` takes candidate fields in registers; pointer-walk scan skips the candidate via channel 0; per-tick free-slot cursor shared by `fireHostile`/`fireFan`/`bossVolley` | 96/96 images ON and OFF, both profiles; ordinary 38 captures + 194 states, and campaign 53 + 249, identical | 36.28/148; 105.17/547. Firing PLAY spikes 497→448 and 589→536; **non-firing PLAY dense +2.2 lines** | **5844/341%**; 5209/320% | **Rejected.** A500 OFF drops rise (+37) despite the peak −20 pp; campaign A500 is unchanged at 17/122%. AROS ordinary means rise slightly. |
+| it3b | Free-slot cursor only | 96/96 images ON, both profiles | 36.64/157; 106.10/579 | not run (ON already worse) | **Rejected.** The cursor makes `fireFan` out-of-line and the cursor address-taken, which causes the +2-line non-firing regression. |
+| it3c | Register `staysApart` + pointer scan only, no cursor | A500 48 images ON identical; **AROS run not executed** | 35.88/139; 104.74/578 (no left regression) | not run | **Unvalidated, reverted.** The run was blocked by a concurrent session (see below). It is the most promising candidate; the patch is retained. |
+
+Equivalence review of it3 (all parts):
+- `staysApart`: `dy = e.y − o.y` replaces `d0 = 2·dy`. The comparisons halve
+  exactly. `d1 = 2dy + Δvy·t`, with |Δvy| ≤ 4 and t ≤ 219, cannot overflow int16.
+  The redundant `d0 ≥ need` term is already implied by the earlier test.
+- Skipping the candidate through channel 0 is equivalent to `o == e`. The
+  original `default: continue` already skipped any other active channel-0
+  hostile, so equivalence does not depend on others never having channel 0.
+  This also holds for the `scheduleBullets` re-admission caller.
+- Cursor: within one `updateEnemies` or `bossVolley` call, only firing activates
+  hostile slots. The only deactivation is a rejected candidate, and the cursor
+  stays on that slot. Slots below the cursor therefore stay active, so the slot
+  chosen equals `spawn()`'s first free slot.
+
+The new host test `testSameTickFansFillLowestFreeSlots` fires two gunner fans
+in one tick, with a refused centre ray and interleaved pool holes. It passes on
+HEAD and on the candidate, and fails on a deliberately broken cursor.
+
+Retained patches: `.tmp/perf-loop-candidates/{it3-full,it3b-cursor-only,it3c-register-admission}.patch`.
+Evidence: `game/build/perf-loop-{it3v-on,it3v-off,it3b-on,it3c-on}` and the
+crashed session's identical-binary runs `perf-loop-it3-{prod,campaign}`. The
+it3v OFF matrix reproduced those runs' figures exactly.
+
+**Blocking condition:** at 14:21, a concurrent session in this same worktree
+modified `game/src/main.c` (F9 ending preview) and added
+`game/tests/native/ending_preview.agk`. It also ran its own emulator against the
+shared `game/build`. The AROS step of it3c was refused by the stale-ADF guard.
+The production build restored by the runner (488512 bytes) contains that
+session's `main.c` and it3c. It is **not** a validated release build. Production
+must be rebuilt with flags OFF and boot-validated after that session finishes;
+the HEAD production executable is 488176 bytes. The CMake cache shows all four
+diagnostic flags OFF.
+
 ## Final accepted changes and production evidence
 
 1. `render_bullets.c`: rolling gather bit and 128-byte survivor bit lookup remove

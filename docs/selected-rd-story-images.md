@@ -1,6 +1,139 @@
 # Selected Retro Diffusion story images
 
-## Current implementation — larger panels and dedicated WIN
+## Current implementation — consistent ordinary-story eyes
+
+All four regular160×96 panels now use localized offline derivatives in
+`game/art/selected-rd/story-eyes/`: blue irises (ink15), dark central pupils
+(ink1) and white highlights (ink7), scaled to each pose's existing eye size.
+Only28 pixels changed across the four images; no changes outside explicit eye
+masks. Original RD PNG/RGB files and manifest are preserved. The generator
+`tools/make-story-eyes.py --check` verifies provenance, pixel edits and outputs
+without relying on mutable galleries. No paid generation was used.
+
+Importer and independent PNG oracle explicitly select these ordinary derivatives
+after validating the originals. The ending remains the approved almond-eye image:
+all12 ending capture comparisons in this run match the previous ending PNG/RGB
+byte-for-byte. White border, skin palette, picture dimensions and layout unchanged.
+
+Validation: **111 Python tests, C rules, generation/freshness PASS**. Both-profile
+injected campaign runs in `game/build/story-eyes-campaign/` pass all13 scenes,
+1,160,320 source-derived pixels per profile, ending/restart/ESC;32 complete PNG
+pairs match across profiles. All four ordinary images and ending were inspected.
+Production probe/timing OFF restored. Production executable505,984 bytes; tables
+59,685 resident bytes. Injected startup A500 free34,152 CHIP /38,392 total bytes
+(not a worst-case bound). Performance remains blocked:15 drops/125% peak A500,
+11 drops/122% AROS. Known broad-suite failures remain unisolated; no golden updates.
+
+## Previous implementation — narrower almond eyes
+
+Selected `victory-eyes-almond/`, an offline localized eye reshape of the preserved
+identity master. The eyes are compressed vertically by up to28% centrally,
+tapering toward unchanged outer corners. Only eye-mask pixels change:
+671 master pixels and299 runtime pixels; zero changes outside either mask.
+Peach skin, the rounded purple bob and the rest of the artwork are preserved.
+Canonical `victory.png` and master/RGB hashes retain the normal importer contract;
+provenance records the offline method and parent hashes, not a new RD generation.
+An earlier **$0.18 RD inpainting attempt was rejected** for portrait displacement
+and remains archived in `victory-eyes-refined/`; selected offline correction cost$0.
+
+Validation: **105 Python tests and C rules PASS**; generator freshness and build
+PASS. Both `game/build/ending-eyes-preview-{a500,aros}/` production replays pass.
+Peach checks preserve the exact498 parent samples and separately verify seven
+intentional new skin pixels where eye white/liner was removed. Source checks
+cover299,264 pixels per profile; seven complete screenshot pairs are identical,
+including palette/title restoration. Both native WIN screenshots were inspected.
+Executable505,980 bytes; generated tables59,681 bytes. A500 startup34,160 CHIP /
+45,432 total free bytes (not worst-case bounds). Focused zero drops with peak92%
+A500 /90% AROS; the A500 ≤90% target and prior broad-suite failures remain open.
+Probe/timing flags remain OFF. No golden updates or broad-suite rerun.
+
+## Previous implementation — original-style bob and peach skin
+
+Selected `victory-identity-master/`: a preserved480×288 RD redraw from the
+original, using strength0.55 and seed861013, with a rounded side-swept purple bob
+and peach/rosy skin. Task `1298f725-b3ed-42c5-aa2a-90bcd7c89513`, cost **$0.06**.
+Earlier derivatives remain intact. Runtime remains320×192 with2px white border.
+
+Source skin `#FCA98B` initially quantized to the shared orange ink14 `#FA6`.
+WIN now uses **ink11 `#FA9` (peach)** while retaining sky ink14 `#FA6`.
+Importer and independent oracle quantize WIN against its displayed palette
+(0black,4`#BDF`,11`#FA9`). The original rose ink11 is captured and restored
+outside WIN through existing back-frame palette publication. Shared palette.txt
+and ordinary story colors are unchanged; the displayed tone is an OCS approximation.
+
+Validation: **103 Python tests, C rules, build and generator freshness PASS**.
+Both production replays in `game/build/ending-identity-peach-{a500,aros}/` pass.
+`tools/verify-ending-peach.py` checks299,264 source-derived pixels per profile,
+including498 peach skin pixels and256 orange sky pixels per WIN capture;
+initial/returned title pixels match exactly. Seven complete screenshot pairs are
+byte-identical across profiles. Ending/restart/title screenshots were inspected.
+Executable506,020 bytes; tables59,721 bytes. A500 startup free34,120 CHIP /
+45,392 total bytes. Focused zero drops, peaks92% A500 /90% AROS. A500 still
+misses the ≤90% target; startup memory is not a worst-case bound. Prior broad
+regression failures remain unresolved and were not rerun; no golden updates.
+
+## Previous implementation — higher-definition RD ending redraw
+
+The selected ending now comes from a **480×288** RD Plus environment redraw
+of the original160×96 `victory-a.png`, with strength0.72 and seed861014. It resolves
+new hair, eye, flight-suit and spacecraft detail rather than enlarging pixel blocks.
+`game/art/selected-rd/victory-detail-master/` preserves the provider master,
+320×192 pixel-center-sampled runtime image/RGB, request, quote and hashed provenance.
+Task: `1457a6d2-68b0-4016-9921-476da0bf5152`; selected image cost **$0.06**.
+A second native320×192 candidate is retained in `victory-detail-native/`;
+total spend for this revision **$0.12**. Previous originals/derivatives are untouched.
+Both importer and independent oracle verify the original, master, PNG and RGB hashes.
+Story160×96 geometry, ending320×192 geometry and2px white inset border are unchanged.
+
+Focused validation: **102 Python tests and C rules PASS**; generator check/build
+PASS. `game/build/ending-detail-preview-{a500,aros}/` contains passing production
+F9/restart/ESC replays. Three ending captures per profile pass **245,760** exact
+source-pixel checks; all six complete captures match byte-for-byte across profiles.
+Production executable **503,700 bytes**; tables **57,451 resident bytes**. Startup
+A500 free memory: **36,392 CHIP / 47,704 total bytes** (not worst-case bounds).
+Focused telemetry: zero drops, peak93%/91% on A500/AROS; the ≤90% gate remains unmet.
+
+**Broad regression validation is blocked:** `bash tools/agk test` reports12/38
+passing and26 failures, including `asteroids/hero_dying` (2,840 changed pixels)
+and `barrage.agk` line11 (six bullets versus expected seven or more). Cause has
+not been isolated against the pre-integration dirty baseline. No goldens were
+updated; further validation stopped. The injected full campaign was not rerun for
+this redraw. Probe/timing flags remain OFF. Do not infer full-game acceptance
+from the focused ending checks.
+
+## Previous implementation — native-size stories and RD-enlarged ending
+
+Story scenes 0–11 now display the preserved originals at **160×96**, positioned
+at **(144,68)** without resampling. The window is **(136,56,176,152)** and the
+frame **(142,66,164,100)**. Captions/replies begin at **y168/y186**, retaining
+28-character wrapping. The height remains divisible by eight for bounded erase.
+
+The ending remains **320×192 at (0,32)**, now with a **2px white inset border**
+(ink 7). Its new image is an RD Plus image-to-image enlargement of the original
+`game/art/selected-rd/victory-a.png`, not nearest-neighbor scaling. The original
+is untouched. The derivative, RGB export, request, quote, task ID and hashes are
+preserved in `game/art/selected-rd/victory-upscaled/`. Actual cost: **$0.06**;
+task `b4de6aba-a6cb-4ca9-814b-72ed41b29313`. `tools/upscale-victory-rd.py`
+quotes by default and resumes the same paid task with `--generate`.
+
+**F9 on a ready title screen** previews the ending in production. Release then
+press Fire/Space to restart; ESC returns to title. F9 is ignored outside TITLE.
+
+Validation for this revision:
+- C rules: PASS; Python discovery: **99 tests PASS**; generated-data check PASS.
+- `game/build/story-upscale-ending/report.json`: both profiles pass all 13 scenes,
+  **1,160,320 source-derived pixels per profile**, consecutive ending buffers,
+  held/released fire, restart and ESC. This is an injected campaign fixture.
+- Production F9 replay passes on both profiles, with captures under
+  `game/build/story-upscale-preview-{a500,aros}/`.
+- Generated tables: **49,180 resident bytes**. Production executable:
+  **495,428 bytes**; probe OFF restored. Injected startup A500 reports
+  **44,664 CHIP / 48,952 total free bytes**, not a worst-case memory bound.
+- Global 50fps acceptance remains blocked: observed injected campaign A500
+  **16 drops / 125% peak**, AROS **11 drops / 122% peak**. These observations
+  are not performance acceptance and do not establish an ordinary full clear.
+
+## Previous implementation — larger panels and dedicated WIN
 
 Selections remain **1B / 2B / 3B / 4B / 5A**. Preserved 160×96 PNGs, provider
 metadata, RGB exports and legacy procedural assets are unchanged. No new art

@@ -1,0 +1,15 @@
+{
+  "input_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "idempotency_key": "7477d3bb-972e-4f99-badb-b040a81d1b51",
+  "request": {
+    "prompt_style": "rd_plus__environment",
+    "width": 480,
+    "height": 288,
+    "num_images": 1,
+    "seed": 861014,
+    "strength": 0.72,
+    "remove_bg": false,
+    "bypass_prompt_expansion": true,
+    "prompt": "A beautifully detailed science fiction anime victory illustration. Preserve the reference composition: the same young adult woman pilot with short purple hair smiling and saluting at her temple in the left foreground, wearing a white and blue armored flight suit. A squadron of small white space fighters flies home across an orange sunrise on the right above a dark mountain horizon. Redraw with substantially finer detail: clearly defined expressive eyes and irises, fine individual hair strands and highlights, articulated glove fingers, precise suit seams and layered collar hardware, detailed spacecraft wings and engines, layered distant mountains and delicate illuminated clouds. Fine single-pixel outlines and elegant small pixel clusters at the requested resolution, polished cinematic game ending artwork, warm hopeful lighting. Retain character identity and pose. No lettering, logos, panels or border. Do not reproduce enlarged low-resolution pixel blocks; resolve fresh detail throughout the scene."
+  }
+}

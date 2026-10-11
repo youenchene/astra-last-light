@@ -50,6 +50,22 @@ static tInput readInput(void) {
 	return input;
 }
 
+/* TITLE has no live combat pools. Request WIN without acknowledging it: the
+ * normal renderer/publication path must prepare both buffers before fire arms. */
+static void previewEnding(const tInput *input) {
+	s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
+	s_sState.phase = WIN;
+	s_sState.level = LEVEL_COUNT - 1;
+	s_sState.phaseFrame = 0;
+	s_sState.sceneId = 12;
+	++s_sState.sceneEpoch;
+	s_sState.sceneReady = s_sState.sceneArmed = 0;
+	s_sState.charge = s_sState.fireCooldown = 0;
+	s_sState.fireWasDown = input->fire != 0;
+	s_sState.events = EVENT_LEVEL;
+	logicSetPresentationBusy(&s_sState, 1);
+}
+
 static UBYTE createDisplay(void) {
 	UWORD count = ASTRA_COP_DECOR + ASTRA_COP_DECOR_COUNT;
 	s_pView = viewCreate(0,
@@ -291,6 +307,8 @@ void genericProcess(void) {
 	s_mutePending ^= s_isIntroDone && keyUse(KEY_M);
 	/* Consume intro/title edges too, so a held P cannot leak into live play. */
 	UBYTE pausePressed = keyUse(KEY_P);
+	/* Consume edges outside TITLE too; held F9 must not leak across phases. */
+	UBYTE previewPressed = keyUse(KEY_F9);
 	if(s_isIntroDone && pausePressed) logicTogglePause(&s_sState);
 	combatPerfBegin(CP_RESTORE);
 	if(s_isIntroDone) renderAnimate(&s_sState);
@@ -333,6 +351,10 @@ void genericProcess(void) {
 			s_confirm.active = s_confirm.visible = s_confirmSubmitted = 0;
 			logicReturnToTitle(&s_sState, &input);
 			agkPrint("AGK escape_title\n");
+		}
+		else if(previewPressed && s_sState.phase == TITLE && !s_sState.presentationBusy) {
+			previewEnding(&input);
+			agkPrint("AGK ending_preview\n");
 		}
 		else {
 			confirming = titleConfirmFilter(&s_confirm, &s_sState, &input);

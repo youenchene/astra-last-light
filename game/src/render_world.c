@@ -31,7 +31,7 @@ static UWORD s_pStarX[STAR_COUNT], s_pStarRow[STAR_COUNT];
 /* A frozen world still catches up both N-2 histories once. Thereafter its
  * unchanged 96-entry star arrays need no per-frame comparison. */
 static UBYTE s_starsDirty[2];
-static UWORD s_uwOriginalStarColor;
+static UWORD s_uwOriginalStarColor, s_uwOriginalRoseColor;
 /* Cache horizontal scaling only; vertical repetitions share their source row.
  * This removes 9072 bytes of redundant resident storage at cold-load time. */
 static ULONG s_pGlyphMasks[3][36][7];
@@ -297,8 +297,9 @@ static void scoreDraw(ULONG score, UBYTE dirty) {
 	}
 }
 
-void renderWorldSetStarColor(UWORD color) {
-	s_uwOriginalStarColor = color;
+void renderWorldSetBaseColors(UWORD star, UWORD rose) {
+	s_uwOriginalStarColor = star;
+	s_uwOriginalRoseColor = rose;
 }
 
 void renderWorldBind(tBitMap *pScreen) {
@@ -662,6 +663,8 @@ void renderWorldBegin(const tGameState *pState) {
 	s_commandCount = s_command = 0; s_commandCursor = 0;
 	s_pVPort->pPalette[0] = s_ePhase == WIN ? 0 : space[level];
 	s_pVPort->pPalette[4] = s_ePhase == TITLE ? s_uwOriginalStarColor : 0xbdf;
+	/* Shadow palette only; the completed target publishes these colors atomically. */
+	s_pVPort->pPalette[11] = s_ePhase == WIN ? 0xfa9 : s_uwOriginalRoseColor;
 	if(s_ePhase == TITLE) {
 		queueRect(0, 224, WORLD_W, 8, 0);
 		queueCentered(224, g_stageNames[level], 1, 5);

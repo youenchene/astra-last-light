@@ -46,7 +46,7 @@ void renderSyncPalette(void) {
 void renderPreparePalette(void) {
 	UWORD palette[32] = {0};
 	artPaletteApply(palette);
-	renderWorldSetStarColor(palette[4]);
+	renderWorldSetBaseColors(palette[4], palette[11]);
 	for(UBYTE ink = 1; ink < 16; ++ink) palette[16 + ink] = g_pArtHero32Palette[ink];
 	for(UBYTE index = 0; index < 32; ++index)
 		s_pVPort->pPalette[index] = palette[index];

@@ -33,7 +33,7 @@ class TitleCompositionTests(unittest.TestCase):
         declarations = source[source.index("static UBYTE s_ubLevel"):source.index("/* All display writes")]
         functions = "\n".join(function(source, name) for name in (
             "queueText", "queueRect", "queueCentered", "panelQueue", "combatBackground",
-            "renderWorldBind", "renderWorldInvalidate", "renderWorldBegin", "renderWorldStep"))
+            "renderWorldSetBaseColors", "renderWorldBind", "renderWorldInvalidate", "renderWorldBegin", "renderWorldStep"))
         prelude = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -107,6 +107,8 @@ static unsigned complete(void) {
 }
 int main(void) {
     tGameState state = {0};
+    renderWorldSetBaseColors(0x568, 0xf9b);
+    viewport.pPalette[14] = 0xfa6;
     state.phase = TITLE;
     renderWorldBind(bitmaps);
     renderWorldBegin(&state);
@@ -157,6 +159,7 @@ int main(void) {
     renderWorldInvalidate(0);
     renderWorldBegin(&state);
     scenery = hud = 0;
+    assert(viewport.pPalette[11] == 0xfa9 && viewport.pPalette[14] == 0xfa6);
     assert(s_commandCount == 0 && viewport.pPalette[0] == 0);
     for(unsigned buffer = 0; buffer < 2; ++buffer) {
         renderWorldBind(bitmaps + buffer);
@@ -169,6 +172,14 @@ int main(void) {
     state.phase = TITLE;
     renderWorldBegin(&state);
     assert(complete() > 60 && viewport.pPalette[0] == 0x001);
+    assert(viewport.pPalette[11] == 0xf9b && viewport.pPalette[4] == 0x568);
+    state.phase = WIN;
+    renderWorldBegin(&state);
+    assert(viewport.pPalette[11] == 0xfa9);
+    state.phase = SECTOR_INTRO;
+    renderWorldBegin(&state);
+    assert(viewport.pPalette[11] == 0xf9b && viewport.pPalette[4] == 0xbdf);
+    assert(viewport.pPalette[14] == 0xfa6);
     puts("PASS cold/repair/retap/fire/invalidation/GAMEOVER; 8 rows or 2 glyphs");
 }
 '''

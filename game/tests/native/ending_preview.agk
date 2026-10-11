@@ -1,0 +1,33 @@
+# Normal production build: F9 only on a fully prepared TITLE.
+wait-serial "AGK title_ready" 600
+screenshot ending_preview_initial_title
+key 0x58
+wait-serial "AGK ending_preview" 100
+# Hold through preparation and well beyond the normal scene dwell.
+hold fire
+wait-serial "AGK scene_ready" 1000
+screenshot ending_preview_ready
+wait 200
+screenshot ending_preview_held
+release
+wait 2
+screenshot ending_preview_released
+press fire 1
+wait-serial "AGK scene_ready" 1000
+screenshot ending_preview_restarted
+# F9 cannot replace an opening scene; ESC still returns to TITLE.
+key 0x58
+wait 2
+screenshot ending_preview_ignored
+key 0x45
+wait-serial "AGK title_ready" 600
+# Re-enter once more to exercise ESC directly from WIN.
+key 0x58
+wait-serial "AGK ending_preview" 100
+wait-serial "AGK scene_ready" 1000
+key 0x45
+wait-serial "AGK title_ready" 600
+screenshot ending_preview_returned_title
+expect-serial "phase=5 "
+expect-serial "scene=12 scene_ready=1 preparing=0"
+expect-no-serial "qa_NON_SHIPPING|qa_fail=|bullet_hidden=[1-9]|ERR|STACK SMASHED|allocation failure"

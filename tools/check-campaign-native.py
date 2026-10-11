@@ -142,7 +142,7 @@ def check_scene_pair(early, late, scene):
             f"scene {scene}: window or frozen exterior changed")
     from selected_rd_oracle import scene_rgb
     panel = scene_rgb(scene)
-    x0, y0 = (0, 32) if scene == 12 else (162, 68)
+    x0, y0 = (0, 32) if scene == 12 else (144, 68)
     require(all(early.pixel(x0 + x, y0 + y) == color
                 for y, row in enumerate(panel) for x, color in enumerate(row)),
             f"scene {scene}: panel differs from original selected RD source")

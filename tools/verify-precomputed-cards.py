@@ -20,24 +20,22 @@ def check_scene(path, scene):
     from selected_rd_oracle import original_panels
     pixels = oracle.reference_card(scene)
     panel = 4 if scene == 12 else scene // 3
-    x0, y0 = (0, 32) if scene == 12 else (162, 68)
+    x0, y0 = (0, 32) if scene == 12 else (144, 68)
     for y, row in enumerate(original_panels()[panel]):
         pixels[y0+y][x0:x0+len(row)] = row
-    if scene != 12:
-        for y in range(68, 152):
-            for x in (160, 161, 302, 303):
-                pixels[y][x] = 0
     palette = {int(index): int(value,16) for index,value in re.findall(
         r'^(\d+)\s+0x([0-9a-fA-F]{3})\b', (ROOT/'game/art/palette.txt').read_text(), re.M)}
     palette[0] = 0 if scene == 12 else (0x001, 0x102, 0x101, 0x001)[scene//3]
     palette[4] = 0xbdf
+    if scene == 12:
+        palette[11] = 0xfa9
     rgb = {ink: tuple((value >> shift & 15)*17 for shift in (8,4,0))
            for ink,value in palette.items()}
     image = Image.load_png(path)
     assert (image.width, image.height) == (320, 256), path
     count = 0
-    for y in (range(256) if scene == 12 else range(56,192)):
-        for x in (range(320) if scene == 12 else range(152,312)):
+    for y in (range(256) if scene == 12 else range(56,208)):
+        for x in (range(320) if scene == 12 else range(136,312)):
             assert image.pixel(x,y) == rgb[pixels[y][x]], (path,x,y)
             count += 1
     return count
