@@ -1,7 +1,6 @@
 # ASTRA: LAST LIGHT
 
-An original horizontal space-opera shooter for the **Amiga A500 / OCS**, inspired
-by the deliberate dodging and charged fire of R-Type. The expanded four-sector
+An original horizontal space-opera shooter for the **Amiga A500 / OCS**. The expanded four-sector
 campaign has **all 11 functional features implemented**. **Performance acceptance is BLOCKED:**
 locked PAL 50fps is not yet achieved. This is not a finished commercial game.
 
@@ -239,6 +238,9 @@ composition. Buffers are preallocated; there are no per-frame full-screen copies
 
 ## Build and test
 
+For raw executable, bootable ADF, HD ZIP/LHA and compiled-slave WHD LHA output,
+see [release packaging, commands and validation limitations](docs/release-artifacts.md).
+
 Requirements: a working AGK installation, Python 3.12, Docker and the kit's
 toolchain/emulator setup. Tested kit revision:
 `4d825a05a8d8dfcf8d824d70f0cb53b2f350fc7a`.
@@ -397,4 +399,4 @@ branding. The ACE intro carries MPL-2.0 provenance; the Micrix material is
 **CC BY-NC-SA 4.0**, including its noncommercial/share-alike restrictions.
 See [intro attribution and modification notices](game/art/intro/README.md).
 Do not treat the entire game as permissively licensed or assume commercial
-distribution rights from this repository. No R-Type artwork, music or code is used.
+distribution rights from this repository.

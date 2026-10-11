@@ -1,0 +1,45 @@
+{
+  "drawer": {
+    "source_bbox": [
+      9,
+      10,
+      56,
+      55
+    ],
+    "fitted_size": [
+      46,
+      44
+    ],
+    "cleared_sage_pixels": 0,
+    "selected": "Offline RGB lift +18/+34/+42; same registered canvas and alpha",
+    "classic_selected": "Offline exchange pens 1 and 3; same silhouette"
+  },
+  "interceptor": {
+    "source_bbox": [
+      1,
+      10,
+      62,
+      54
+    ],
+    "fitted_size": [
+      60,
+      43
+    ],
+    "cleared_sage_pixels": 782,
+    "selected": "Offline RGB lift +18/+34/+42; same registered canvas and alpha",
+    "classic_selected": "Offline exchange pens 1 and 3; same silhouette"
+  },
+  "sha256": {
+    "drawer-normal.png": "09c0c8a165d7335c3cc6eb5787ed412998bec684a7eb92ef117429412887f9fb",
+    "drawer-classic-normal.png": "93571fcf8b3060420e6bbac16ebff4aba1666317df74e1a8b68865de3079f472",
+    "drawer-selected.png": "b09d4a446c83ee3690b0bdac8ef305e299777a6a16ef19219886eb7d93f43b6d",
+    "drawer-classic-selected.png": "411f305489f14d9477246807f7f1e9af87fc8386f356157212632ed181f6b058",
+    "Astra-drawer.info": "cb7927a6ceef27578bb1c27c5dea15cc7a2ef37b4ff70acf0bc1836608c8ac7f",
+    "interceptor-normal.png": "4353d870730210ffc6806a8378d709dc66167192173b60ef53c0c8585c97a821",
+    "interceptor-classic-normal.png": "8d845695c19b8fd7dd1a6caf6836597b1999f471462a40190c07a9ec3310bbe9",
+    "interceptor-selected.png": "5edd9f3959681fc917dfd935fd42a4e869d60986c6bde00ccfe35eef4354f20d",
+    "interceptor-classic-selected.png": "f1282ac682589f3469967765ae56aadf573f2be7a3ee69a22aa3e17c4814807f",
+    "Astra-tool.info": "a81efd285f55603142e603564cec2403dee27a010584eeee02575f1d49054d06",
+    "Astra-whdload.info": "805d538a1222a4d25a68de86787e724c312847f6510a57f01390575b82b7fd7d"
+  }
+}
