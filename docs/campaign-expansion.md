@@ -2,6 +2,28 @@
 
 ## Status
 
+### Current bold cheek marks — approved and integrated
+
+All five pictures select the `bold-marks` child layer. The approved ending mark is
+13 copper pixels with tapered ends; ordinary marks are four/five pixels. Only16
+pixels differ from the preserved character parents (two per ordinary image, eight
+in the ending). Historical layers and their exact armor/eye tests remain explicit.
+121 Python tests, C rules, all13 native scenes on both profiles and production F9
+skin/sky/title restoration PASS.32 native capture pairs are byte-identical;
+64 complete-screen comparisons match only the exact new mark additions.
+Probe/timing OFF restored. Campaign performance remains15 drops/125% A500 and
+11 drops/122% AROS; prior broad-suite limitations remain open. See
+[current validation and gallery](selected-rd-story-images.md).
+
+### Previous armor/cheek harmonization — focused checks passed
+
+All five portraits share a diagonal left-cheek mark; ordinary suits follow the
+ending's white/silver plates, blue inserts and segmented collars. Extra soot is
+removed; validated eyes, hair, expressions and scenery are unchanged.115 Python
+tests, C rules, both-profile all13scene/source/mask checks and production ending
+restoration pass. Probe OFF restored; known performance and broad-suite limitations
+remain open. See [current evidence](selected-rd-story-images.md).
+
 ### Current story-eye consistency — focused checks passed
 
 All four ordinary pictures now share blue irises, dark pupils and small highlights

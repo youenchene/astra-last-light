@@ -1,6 +1,110 @@
 # Selected Retro Diffusion story images
 
-## Current implementation — consistent ordinary-story eyes
+## Current implementation — approved bold cheek marks
+
+All five portraits now select `story-character/bold-marks/` through the explicit
+`bold-marks` default in both importer and independent PNG oracle. The ending now
+uses a **13-pixel tapered diagonal** (three-pixel center, one-pixel tips).
+The four 160×96 portraits use compact four/five-pixel versions of the same mark.
+Copper ink13 `#A43`, dimensions, palettes, eyes, nose, hair and surrounding skin
+are preserved. This is an offline retouch; cost **$0**.
+
+Against the immediate `story-character` parents, exact source/displayed changes
+are **2 / 2 / 2 / 2 / 8 pixels**, **16 total**. Every Phase1 approved PNG, RGB,
+mask and preview remains byte-identical. The `story-eyes` and `story-character`
+layers remain explicitly selectable; historical armor/eye/ending-five-pixel tests
+retain their original expectations on those named layers.
+
+The authorized Phase2 metadata migration archived the original266-file protection
+manifest and provenance under `bold-marks/phase1-evidence/`. Current protection is
+**259 immutable selected-art/parent files and palette**, excluding the seven code,
+generated-data and top-level documentation entries that belonged to the initial
+Phase1 snapshot. All retained hashes were checked against that original snapshot;
+no historical art hash, delta or assertion was relaxed.
+
+### Validation and native gallery
+
+- **121 Python tests and C rules PASS**; generation/freshness and native build PASS.
+  Six new tests cover exact footprints/deltas, four-connectivity, tapered tips,
+  same-cheek retention, layer defaults, approved bytes and corruption rejection.
+  The first full Python invocation hit the tool's120-second command limit; the
+  unchanged suite completed in150.373seconds with a longer tool timeout.
+- `game/build/story-bold-marks-campaign/`: all13 scenes and ending/release/restart/ESC
+  PASS on `a500` and `a500-aros`, **1,160,320 source-derived pixels per profile**.
+  Independent native verification checks **32 byte-identical cross-profile pairs**
+  and **64 exact complete-screen delta comparisons** against
+  `game/build/story-character-campaign/`. Ordinary image captures differ by exactly
+  two pixels, ending captures by eight, and returned title by zero.
+- All2,571 complete-eye pixels and the original498 peach samples plus seven
+  approved additions remain intact. Source checks preserve every outside-footprint
+  pixel. Native checks additionally verify all505 ending skin samples in every
+  ending capture, and unchanged complete-eye regions in every portrait capture.
+- Both production F9 runs in `story-bold-marks-preview-{a500,aros}/` PASS:
+  299,264 source pixels per profile, skin/sky/ordinary-scene/title restoration,
+  and seven complete capture pairs byte-identical. The five native portraits,
+  before/after sheet and production ending were visually inspected.
+- Production **probe OFF / timing OFF** restored. Executable **505,972 bytes**;
+  presentation tables **59,676 resident bytes** (+7). Injected A500 startup
+  **34,168 CHIP /38,408 total free bytes**, unchanged from the immediate parent;
+  not a worst-case bound.
+- Campaign performance remains blocked: **15 drops/125% peak A500**,
+  **11 drops/122% AROS**. F9 has zero drops,92%/90% peaks. No broad known-failing
+  suite rerun, golden updates, paid calls, GUI or commit.
+
+[Approved source before/after gallery](../game/art/selected-rd/story-character/bold-marks/README.md)
+· [Native five-portrait before/after sheet](../game/build/story-bold-marks-campaign/bold-marks-native-review.png)
+· [Native ending](../game/build/story-bold-marks-campaign/a500/scene12.screen.png)
+· [Complete native evidence](../game/build/story-bold-marks-campaign/bold-marks-integration-evidence.json)
+
+```sh
+python3 tools/make-story-bold-marks.py --check
+python3 tools/verify-story-bold-marks.py
+python3 tools/make-story-character.py --check
+python3 tools/verify-story-character.py
+python3.12 tools/make-presentation.py --check
+python3.12 -m unittest discover -s game/tests/unit -p 'test_*.py'
+bash tools/agk unit
+# New campaign runs require a fresh --out directory:
+python3.12 tools/check-large-ending.py --out game/build/NEW-bold-marks-campaign
+python3 tools/verify-story-bold-marks-native.py game/build/NEW-bold-marks-campaign
+python3.12 tools/verify-ending-peach.py game/build/story-bold-marks-preview-a500 game/build/story-bold-marks-preview-aros
+```
+
+## Previous implementation — coherent armor and cheek mark
+
+All five panels now select the offline `story-character/` derivative layer.
+Four ordinary suits share the ending's silver/white plates, blue inserts and
+segmented collar details, adapted to their poses. Helmets and communicators remain.
+One copper diagonal mark appears on the pilot's left cheek (viewer-right) in
+each portrait; extra soot marks are removed. The ending armor remains untouched.
+Eyes, hair, expressions and scenery are preserved. This is a deterministic offline
+retouch, not new RD generation; cost$0. Previous originals/derivatives remain intact.
+
+`python3 tools/make-story-character.py --check` and
+`python3 tools/verify-story-character.py` verify95 historical file hashes,
+declared masks,2,571 unchanged complete-eye pixels and2,277 exact source-RGB
+changes (2,276 displayed changes). Ending differs at exactly five cheek pixels.
+Importer/oracle independently validate original, parent and current-layer hashes
+and deltas. Historical eye-only tests remain scoped to that historical layer.
+
+Validation: **115 Python tests and C rules PASS**; generator freshness/build PASS.
+`game/build/story-character-campaign/` passes all13 scenes on both profiles,
+1,160,320 source pixels per profile. The dedicated verifier checks32 identical
+cross-profile captures and64 full-screen historical delta/mask comparisons.
+The new five native pictures were visually inspected. Both production F9 runs in
+`story-character-preview-{a500,aros}/` pass skin/sky/title restoration; all seven
+capture pairs match, with299,264 source pixels checked per profile. Original498
+peach samples plus seven approved eye-edit additions remain intact.
+
+Production executable505,968 bytes; presentation tables59,669 bytes. Probe/timing
+OFF restored. Injected A500 startup34,168 CHIP /38,408 total free bytes (not a
+worst-case bound). Campaign performance still blocked:15 drops/125% A500,
+11 drops/122% AROS. Focused preview zero drops,92%/90% peaks respectively.
+No broad known-failing suite rerun or golden updates. Asset/Pillow scripts use
+`python3`; the installed Python3.12 environment lacks Pillow, while harness/test
+commands continue using Python3.12 where required.
+
+## Previous implementation — consistent ordinary-story eyes
 
 All four regular160×96 panels now use localized offline derivatives in
 `game/art/selected-rd/story-eyes/`: blue irises (ink15), dark central pupils

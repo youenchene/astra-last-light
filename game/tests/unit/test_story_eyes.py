@@ -72,14 +72,15 @@ class StoryEyesTests(unittest.TestCase):
         for path, expected in provenance['protected_sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), expected, path)
 
-    def test_entire_ending_remains_almond_source_with_existing_palette_and_border(self):
+    def test_historical_eye_layer_ending_remains_almond_with_palette_and_border(self):
         source = selected_rd_oracle.Image.load_png(ART / 'victory-eyes-almond/victory.png')
         # Existing ending palette, independent from the ordinary derivative recipe.
         words = (0x000, 0x112, 0x224, 0x346, 0xBDF, 0x89A, 0xCEF, 0xFFF,
                  0x214, 0x536, 0xA58, 0xFA9, 0x521, 0xA43, 0xFA6, 0x4BD)
         colors = [tuple((word >> shift & 15) * 17 for shift in (8, 4, 0)) for word in words]
         mapping = {}
-        actual = selected_rd.panels()[4]
+        actual = selected_rd.panels(layer='story-eyes')[4]
+        self.assertEqual(actual, selected_rd_oracle.original_panels(layer='story-eyes')[4])
         for y in range(192):
             for x in range(320):
                 rgb = source.pixel(x, y)

@@ -6,7 +6,75 @@ import re
 
 ART = Path(__file__).resolve().parents[1] / 'art'
 
-def panels():
+def character_rgb(parent_png, parent_rgb, original, width, height, index):
+    """Validate the approved runtime-only layer after the historical chain."""
+    folder = ART / 'selected-rd/story-character'
+    provenance = json.loads((folder / 'provenance.json').read_text())
+    protected = json.loads((folder / 'protected-sha256.json').read_text())
+    entry = provenance['panels'][index]
+    name = original['id'] if index < 4 else 'victory'
+    parent_key = 'game/art/' + parent_png.relative_to(ART).as_posix()
+    assert entry['name'] == name and entry['parent'] == parent_key
+    assert entry['parent_sha256'] == protected[parent_key] == hashlib.sha256(parent_png.read_bytes()).hexdigest()
+    assert protected['game/art/selected-rd/' + original['durable_image']] == original['image_sha256']
+    assert hashlib.sha256((folder / 'recipe.json').read_bytes()).hexdigest() == provenance['recipe_sha256']
+    png = (folder / f'{name}.png').read_bytes()
+    export = (folder / f'{name}.rgb.hex').read_bytes()
+    for filename, data in ((f'{name}.png', png), (f'{name}.rgb.hex', export)):
+        assert hashlib.sha256(data).hexdigest() == provenance['output_sha256'][filename]
+    assert png[:8] == b'\x89PNG\r\n\x1a\n'
+    assert (int.from_bytes(png[16:20], 'big'), int.from_bytes(png[20:24], 'big')) == (width, height)
+    rgb = bytes.fromhex(export.decode())
+    assert len(rgb) == width * height * 3
+    expected = bytearray(parent_rgb)
+    seen = set()
+    for change in entry['changes']:
+        x, y = change['x'], change['y']
+        assert 0 <= x < width and 0 <= y < height and (x, y) not in seen
+        seen.add((x, y))
+        offset = (y * width + x) * 3
+        assert list(parent_rgb[offset:offset+3]) == change['before']
+        expected[offset:offset+3] = bytes(change['after'])
+    assert len(seen) == entry['changed_pixels'] and bytes(expected) == rgb
+    return rgb
+
+
+def bold_rgb(parent_rgb, name, width, height, index):
+    """Apply only the approved additions to the validated historical character."""
+    parent = ART / 'selected-rd/story-character'
+    folder = parent / 'bold-marks'
+    provenance = json.loads((folder / 'provenance.json').read_text())
+    protected = json.loads((folder / 'protected-sha256.json').read_text())
+    entry = provenance['panels'][index]
+    key = f'game/art/selected-rd/story-character/{name}.png'
+    assert entry['name'] == name and entry['parent'] == key
+    assert entry['dimensions'] == [width, height]
+    assert entry['parent_sha256'] == protected[key] == hashlib.sha256((parent/f'{name}.png').read_bytes()).hexdigest()
+    assert hashlib.sha256((parent/'recipe.json').read_bytes()).hexdigest() == provenance['parent_recipe_sha256']
+    assert hashlib.sha256((ART/'palette.txt').read_bytes()).hexdigest() == protected['game/art/palette.txt']
+    png, export = [(folder / f'{name}{suffix}').read_bytes() for suffix in ('.png', '.rgb.hex')]
+    for filename, data in ((f'{name}.png', png), (f'{name}.rgb.hex', export)):
+        assert hashlib.sha256(data).hexdigest() == provenance['output_sha256'][filename]
+    assert png[:8] == b'\x89PNG\r\n\x1a\n'
+    assert (int.from_bytes(png[16:20], 'big'), int.from_bytes(png[20:24], 'big')) == (width, height)
+    rgb = bytes.fromhex(export.decode())
+    assert len(rgb) == width * height * 3
+    expected, seen = bytearray(parent_rgb), set()
+    for change in entry['changes']:
+        x, y = change['x'], change['y']
+        assert 0 <= x < width and 0 <= y < height and (x, y) not in seen
+        seen.add((x, y))
+        offset = (y * width + x) * 3
+        assert list(parent_rgb[offset:offset+3]) == change['before']
+        assert change['after'] == [170, 68, 51] and change['before'] != change['after']
+        expected[offset:offset+3] = bytes(change['after'])
+    assert len(seen) == entry['changed_pixels'] == (8 if index == 4 else 2)
+    assert bytes(expected) == rgb
+    return rgb
+
+
+def panels(*, layer='bold-marks'):
+    assert layer in ('story-eyes', 'story-character', 'bold-marks')
     manifest = json.loads((ART / 'selected-rd/manifest.json').read_text())
     palette_data = (ART / 'palette.txt').read_bytes()
     assert hashlib.sha256(palette_data).hexdigest() == manifest['palette_sha256']
@@ -55,6 +123,10 @@ def panels():
             rgb = bytes.fromhex((derivative / 'victory.rgb.hex').read_text())
             assert len(rgb) == width * height * 3
             assert hashlib.sha256(rgb).hexdigest() == provenance['rgb_sha256']
+        if layer in ('story-character', 'bold-marks'):
+            rgb = character_rgb(png, rgb, job, width, height, index)
+        if layer == 'bold-marks':
+            rgb = bold_rgb(rgb, job['id'] if index < 4 else 'victory', width, height, index)
         colors = {}
         image = []
         for y in range(height):

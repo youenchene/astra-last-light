@@ -1,0 +1,498 @@
+{
+  "status": "User-approved bold marks; phase-two selected asset layer",
+  "cost_usd": 0,
+  "method": "Literal copper ink-13 diagonal runs; no resampling or antialiasing",
+  "script_sha256": "230f9b1aa49c7c98e908f1cd5c3b2a73d16258f2e9515084773041c62cef6661",
+  "parent_recipe_sha256": "2293ca9deace1e2817101133a0312ff6eed4b7c7cc866e9c6233001050cf8018",
+  "protected_files": 259,
+  "panels": [
+    {
+      "name": "graveyard-b",
+      "parent": "game/art/selected-rd/story-character/graveyard-b.png",
+      "parent_sha256": "4f0de99a0a4e441914279f84132f23db05a408ea6ac8dbddd169a314bf47d057",
+      "dimensions": [
+        160,
+        96
+      ],
+      "old_mark_pixels": 2,
+      "mark_pixels": 4,
+      "changed_pixels": 2,
+      "displayed_changed": 2,
+      "protected_eye_pixels": 235,
+      "eye_changes": 0,
+      "outside_footprint_changes": 0,
+      "protected_skin_samples": 0,
+      "mark": [
+        [
+          36,
+          57
+        ],
+        [
+          35,
+          58
+        ],
+        [
+          36,
+          58
+        ],
+        [
+          35,
+          59
+        ]
+      ],
+      "changes": [
+        {
+          "x": 36,
+          "y": 58,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 35,
+          "y": 59,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nebula-b",
+      "parent": "game/art/selected-rd/story-character/nebula-b.png",
+      "parent_sha256": "af796686034c71f3b5be449257f37ec56bfc107af6eb6289fddae1720995db5f",
+      "dimensions": [
+        160,
+        96
+      ],
+      "old_mark_pixels": 3,
+      "mark_pixels": 5,
+      "changed_pixels": 2,
+      "displayed_changed": 2,
+      "protected_eye_pixels": 292,
+      "eye_changes": 0,
+      "outside_footprint_changes": 0,
+      "protected_skin_samples": 0,
+      "mark": [
+        [
+          40,
+          30
+        ],
+        [
+          38,
+          31
+        ],
+        [
+          39,
+          31
+        ],
+        [
+          40,
+          31
+        ],
+        [
+          38,
+          32
+        ]
+      ],
+      "changes": [
+        {
+          "x": 38,
+          "y": 31,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 40,
+          "y": 31,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        }
+      ]
+    },
+    {
+      "name": "foundry-b",
+      "parent": "game/art/selected-rd/story-character/foundry-b.png",
+      "parent_sha256": "506433df7b04fdcf60f5db1dae0a2c8bf9eb6db48845869dbd0cc39d4fe1d5e2",
+      "dimensions": [
+        160,
+        96
+      ],
+      "old_mark_pixels": 2,
+      "mark_pixels": 4,
+      "changed_pixels": 2,
+      "displayed_changed": 2,
+      "protected_eye_pixels": 280,
+      "eye_changes": 0,
+      "outside_footprint_changes": 0,
+      "protected_skin_samples": 0,
+      "mark": [
+        [
+          38,
+          60
+        ],
+        [
+          37,
+          61
+        ],
+        [
+          38,
+          61
+        ],
+        [
+          37,
+          62
+        ]
+      ],
+      "changes": [
+        {
+          "x": 38,
+          "y": 61,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 37,
+          "y": 62,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        }
+      ]
+    },
+    {
+      "name": "citadel-b",
+      "parent": "game/art/selected-rd/story-character/citadel-b.png",
+      "parent_sha256": "7c86bda0f8b98b4bce742b4feab13c0cd20cbbdc48bc5374712bad52558f79e2",
+      "dimensions": [
+        160,
+        96
+      ],
+      "old_mark_pixels": 3,
+      "mark_pixels": 5,
+      "changed_pixels": 2,
+      "displayed_changed": 2,
+      "protected_eye_pixels": 370,
+      "eye_changes": 0,
+      "outside_footprint_changes": 0,
+      "protected_skin_samples": 0,
+      "mark": [
+        [
+          49,
+          60
+        ],
+        [
+          47,
+          61
+        ],
+        [
+          48,
+          61
+        ],
+        [
+          49,
+          61
+        ],
+        [
+          47,
+          62
+        ]
+      ],
+      "changes": [
+        {
+          "x": 47,
+          "y": 61,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 49,
+          "y": 61,
+          "before": [
+            254,
+            170,
+            102
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        }
+      ]
+    },
+    {
+      "name": "victory",
+      "parent": "game/art/selected-rd/story-character/victory.png",
+      "parent_sha256": "d8229742c3c3237a587a6ab3b07227fca3ec9124e7a836ef2b957200980522d0",
+      "dimensions": [
+        320,
+        192
+      ],
+      "old_mark_pixels": 5,
+      "mark_pixels": 13,
+      "changed_pixels": 8,
+      "displayed_changed": 8,
+      "protected_eye_pixels": 1394,
+      "eye_changes": 0,
+      "outside_footprint_changes": 0,
+      "protected_skin_samples": 505,
+      "mark": [
+        [
+          127,
+          92
+        ],
+        [
+          125,
+          93
+        ],
+        [
+          126,
+          93
+        ],
+        [
+          127,
+          93
+        ],
+        [
+          124,
+          94
+        ],
+        [
+          125,
+          94
+        ],
+        [
+          126,
+          94
+        ],
+        [
+          123,
+          95
+        ],
+        [
+          124,
+          95
+        ],
+        [
+          125,
+          95
+        ],
+        [
+          123,
+          96
+        ],
+        [
+          124,
+          96
+        ],
+        [
+          123,
+          97
+        ]
+      ],
+      "changes": [
+        {
+          "x": 125,
+          "y": 93,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 127,
+          "y": 93,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 124,
+          "y": 94,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 126,
+          "y": 94,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 123,
+          "y": 95,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 125,
+          "y": 95,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 124,
+          "y": 96,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        },
+        {
+          "x": 123,
+          "y": 97,
+          "before": [
+            250,
+            140,
+            127
+          ],
+          "after": [
+            170,
+            68,
+            51
+          ]
+        }
+      ]
+    }
+  ],
+  "output_sha256": {
+    "graveyard-b.png": "17f20c5892816ce7ddcd31bc22cecff2188e8702f6e8599cdc4ddf664a97dbed",
+    "graveyard-b.rgb.hex": "843b60c78112b08a972513fb547f40220050c680009475ae6e678541be7992d7",
+    "graveyard-b.displayed.png": "93541945ff95c21198f4155085d07b7ac8c87d96028117d40365d45f3fd81d5b",
+    "masks/graveyard-b-footprint.png": "b74f7718d8acfcbdac9dd2b7bfa7ca45be38128a8b63e86f6f3a1b8055f7527e",
+    "masks/graveyard-b-additions.png": "0aa286f10713a73ed50d72d15007868157ed4efd6eddef998f844407d4678f4e",
+    "previews/graveyard-b-before-after.png": "5d3075c337f65282126b45bb506d567d8e9c0279ea54454308470bd5b5f7df76",
+    "nebula-b.png": "3239a8c4d4152a6f18fbea4d53eee57d9a0eb4a35cc690f2ff69141747de692b",
+    "nebula-b.rgb.hex": "bd0874732cfe9660ea7870c520731e7c0c72ddf8bf96c6126ef2f55851df0440",
+    "nebula-b.displayed.png": "d56c609817228bc6f6e2e72475440564eae54798ddccd93414eff74d8bbfbec4",
+    "masks/nebula-b-footprint.png": "ddd8856b98bc9a3c90c7ba4cff1ca7cf1988a1d2e55b3ee2b750e7084359e716",
+    "masks/nebula-b-additions.png": "91bbc55702a8c063c968fa32333a70c54a87e8e6141bb89404e0c702ea4bf7f4",
+    "previews/nebula-b-before-after.png": "2c57382c80bb5c6799f64ce8287b3580e0213af8c9f45bb75bdccc290a67c509",
+    "foundry-b.png": "e803d390b0f37cbea125d959cbb765a2e75ed7d5e983dc0e0fd34495bbe71557",
+    "foundry-b.rgb.hex": "451293fa2262406824be9ef158f6ae32e649b50baba01319e7b9380a16ea83ce",
+    "foundry-b.displayed.png": "09dd5e01198a9c64e4dd4ada7bfb96148a4271236a31b658dc423f2865af1447",
+    "masks/foundry-b-footprint.png": "a77619a7e5081b7cfd386227c75a62c1e5336e0e07fb8189eb211b8b3bab34d0",
+    "masks/foundry-b-additions.png": "54c207b102f28f8a4b9c590d6fb4674f8a5cd515bcde824cd57dc6aa73b881b4",
+    "previews/foundry-b-before-after.png": "8dbd3807666ab63d65925e0bb8e6ac87fe2b4b1ea10e8d3d4d318d38c10cf279",
+    "citadel-b.png": "118240c3117a1fcb47588a42cf2a13b01e2f5dcc15a03a982245941cc864dfc0",
+    "citadel-b.rgb.hex": "4f4374477dd5334f2dc20c5a3ea9c651c58ae772814047f72966d356df3d98d6",
+    "citadel-b.displayed.png": "59ab620f067a3d0f36d2e77fecd186e7d88ba56cfee32a9313452f43be135cb8",
+    "masks/citadel-b-footprint.png": "66b0f4bf42764a162dfa00aefe06102c77c536bad7ed47546901d75af8bbdd28",
+    "masks/citadel-b-additions.png": "1e6781e2bd70a68c6194688bcc2e9eca731f6afa5b759545066620c9745dd36e",
+    "previews/citadel-b-before-after.png": "7bedbb1cbb9ec59a2f2aec72d50fbfeca64cc5942eec54cb52eaac5009dfc949",
+    "victory.png": "8dbf95f422eca0c858cf9d778918367fee97e19a955430153308a7be6a5ad2e1",
+    "victory.rgb.hex": "df900f3a08aed96b436aeef162cc2970653952582b788c4e88fee896efb92fb9",
+    "victory.displayed.png": "75404fa7a104bdf5ee993ba6b1037188e4a2fe875e3d10310dbb3a13190473d2",
+    "masks/victory-footprint.png": "9088408aa50ffea41be1f0b89a7f83898d06006e08c2f98e633f5da0e866dde3",
+    "masks/victory-additions.png": "d34a6c464959a3a5fe4f3b805e705185f80a774e5bb4cece13ae92bcf0d5ed5a",
+    "previews/victory-before-after.png": "e2dfb19092776354959b5a909e8387d56f55c01ee0a38f320996da2aeef87449",
+    "previews/five-panels-ocs-native.png": "c3b3ac6386ede3223c3c41932e28fec9a54f5f9b9eeb945d138f7a0efac6f19b",
+    "previews/five-panels-ocs-2x.png": "4344fdf8022142c9dc88a604845dff8cd1a2cc0e50ff57c75f0c95fe2881b993",
+    "previews/ending-closeup.png": "a19a57ebe91d672a2042484b1960ee955c53410becb1525d0474c43543f95f4e"
+  }
+}
