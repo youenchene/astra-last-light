@@ -32,6 +32,10 @@ void combatPerfFrame(const tGameState *state) {
 	if(!s_frames) { s_firstPhase = state->phase; s_firstCase = combatStressCase(); }
 	s_busy |= state->presentationBusy;
 	if(++s_frames != 50) return;
+	combatPerfFlush(state);
+}
+void combatPerfFlush(const tGameState *state) {
+	if(!s_frames) return;
 	for(UBYTE i = 0; i < CP_COUNT; ++i) {
 		agkState("cp", s_window); agkState("stage", i);
 		agkState("calls", s_cost[i].calls); agkState("lines", s_cost[i].total);
@@ -39,6 +43,7 @@ void combatPerfFrame(const tGameState *state) {
 		s_cost[i].total = s_cost[i].calls = s_cost[i].peak = 0;
 	}
 	agkState("cp_window", s_window++); agkState("frame", state->frame);
+	agkState("frames", s_frames);
 	agkState("first_phase", s_firstPhase); agkState("phase", state->phase);
 	agkState("level", state->level); agkState("first_case", s_firstCase);
 	agkState("case", combatStressCase()); agkEnd();

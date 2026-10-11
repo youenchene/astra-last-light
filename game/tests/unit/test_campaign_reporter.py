@@ -32,7 +32,8 @@ class CampaignReporterTests(unittest.TestCase):
             output = root / 'evidence'
             cache = root / 'game/build'
             cache.mkdir(parents=True)
-            (cache / 'CMakeCache.txt').write_text('ASTRA_CAMPAIGN_PROBE:BOOL=OFF\n')
+            (cache / 'CMakeCache.txt').write_text(''.join('ASTRA_'+flag+':BOOL=OFF\n'
+                for flag in ('CAMPAIGN_PROBE','COMBAT_STRESS','COMBAT_TIMING','PRESENTATION_TIMING')))
             calls = []
             def command(args, **kwargs):
                 calls.append(args)
@@ -43,6 +44,7 @@ class CampaignReporterTests(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, args)
             with patch.object(CHECK, 'ROOT', root), patch.object(CHECK.subprocess, 'run', command), \
                  patch.object(CHECK, 'preserve_probe', return_value={}, create=True), \
+                 patch.object(CHECK, 'scenario_with_boundary', return_value=Path('campaign.agk')), \
                  patch.object(sys, 'argv', ['check', '--out', str(output)]):
                 self.assertEqual(CHECK.main(), 1)
             report = json.loads((output / 'report.json').read_text())

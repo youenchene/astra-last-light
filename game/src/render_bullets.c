@@ -89,15 +89,15 @@ UBYTE renderBulletsCreate(const tView *pView, ULONG *pBlank) {
 			renderBulletsDestroy();
 			return 0;
 		}
+		/* One hostile image for every level: pixels are written once here,
+		 * frames rewrite only control words. */
+		spriteStreamFill(&s_pStreams[channel], s_pPixels[channel >> 1]);
 	}
 	return 1;
 }
 
-/* One pass over the pool: keep last frame's order for survivors, append
- * newcomers, then insertion-sort (linear for already ordered survivors).
- * Reused pool slots simply re-sort by their new Y. */
-static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show) {
-	ULONG drawn[BULLET_CHANNELS] = {0, 0, 0, 0};
+/* One pass over the pool marks drawable hostiles per channel. */
+static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show, ULONG *pDrawn) {
 	ULONG membership = 1;
 	for(UBYTE index = 0; index < HOSTILE_COUNT; ++index, membership <<= 1) {
 		tEntity *pEntity = &pHostile[index];
@@ -107,29 +107,41 @@ static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show) {
 			pEntity->y > PLAY_BOTTOM - HOSTILE_H) continue;
 		if(pEntity->channel < BULLET_FIRST_CHANNEL || pEntity->channel > 7 ||
 			!(mask & (1U << pEntity->channel))) continue;
-		drawn[pEntity->channel - BULLET_FIRST_CHANNEL] |= membership;
+		pDrawn[pEntity->channel - BULLET_FIRST_CHANNEL] |= membership;
 	}
-	for(UBYTE channel = 0; channel < BULLET_CHANNELS; ++channel) {
-		UBYTE *pOrder = s_pOrder[channel];
-		UBYTE count = 0;
-		ULONG pending = drawn[channel];
-		for(UBYTE i = 0; i < s_pCount[channel]; ++i) {
-			ULONG bit = s_membership[pOrder[i]];
-			if(!(pending & bit)) continue;
-			pending &= ~bit;
-			pOrder[count++] = pOrder[i];
-		}
-		for(UBYTE index = 0; pending && count < BULLET_SPRITE_CAPACITY; ++index, pending >>= 1)
-			if(pending & 1) pOrder[count++] = index;
-		for(UBYTE i = 1; i < count; ++i) {
-			UBYTE index = pOrder[i];
-			WORD y = pHostile[index].y;
-			UBYTE j = i;
-			for(; j && pHostile[pOrder[j - 1]].y > y; --j) pOrder[j] = pOrder[j - 1];
-			pOrder[j] = index;
-		}
-		s_pCount[channel] = count;
+}
+
+/* Insertion by cached Y key: one comparison when already in order. */
+static inline void insertOrdered(WORD *pKeys, tEntity **pList, UBYTE *pOrder,
+	UBYTE count, tEntity *pEntity, UBYTE index) {
+	WORD y = pEntity->y;
+	for(; count && pKeys[count - 1] > y; --count) {
+		pKeys[count] = pKeys[count - 1];
+		pList[count] = pList[count - 1];
+		pOrder[count] = pOrder[count - 1];
 	}
+	pKeys[count] = y;
+	pList[count] = pEntity;
+	pOrder[count] = index;
+}
+
+/* Survivors first in last frame's order, then newcomers in pool order.
+ * Reused pool slots simply re-sort by their new Y. */
+static UBYTE orderChannel(UBYTE channel, tEntity *pHostile, ULONG pending, tEntity **pList) {
+	UBYTE *pOrder = s_pOrder[channel];
+	WORD keys[BULLET_SPRITE_CAPACITY];
+	UBYTE count = 0;
+	for(UBYTE i = 0; i < s_pCount[channel]; ++i) {
+		UBYTE index = pOrder[i];
+		ULONG bit = s_membership[index];
+		if(!(pending & bit)) continue;
+		pending &= ~bit;
+		insertOrdered(keys, pList, pOrder, count++, &pHostile[index], index);
+	}
+	for(UBYTE index = 0; pending && count < BULLET_SPRITE_CAPACITY; ++index, pending >>= 1)
+		if(pending & 1) insertOrdered(keys, pList, pOrder, count++, &pHostile[index], index);
+	s_pCount[channel] = count;
+	return count;
 }
 
 void renderBulletsDraw(tGameState *pState) {
@@ -139,27 +151,28 @@ void renderBulletsDraw(tGameState *pState) {
 		for(UBYTE channel = 0; channel < BULLET_CHANNELS; ++channel) s_pCount[channel] = 0;
 		s_mask = mask;
 	}
-	gatherChannels(pState->hostile, mask, logicCombatActive(pState));
+	ULONG drawn[BULLET_CHANNELS] = {0, 0, 0, 0};
+	gatherChannels(pState->hostile, mask, logicCombatActive(pState), drawn);
 	UWORD posX = s_pView->ubPosX - 1, posY = s_pView->ubPosY;
 	for(UBYTE channel = 0; channel < BULLET_CHANNELS; ++channel) {
 		/* Enemies publish 4/5 (including blank) unless logic lends the pair.
 		 * Only the selected back buffer is touched, even on ownership changes. */
 		if(channel < 2 && !(mask & (1U << BULLET_FIRST_CHANNEL))) continue;
-		UBYTE buffer = spriteStreamBuffer(&s_pStreams[channel], s_pView);
-		tSpriteWriter writer;
-		spriteWriterBegin(&writer, &s_pStreams[channel], buffer);
+		tEntity *pList[BULLET_SPRITE_CAPACITY];
+		UBYTE count = orderChannel(channel, pState->hostile, drawn[channel], pList);
+		tSpriteStream *pStream = &s_pStreams[channel];
+		ULONG *pBase = spriteStreamRows(pStream, s_pView), *pSlot = pBase;
 		WORD nextY = -32767;
-		const UBYTE *pOrder = s_pOrder[channel];
-		for(UBYTE i = s_pCount[channel]; i; --i) {
-			tEntity *pEntity = &pState->hostile[*pOrder++];
+		for(tEntity **ppEntity = pList; count; --count) {
+			tEntity *pEntity = *ppEntity++;
+			WORD y = pEntity->y;
 			/* Admission keeps HOSTILE_H + 2 lines between neighbours. */
-			if(pEntity->y < nextY) { pEntity->visible = 0; continue; }
-			spriteWriterPut(&writer, posX + pEntity->x, posY + pEntity->y, 0,
-				s_pPixels[channel >> 1]);
+			if(y < nextY) continue;
+			pSlot = spriteSlotPlace(pSlot, posX + pEntity->x, posY + y, HOSTILE_H);
 			pEntity->visible = 1;
-			nextY = pEntity->y + HOSTILE_H + 1;
+			nextY = y + HOSTILE_H + 1;
 		}
-		spriteWriterPublish(&writer, s_pView);
+		spriteStreamPublishAt(pStream, s_pView, pBase, pSlot);
 	}
 }
 

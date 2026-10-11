@@ -33,6 +33,24 @@ endif()
 add_subdirectory(${ACE_DIR} ace)
 include_directories(${ACE_DIR}/include)
 add_subdirectory(${AGK_KIT}/runtime agk)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# Keep the installed kit immutable. Replace only this build's perf translation
+# unit with an anchor-checked copy; original debug.c and public API stay intact.
+execute_process(COMMAND ${Python3_EXECUTABLE}
+	${CMAKE_CURRENT_SOURCE_DIR}/tools/patch-perf.py
+	${AGK_KIT}/runtime/src/perf.c ${CMAKE_BINARY_DIR}/perf-complete.c
+	RESULT_VARIABLE PERF_PATCH_RESULT)
+if(NOT PERF_PATCH_RESULT EQUAL 0)
+	message(FATAL_ERROR "AGK final-window accounting transform failed")
+endif()
+get_target_property(AGK_SOURCES agk SOURCES)
+if(NOT "src/perf.c" IN_LIST AGK_SOURCES)
+	message(FATAL_ERROR "AGK perf source inventory changed")
+endif()
+list(REMOVE_ITEM AGK_SOURCES src/perf.c)
+set_property(TARGET agk PROPERTY SOURCES "${AGK_SOURCES};${CMAKE_BINARY_DIR}/perf-complete.c")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+	${CMAKE_CURRENT_SOURCE_DIR}/tools/patch-perf.py ${AGK_KIT}/runtime/src/perf.c)
 
 file(GLOB_RECURSE SOURCES src/*.c)
 # Art converted by agk (art/ -> build/art/art.c + art.h), if the project has any
@@ -80,7 +98,6 @@ if(EXISTS ${CMAKE_BINARY_DIR}/sound/sound.c)
 	include_directories(${CMAKE_BINARY_DIR}/sound)
 endif()
 add_executable(astra ${SOURCES})
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_custom_target(presentation_check
 	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py --check
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-presentation.py
@@ -95,6 +112,10 @@ add_custom_target(presentation_check
 		${CMAKE_CURRENT_SOURCE_DIR}/art/presentation-rows.h
 	VERBATIM)
 add_dependencies(astra presentation_check)
+add_custom_target(galaxy_check
+	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/make-galaxy.py --check
+	VERBATIM)
+add_dependencies(astra galaxy_check)
 option(ASTRA_PRESENTATION_TIMING "NON-SHIPPING decoder raster timing" OFF)
 option(ASTRA_COMBAT_TIMING "NON-SHIPPING aggregated combat raster timing" OFF)
 option(ASTRA_COMBAT_STRESS "NON-SHIPPING deterministic combat matrix" OFF)
@@ -107,6 +128,25 @@ if(ASTRA_COMBAT_STRESS)
 endif()
 if(ASTRA_PRESENTATION_TIMING)
 	target_compile_definitions(astra PRIVATE ASTRA_PRESENTATION_TIMING=1)
+	target_compile_definitions(agk PRIVATE ASTRA_PRESENTATION_TIMING=1)
+endif()
+option(ASTRA_FRAME_BREAKDOWN "NON-SHIPPING selected frame disjoint timestamps" OFF)
+if(ASTRA_FRAME_BREAKDOWN)
+	target_compile_definitions(astra PRIVATE ASTRA_FRAME_BREAKDOWN=1)
+endif()
+option(ASTRA_HUD_BOB_TIMING "NON-SHIPPING selected HUD/BOB endpoints" OFF)
+option(ASTRA_HUD_BOB_DETAIL "NON-SHIPPING nested HUD/BOB cuts and operation counts" OFF)
+if(ASTRA_HUD_BOB_TIMING)
+	if(NOT ASTRA_PRESENTATION_TIMING OR ASTRA_FRAME_BREAKDOWN)
+		message(FATAL_ERROR "HUD/BOB experiment requires PRESENTATION_TIMING ON and FRAME_BREAKDOWN OFF")
+	endif()
+	target_compile_definitions(astra PRIVATE ASTRA_HUD_BOB_TIMING=1)
+endif()
+if(ASTRA_HUD_BOB_DETAIL)
+	if(NOT ASTRA_HUD_BOB_TIMING)
+		message(FATAL_ERROR "HUD_BOB_DETAIL requires HUD_BOB_TIMING")
+	endif()
+	target_compile_definitions(astra PRIVATE ASTRA_HUD_BOB_DETAIL=1)
 endif()
 option(ASTRA_CAMPAIGN_PROBE "NON-SHIPPING injected native campaign fixture" OFF)
 if(ASTRA_CAMPAIGN_PROBE)

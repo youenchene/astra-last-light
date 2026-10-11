@@ -65,8 +65,13 @@ void renderScenesClose(void) {
 
 void renderScenesEraseStep(void) {
 	if(s_ready) return;
-	renderWorldRestoreCorridor(SCENE_X, SCENE_Y + s_row, SCENE_W, 8);
-	if((s_row += 8) == SCENE_H) s_ready = 1;
+	/* Finishing the patch and submitting a large boss BOB in the same frame
+	 * exceeds the PAL budget. The completed background stays unpublished;
+	 * next frame's readiness lets renderFrame add HUD/BOBs/sprites and publish
+	 * one complete image. This is a separate work step, not a timed idle. */
+	if(s_row == SCENE_H) { s_ready = 1; return; }
+	if(renderWorldRestoreCorridor(SCENE_X, SCENE_Y + s_row, SCENE_W, 8))
+		s_row += 8;
 }
 
 UBYTE renderScenesReady(void) {

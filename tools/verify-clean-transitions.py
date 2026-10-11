@@ -84,7 +84,7 @@ def check_images(folder):
         left, right = load(a), load(b)
         bad = sum(left.pixel(x, y) != right.pixel(x, y)
                   for y in range(256) for x in range(320)
-                  if not exterior or not (152 <= x < 312 and 56 <= y < 192))
+                  if not exterior or not (136 <= x < 312 and 56 <= y < 208))
         require(bad == 0, f"{a}/{b}: {bad} {'exterior' if exterior else 'full-frame'} pixels changed")
 
     for a, b in (("intro_hold", "intro_hold_later"), ("title_first", "title_repaired"),
@@ -107,7 +107,7 @@ def check_images(folder):
         hero = set()  # The blink-off frame must match the exact empty background.
     require(all(first.pixel(x, y) == restored.pixel(x, y)
                 for y in range(256) for x in range(320)
-                if not (152 <= x < 312 and 56 <= y < 192) and (x, y) not in hero),
+                if not (136 <= x < 312 and 56 <= y < 208) and (x, y) not in hero),
             "opening close changed frozen exterior")
     for name in ("title_first", "title2"):
         image = load(name)

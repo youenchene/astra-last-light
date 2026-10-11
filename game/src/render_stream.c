@@ -23,6 +23,19 @@ UBYTE spriteStreamCreate(tSpriteStream *pStream, const tView *pView,
 	return 1;
 }
 
+void spriteStreamFill(tSpriteStream *pStream, const ULONG *pPixels) {
+	for(UBYTE buffer = 0; buffer < 2; ++buffer) {
+		ULONG *pSlot = pStream->pRows[buffer];
+		for(UBYTE slot = 0; slot < pStream->ubSlots; ++slot) {
+			const ULONG *pSource = pPixels;
+			*pSlot++ = 0;
+			for(UBYTE row = pStream->ubHeight; row; --row) *pSlot++ = *pSource++;
+			pStream->pLoaded[buffer][slot] = pPixels;
+		}
+		*pSlot = 0;
+	}
+}
+
 void spriteStreamDestroy(tSpriteStream *pStream, const tView *pView, ULONG *pBlank) {
 	if(!pStream) return;
 	if(pView && pBlank && (pStream->pRows[0] || pStream->pRows[1])) {

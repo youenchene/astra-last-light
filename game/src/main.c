@@ -18,6 +18,7 @@
 #include "title_confirm.h"
 #include "language_select.h"
 #include "combat_perf.h"
+#include "galaxy_trace.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
 #include "../tests/native/campaign_probe.h"
 #endif
@@ -42,6 +43,11 @@ static tTitleConfirm s_confirm;
 static UBYTE s_confirmSubmitted;
 static tLanguageSelect s_language;
 static UBYTE s_isLanguage, s_languageSubmitted, s_languageTarget, s_languageReported;
+#ifdef AGK_SERIAL_ENABLED
+/* Debug-channel replay boundary, independent of the four diagnostic flags. */
+void astraPerfFinish(ULONG logicFrame);
+static UBYTE s_perfComplete;
+#endif
 
 static tInput readInput(void) {
 	tInput input = {0};
@@ -115,6 +121,7 @@ void genericCreate(void) {
 	introCreate(s_pBuffer, s_pVPort);
 	s_isIntro = 1;
 	/* Exec memory queries belong before hardware takeover, never in gameplay. */
+	galaxyTraceMemory((const void *)genericCreate);
 	agkState("chip_free", memGetFreeChipSize());
 	agkState("ram_free", memGetFreeSize());
 	agkEnd();
@@ -304,11 +311,31 @@ static void publishFrame(void) {
 
 void genericProcess(void) {
 	agkPerfBegin();
+#ifdef AGK_SERIAL_ENABLED
+	if(s_perfComplete) {
+		/* Post-measurement hold lets the harness drain serial/audio. Preserve
+		 * the final scanout. Begin supplies harness ticks, but without End
+		 * these iterations never add a completed-frame sample or report. */
+		ULONG at = timerGet();
+		while(timerGet() == at) { }
+		return;
+	}
+#endif
+	galaxyTraceBegin(&s_sState);
 	if(!s_isLoaded) { agkPerfEnd(); gameExit(); return; }
 	renderBindBack(s_pBuffer->pBack);
 	acknowledgeFrame();
 	keyProcess();
 	joyProcess();
+#ifdef AGK_SERIAL_ENABLED
+	if(keyUse(KEY_F8)) {
+		astraPerfFinish(s_sState.frame);
+		combatPerfFlush(&s_sState);
+		galaxyTraceReport();
+		s_perfComplete = 1;
+		return;
+	}
+#endif
 #ifdef ASTRA_COMBAT_STRESS
 	/* The harness releases only after copying the acknowledged complete image.
 	 * Keep all held ticks in whole-frame metrics; never reuse its DMA buffers. */
@@ -336,8 +363,10 @@ void genericProcess(void) {
 	UBYTE previewPressed = keyUse(KEY_F9);
 	if(s_isIntroDone && pausePressed) logicTogglePause(&s_sState);
 	combatPerfBegin(CP_RESTORE);
+	galaxyTraceMark(9);
 	if(s_isIntroDone) renderAnimate(&s_sState);
 	combatPerfEnd(CP_RESTORE);
+	galaxyTraceMark(0);
 	/* Select music for the acknowledged visible frame, never the hidden work.
 	 * This runs at the start of that display tick, within perf measurement. */
 	combatPerfBegin(CP_AUDIO);
@@ -351,6 +380,7 @@ void genericProcess(void) {
 		}
 	}
 	combatPerfEnd(CP_AUDIO);
+	galaxyTraceMark(12);
 	tInput input = readInput();
 
 	if(!s_isIntroDone && !s_isLanguage && !introProcess(input.fire)) {
@@ -382,9 +412,11 @@ void genericProcess(void) {
 		UBYTE oldLevel = s_sState.level;
 		UWORD oldWave = s_sState.wave;
 		UBYTE wasPreparing = s_sState.presentationBusy;
+		galaxyTraceMark(13);
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeBeforeUpdate(&s_sState);
 #endif
+		galaxyTraceMark(14);
 		combatPerfBegin(CP_LOGIC);
 		UBYTE confirming = 0;
 		if(escapePressed) {
@@ -401,6 +433,7 @@ void genericProcess(void) {
 			logicUpdate(&s_sState, &input);
 		}
 		combatPerfEnd(CP_LOGIC);
+		galaxyTraceMark(1);
 		if(confirming) {
 			agkState("title_confirm_input", 1);
 			agkState("vblank", timerGet()); agkEnd();
@@ -411,9 +444,11 @@ void genericProcess(void) {
 		combatPerfBegin(CP_AUDIO);
 		soundEvents(oldPhase == TITLE ? s_sState.events & ~EVENT_LEVEL : s_sState.events);
 		combatPerfEnd(CP_AUDIO);
+		galaxyTraceMark(2);
 		combatPerfBegin(CP_RENDER);
 		renderFrame(&s_sState);
 		combatPerfEnd(CP_RENDER);
+		galaxyTraceMark(6);
 		combatStressAfter(&s_sState);
 		if(oldPhase == TITLE && (oldLevel != s_sState.level || s_sState.phase != TITLE)) {
 			agkState("title_input", renderRevision());
@@ -424,9 +459,11 @@ void genericProcess(void) {
 			agkState("title_begin", renderRevision());
 			agkState("from", oldPhase); agkState("vblank", acceptedAt); agkEnd();
 		}
+		galaxyTraceMark(21);
 #ifdef ASTRA_CAMPAIGN_PROBE
 		campaignProbeAfterFrame(&s_sState);
 #endif
+		galaxyTraceMark(22);
 		if(oldPhase == GAMEOVER && s_sState.phase == TITLE)
 			agkPrint("AGK gameover_title\n");
 		if(wasPreparing != s_sState.presentationBusy ||
@@ -435,16 +472,23 @@ void genericProcess(void) {
 			oldPhase != s_sState.phase || oldWave != s_sState.wave || pausePressed ||
 			heartbeat) reportState();
 	}
+	galaxyTraceMark(23);
 	combatPerfBegin(CP_WAIT);
 	blitWait();
 	combatPerfEnd(CP_WAIT);
+	galaxyTraceMark(24);
 	combatPerfBegin(CP_PUBLISH);
 	publishFrame();
 	combatPerfEnd(CP_PUBLISH);
+	galaxyTraceMark(25);
 	combatPerfFrame(&s_sState);
 	/* If performance reporting itself crosses the next vblank, that already
 	 * acknowledges this list: do not accidentally wait for a second blank. */
 	ULONG publishedAt = timerGet();
+	galaxyTraceFrame(&s_sState);
+#ifdef ASTRA_PRESENTATION_TIMING
+	if(keyUse(KEY_F10)) galaxyTraceReport();
+#endif
 	agkPerfEnd();
 	/* The newly published copper list becomes active at vblank. Start the
 	 * next logic tick only after that acknowledgement, not at line 300 while
@@ -456,6 +500,7 @@ void genericProcess(void) {
 
 void genericDestroy(void) {
 	agkDebugAsync(0);
+	galaxyTraceReport();
 	blitWait();
 	if(s_isLoaded) { systemSetDmaBit(DMAB_SPRITE, 0); viewLoad(0); }
 	if(s_isSystemUnused) systemUse();

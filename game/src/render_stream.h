@@ -76,4 +76,36 @@ static inline void spriteWriterPublish(tSpriteWriter *pWriter, const tView *pVie
 	copSetMoveVal(&pCommands[1].sMove, ulAddress & 0xffff);
 }
 
+/* Fixed-image streams. spriteStreamFill() writes one image into every slot
+ * of both buffers once; frames then place slots in ascending Y by control
+ * words only. Mixing with spriteWriterPut() stays coherent (pLoaded). */
+void spriteStreamFill(tSpriteStream *pStream, const ULONG *pPixels);
+
+/* First slot of the buffer the back copper list will display. */
+static inline ULONG *spriteStreamRows(const tSpriteStream *pStream, const tView *pView) {
+	return pStream->pRows[spriteStreamBuffer(pStream, pView)];
+}
+
+/* Writes one slot's control words and returns the next slot. */
+static inline ULONG *spriteSlotPlace(ULONG *pSlot, UWORD uwX, UWORD uwStart, UBYTE ubHeight) {
+	UWORD uwStop = uwStart + ubHeight;
+	UWORD *pControl = (UWORD *)pSlot;
+	pControl[0] = (UWORD)(uwStart << 8) | ((uwX >> 1) & 255);
+	pControl[1] = (UWORD)(uwStop << 8) | ((uwStart >> 6) & 4) |
+		((uwStop >> 7) & 2) | (uwX & 1);
+	return pSlot + ubHeight + 1;
+}
+
+/* Terminates at pEnd (cached pixels below stay) and points the back copper
+ * list at pBase, the spriteStreamRows() buffer containing pEnd. */
+static inline void spriteStreamPublishAt(const tSpriteStream *pStream, const tView *pView,
+	ULONG *pBase, ULONG *pEnd) {
+	*pEnd = 0;
+	ULONG ulAddress = (ULONG)pBase;
+	tCopCmd *pCommands = &pView->pCopList->pBackBfr->pList[
+		ASTRA_COP_SPRITES + (pStream->ubChannel << 1)];
+	copSetMoveVal(&pCommands[0].sMove, ulAddress >> 16);
+	copSetMoveVal(&pCommands[1].sMove, ulAddress & 0xffff);
+}
+
 #endif

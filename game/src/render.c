@@ -7,6 +7,7 @@
 #include "render_scenes.h"
 #include "art.h"
 #include "combat_perf.h"
+#include "galaxy_trace.h"
 #include <ace/managers/blit.h>
 #include <ace/managers/memory.h>
 #include <ace/utils/sprite.h>
@@ -112,6 +113,7 @@ void renderAnimate(tGameState *pState) {
 		!renderWorldMatches(pState) || !renderWorldReady()) return;
 	/* All writes target unpublished pixels; caches belong to this bitmap. */
 	renderBobsBegin();
+	galaxyTraceMark(10);
 	renderWorldAnimate(pState);
 }
 
@@ -185,13 +187,19 @@ void renderFrame(tGameState *pState) {
 	tGameState *display = !s_targetReady || (s_inScene && !liveOpening && !s_closingOpening)
 		? &s_blankState : pState;
 	combatPerfBegin(CP_COPPER);
+	galaxyTraceMark(15);
 	renderWorldCopper(pState, s_targetReady);
 	combatPerfEnd(CP_COPPER);
+	galaxyTraceMark(16);
 	if(s_targetReady) renderWorldPause(pState);
+	galaxyTraceMark(17);
 	combatPerfBegin(CP_SPRITES);
 	renderHeroDraw(s_targetReady ? pState : &s_blankState);
+	galaxyTraceMark(18);
 	renderEnemiesDraw(display);
+	galaxyTraceMark(19);
 	renderBulletsDraw(display);
+	galaxyTraceMark(20);
 	combatPerfEnd(CP_SPRITES);
 }
 

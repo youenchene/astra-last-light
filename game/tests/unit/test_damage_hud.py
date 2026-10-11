@@ -20,12 +20,13 @@ class DamageHudTests(unittest.TestCase):
 #include "logic.h"
 #include "../art/localization.h"
 tLanguage languageGet(void) { return LANGUAGE_EN; }
+#include "hud_bob_trace.h"
 typedef uint8_t UBYTE;
 typedef uint16_t UWORD;
 typedef uint32_t ULONG;
 typedef struct { UBYTE pixels[256][320]; } tBitMap;
 typedef struct { UWORD pPalette[32]; } tVPort;
-#define STAR_COUNT 96
+#define STAR_COUNT 36
 #define MINTERM_COOKIE 0
 static tBitMap buffers[2], *s_pScreen, *s_pLabels;
 static tVPort viewport, *s_pVPort = &viewport;
@@ -33,6 +34,7 @@ static UBYTE s_buffer;
 static void starsReset(void) {}
 static void panelQueue(tPhase phase) {(void)phase;}
 static void scoreDraw(ULONG n, UBYTE dirty) {(void)n;(void)dirty;}
+static void bossLabelDraw(void) {}
 static void blitRect(tBitMap *b,UWORD x,UWORD y,UWORD w,UWORD h,UBYTE c) {
     for(unsigned yy=y; yy<y+h; ++yy) memset(&b->pixels[yy][x],c,w);
 }

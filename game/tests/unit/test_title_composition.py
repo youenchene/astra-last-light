@@ -30,9 +30,10 @@ class TitleCompositionTests(unittest.TestCase):
 
     def test_physical_provenance_and_bounded_repair(self):
         source = (ROOT / "game/src/render_world.c").read_text()
+        source = source.replace('__attribute__((noinline)) ', '')
         declarations = source[source.index("static UBYTE s_ubLevel"):source.index("/* All display writes")]
         functions = "\n".join(function(source, name) for name in (
-            "queueText", "queueRect", "queueCentered", "panelQueue", "combatBackground",
+            "numberText", "queueText", "queueRect", "queueCentered", "panelQueue", "combatBackground",
             "renderWorldSetBaseColors", "renderWorldBind", "renderWorldInvalidate", "renderWorldBegin", "renderWorldStep"))
         prelude = r'''
 #include <assert.h>
@@ -50,7 +51,7 @@ typedef struct {
     UWORD BytesPerRow;
 } tBitMap;
 typedef struct { UWORD pPalette[32]; } tVPort;
-#define STAR_COUNT 96
+#define STAR_COUNT 36
 #define DECOR_HEIGHT 24
 #define DECOR_TOP 29
 #define DECOR_BOTTOM 220
@@ -73,6 +74,11 @@ static void blitRect(tBitMap *b, UWORD x, UWORD y, UWORD w, UWORD h, UBYTE color
         }
 }
 static void starsReset(void) {}
+static UWORD galaxyStep(unsigned char *const planes[4], UWORD stride,
+    UBYTE level, UWORD x, UWORD y, UWORD width, UWORD height, UWORD row, UBYTE cleared) {
+    (void)planes;(void)stride;(void)level;(void)x;(void)y;(void)width;(void)height;
+    (void)cleared; assert(!"TITLE must never decode a galaxy"); return row;
+}
 static void starToggle(UBYTE i, UWORD x) {(void)i; (void)x; ++scenery;}
 static void decorRows(UWORD a,UWORD b,UWORD c,UWORD d,UWORD e) {
     (void)a;(void)b;(void)c;(void)d;(void)e; ++scenery;

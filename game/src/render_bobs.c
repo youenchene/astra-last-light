@@ -5,6 +5,7 @@
 #include "render_scenes.h"
 #include "art.h"
 #include "combat_perf.h"
+#include "galaxy_trace.h"
 #include <ace/managers/bob.h>
 
 #define BOB_WIDTH 16
@@ -109,6 +110,7 @@ static void drawPickups(tGameState *pState, UBYTE show) {
 		if(!show || pPickup->kind >= BONUS_FRAMES || !fits(pPickup, BONUS_HEIGHT)) continue;
 		bobSetFrame(&s_pBonusBobs[i], s_pBonusData[pPickup->kind], s_pBonusMask[pPickup->kind]);
 		push(&s_pBonusBobs[i], pPickup);
+		hudBobPushed(HB_PICKUP, pPickup->x);
 		pPickup->visible = 1;
 	}
 }
@@ -123,34 +125,47 @@ static void drawShots(tGameState *pState, UBYTE show) {
 			!fits(pShot, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
 		if((pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO) && renderScenesOccludes(pShot->x, pShot->y,
 			BOB_WIDTH, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
-		if(!charged) { push(&s_pShotBobs[i], pShot); pShot->visible = 1; continue; }
+		if(!charged) {
+			push(&s_pShotBobs[i], pShot);
+			hudBobPushed(HB_SHOT, pShot->x);
+			pShot->visible = 1; continue;
+		}
 		if(lances >= LANCE_BOBS) continue;
 		tBob *pBob = &s_pLanceBobs[lances++];
 		bobSetFrame(pBob, s_pLanceData[flash], s_pLanceMask[flash]);
 		push(pBob, pShot);
+		hudBobPushed(HB_LANCE, pShot->x);
 		pShot->visible = 1;
 	}
 }
 
 void renderBobsDraw(tGameState *pState) {
+	hudBobMark(HB_BOBS_BEGIN);
 	combatPerfBegin(CP_BOBS);
 	if(pState) {
 		UBYTE show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS ||
 			pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO);
 		renderBossQueue(pState, s_isFrameOpen);
+		hudBobMark(HB_BOSS_QUEUE_END);
 		/* Upper-lane blasts must reach the beam before lower reward objects.
 		 * Shots and badges remain readable in front of cosmetic explosions. */
 		if(s_isFrameOpen) renderEffectsQueue(pState);
+		hudBobMark(HB_EFFECTS_QUEUE_END);
 		drawPickups(pState, show);
+		hudBobMark(HB_PICKUPS_END);
 		drawShots(pState, show);
+		hudBobMark(HB_SHOTS_END);
 	}
 	if(!s_isFrameOpen) { combatPerfEnd(CP_BOBS); return; }
 	bobEnd();
+	hudBobMark(HB_FLUSH_END);
 	combatPerfBegin(CP_WAIT);
 	blitWait();
+	hudBobMark(HB_WAIT_END);
 	combatPerfEnd(CP_WAIT);
 	s_isFrameOpen = 0;
 	combatPerfEnd(CP_BOBS);
+	galaxyTraceMark(5);
 }
 
 void renderBobsDiscard(void) {

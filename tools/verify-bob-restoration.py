@@ -9,7 +9,7 @@ the emulator. Example (uses AGK's stdlib-only PNG reader):
 The restoration ROI is the union of aligned 32x16 ACE backup rectangles
 across the first pickup's lifetime, not merely its final 16x16 image. Host
 replay excludes visible sprites and the hero over the final three states.
-Every restored pixel must be space $001 or star $BDF. The drop check proves
+Every restored pixel must match the selected PNG plus exact XOR-star history. The drop check proves
 the entire opaque D artwork AND transparent mask against actual pixels.
 """
 
@@ -22,12 +22,13 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
 KIT = Path(os.environ.get("AGK_KIT", str(Path.home() / "Code/amiga/amiga-game-kit")))
 sys.path.insert(0, str(KIT / "harness"))
 _spec = importlib.util.spec_from_file_location("gameover_states", ROOT / "tools/verify-gameover-title.py")
 STATE_PARSER = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(STATE_PARSER)
-BACKGROUND = {(0, 0, 17), (187, 221, 255)}
+from galaxy_oracle import pixel as background_pixel
 
 
 def first_bonus():
@@ -61,19 +62,19 @@ def image(path):
     return source
 
 
-def verify_restore(restored, roi):
+def verify_restore(restored, roi, ticks):
     x0, y0, x1, y1 = roi
     if not (0 <= x0 < x1 <= 320 and 56 <= y0 < y1 <= 216):
         raise ValueError(f"invalid gameplay ROI: {roi}")
     bad = [(x, y, restored.pixel(x, y))
            for y in range(y0, y1) for x in range(x0, x1)
-           if restored.pixel(x, y) not in BACKGROUND]
+           if restored.pixel(x, y) != background_pixel(0, ticks, x, y)]
     if bad:
         raise ValueError(f"restoration: {len(bad)} non-background pixels; first={bad[:8]}")
-    print(f"PASS restoration: all {(x1-x0)*(y1-y0)} pixels in {roi} are $001/$BDF")
+    print(f"PASS restoration: all {(x1-x0)*(y1-y0)} pixels in {roi} match PNG + exact stars at tick {ticks}")
 
 
-def verify_drop(drop, bounds, x_adjust):
+def verify_drop(drop, bounds, x_adjust, ticks):
     colors, rows = first_bonus()
     x0, y0, x1, y1 = bounds
     x0 += x_adjust
@@ -85,7 +86,7 @@ def verify_drop(drop, bounds, x_adjust):
         for dx, symbol in enumerate(row):
             actual = drop.pixel(x0 + dx, y0 + dy)
             if symbol == ".":
-                correct = actual in BACKGROUND
+                correct = actual == background_pixel(0, ticks, x0 + dx, y0 + dy)
             else:
                 opaque += 1
                 correct = actual == colors[symbol]
@@ -153,8 +154,10 @@ def main():
     evidence = json.loads(args.evidence.read_text())
     if args.drop_x_adjust:
         print(f"Presentation correction requested: drop x {args.drop_x_adjust:+d}")
-    verify_drop(image(args.drop), evidence["drop_bob"], args.drop_x_adjust)
-    verify_restore(image(args.restored), evidence["roi"])
+    # One ready update precedes input; one 40-tick death freezes world scrolling.
+    offset = evidence["ready_updates"] - evidence["death_duration"]
+    verify_drop(image(args.drop), evidence["drop_bob"], args.drop_x_adjust, evidence["drop_capture"] + offset)
+    verify_restore(image(args.restored), evidence["roi"], evidence["restore_capture"] + offset)
     if args.lifecycle_serial:
         verify_lifecycle(args.lifecycle_serial, evidence)
 

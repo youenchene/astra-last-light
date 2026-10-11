@@ -1,6 +1,7 @@
 #include "render_effects.h"
 #include "render_internal.h"
 #include "art.h"
+#include "hud_bob_trace.h"
 #include <ace/managers/bob.h>
 
 #define FX_FRAMES 8
@@ -81,6 +82,7 @@ void renderEffectsQueue(const tGameState *pState) {
 		pBob->sPos.uwX = x;
 		pBob->sPos.uwY = y;
 		bobPush(pBob);
+		hudBobPushed(size == 0 ? HB_SMALL_FX : (size == 1 ? HB_HERO_FX : HB_BOSS_FX), x);
 	}
 }
 

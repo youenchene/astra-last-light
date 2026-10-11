@@ -310,24 +310,25 @@ static uint16_t hostileLife(const tEntity *e) {
 }
 
 /* Straight paths in doubled pixels: 2y(t) = 2y + vy*t. Linear distance is
- * extremal at the ends of the shared lifetime, so two samples suffice. */
-static uint8_t staysApart(const tEntity *a, const tEntity *b) {
-	const int16_t need = 2 * (HOSTILE_H + HOSTILE_GAP);
-	int16_t d0 = (int16_t)((b->y - a->y) * 2);
+ * extremal at the ends of the shared lifetime, so two samples suffice.
+ * The candidate's fields arrive in registers; |2dy| < 2*apart is |dy| < apart. */
+static uint8_t staysApart(const tEntity *o, int16_t y, int8_t vy, uint16_t age) {
+	const int16_t apart = HOSTILE_H + HOSTILE_GAP;
+	int16_t dy = (int16_t)(y - o->y);
+	int8_t otherVy = o->vy;
 	/* Already-overlapping paths fail immediately; parallel/diverging paths
 	 * need no lifetime multiplication on the 68000. */
-	if(d0 >= 0) {
-		if(d0 < need) return 0;
-		if(b->vy >= a->vy) return 1;
+	if(dy >= 0) {
+		if(dy < apart) return 0;
+		if(vy >= otherVy) return 1;
 	}
 	else {
-		if(d0 > -need) return 0;
-		if(b->vy <= a->vy) return 1;
+		if(dy > -apart) return 0;
+		if(vy <= otherVy) return 1;
 	}
-	int16_t t = (int16_t)(a->age < b->age ? a->age : b->age);
-	int16_t d1 = (int16_t)(d0 + (int16_t)(b->vy - a->vy) * t);
-	if(d0 >= 0) return d0 >= need && d1 >= need;
-	return d0 <= -need && d1 <= -need;
+	int16_t t = (int16_t)(o->age < age ? o->age : age);
+	int16_t d1 = (int16_t)(dy * 2 + (int16_t)(vy - otherVy) * t);
+	return dy >= 0 ? d1 >= 2 * apart : d1 <= -2 * apart;
 }
 
 /* One pass over the pool, with explicit scalar counters for the four DMA
@@ -335,12 +336,16 @@ static uint8_t staysApart(const tEntity *a, const tEntity *b) {
 static uint8_t admitHostile(tGameState *s, tEntity *e) {
 	uint8_t fits = logicHostileChannelMask(s), bestCount = BULLET_SPRITE_CAPACITY;
 	uint8_t count4 = 0, count5 = 0, count6 = 0, count7 = 0;
-	e->age = hostileLife(e);
+	const int16_t y = e->y;
+	const int8_t vy = e->vy;
+	const uint16_t age = hostileLife(e);
+	e->age = age;
+	/* Channel zero also makes the pool scan skip the candidate itself. */
 	e->channel = 0;
-	for(uint8_t i = 0; i < HOSTILE_COUNT; ++i) {
-		tEntity *o = &s->hostile[i];
+	tEntity *o = s->hostile;
+	for(uint8_t i = HOSTILE_COUNT; i; --i, ++o) {
 		uint8_t bit;
-		if(o == e || !o->active) continue;
+		if(!o->active) continue;
 		switch(o->channel) {
 		case 4: ++count4; bit = 0x10; break;
 		case 5: ++count5; bit = 0x20; break;
@@ -350,7 +355,7 @@ static uint8_t admitHostile(tGameState *s, tEntity *e) {
 		}
 		if(!(fits & bit)) continue;
 		if(!o->age) o->age = hostileLife(o);
-		if(!staysApart(o, e)) {
+		if(!staysApart(o, y, vy, age)) {
 			fits &= (uint8_t)~bit;
 			/* Once every permitted channel conflicts, no later entity can
 			 * make this ray admissible. Dense volleys take this path often. */
@@ -737,6 +742,14 @@ void logicTogglePause(tGameState *s) {
 	s->sceneArmed = 0;
 }
 
+/* Optional portable callback; production has no hardware dependency or calls. */
+#ifdef ASTRA_FRAME_BREAKDOWN
+extern unsigned char galaxyTraceTarget;
+extern void galaxyTraceMarkTarget(unsigned char mark);
+#define logicTrace(mark) do { if(galaxyTraceTarget) galaxyTraceMarkTarget(mark); } while(0)
+#else
+#define logicTrace(mark) ((void)0)
+#endif
 uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	static const tInput neutral = {0, 0, 0};
 	tInput filtered;
@@ -794,6 +807,7 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	uint8_t enemyStep = s->enemyAccumulator >= 20;
 	if(enemyStep) { s->enemyAccumulator -= 20; ++s->enemyMotionFrame; }
 	updateHero(s, input);
+	logicTrace(26);
 	if(s->phase == PLAY) {
 		++s->stageFrame;
 		if(s->waveTimer) --s->waveTimer;
@@ -805,15 +819,21 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 		if(s->boss.cooldown) --s->boss.cooldown;
 		if(!s->boss.cooldown) bossVolley(s);
 	}
+	logicTrace(27);
 	moveProjectiles(s->shots, SHOT_COUNT, 1, s->simFrame);
 	moveProjectiles(s->hostile, HOSTILE_COUNT, 0, s->simFrame);
+	logicTrace(28);
 	updatePickups(s);
+	logicTrace(29);
 	/* Collide only entities shown on the preceding frame, before rescheduling.
 	 * Thus mux drops (including extra renderer drops) are never lethal. */
 	collideShots(s);
 	if(s->phase == PLAY || s->phase == BOSS) collideHero(s);
+	logicTrace(30);
 	if(logicCombatActive(s)) scheduleSprites(s);
+	logicTrace(31);
 	/* Collisions/death have precedence; a death tick cannot advance the gate. */
 	if(s->phase == PLAY) updateBossGate(s, wasQuiet);
+	logicTrace(32);
 	return 1;
 }

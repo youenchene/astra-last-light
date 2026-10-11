@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from perf_boundary import scenario_with_boundary, complete_performance
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,6 +51,7 @@ def main():
         for case in ('pause_continuity', 'clean_transitions', 'gameover_title', 'large_manga', 'bob_restore'):
             output = folder/case
             scenario = f'game/tests/{"" if case == "bob_restore" else "native/"}{case}.agk'
+            scenario = scenario_with_boundary(ROOT, scenario, folder/'scenarios')
             command(['bash','tools/agk','run','--no-build','--fresh','--profile',args.profile,
                      '-f',scenario,'-o',output])
             if case == 'bob_restore':
@@ -64,7 +66,7 @@ def main():
                 command([sys.executable,'tools/'+validator,
                          output/'serial.txt' if case == 'gameover_title' else output])
             text = (output/'serial.txt').read_text()
-            report['cases'][case] = {'functional_pass':True, 'performance':campaign.performance(text),
+            report['cases'][case] = {'functional_pass':True, 'performance':complete_performance(text, campaign.performance(text)),
                 'memory':campaign.records(text,'chip_free='),
                 'captures':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in output.glob('*.screen.png')}}
     except (subprocess.CalledProcessError, OSError, ValueError) as error:

@@ -80,6 +80,7 @@ static UBYTE pixelRead(const tBitMap *bitmap,UWORD x,UWORD y) {
 }
 '''
         declarations = re.search(r'static ULONG s_pGlyphMasks[^;]+;', source)[0]
+        declarations += re.search(r'static ULONG s_bossLabel[^;]+;', source)[0]
         functions = '\n'.join(function(source, name) for name in (
             'fontMasksCreate', 'labelsCreate', 'textDraw', 'renderWorldTextStep'))
         wrapper = r'''

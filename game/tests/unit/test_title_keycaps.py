@@ -57,10 +57,11 @@ int main(void) {
 }
 '''
         panel = function(source, 'panelQueue')
-        for command in ('queueText(88, 202, "", 255, 0)',
-                        'queueText(105, 203, "OR", 1, 4)',
-                        'queueText(122, 202, "", 255, 1)',
-                        'queueText(137, 203, "TO CHANGE SECTOR", 1, 4)'):
+        for command in ('UBYTE shift = languageGet() == LANGUAGE_FR ? 6 : 0',
+                        'queueText(88 - shift, 202, "", 255, 0)',
+                        'queueText(105 - shift, 203, localizedText(TEXT_OR), 1, 4)',
+                        'queueText(122 - shift, 202, "", 255, 1)',
+                        'queueText(137 - shift, 203, localizedText(TEXT_CHANGE_SECTOR), 1, 4)'):
             self.assertIn(command, panel)
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)

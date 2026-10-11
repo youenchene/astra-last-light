@@ -7,10 +7,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--out', required=True, type=Path)
+parser.add_argument('--modules', nargs='+', default=['logic', 'render_bullets', 'render_bobs', 'render_world'])
 args = parser.parse_args()
 base = ['docker', 'run', '--rm', '-v', f'{ROOT}/game:/project:ro', 'amigadev/crosstools:m68k-amigaos']
 with args.out.open('w') as output:
-    for module in ('logic', 'render_bullets', 'render_bobs', 'render_world'):
+    for module in args.modules:
         obj = f'/project/build/CMakeFiles/astra.dir/src/{module}.c.obj'
         output.write('\nMODULE '+module+'\n')
         for tool, flags in [('nm', ['-S', '-n']), ('objdump', ['-dr'])]:
