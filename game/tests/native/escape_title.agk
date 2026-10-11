@@ -1,0 +1,64 @@
+# Real Amiga ESC (0x45), held by the emulator for 25 video frames per key.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+screenshot initial_title
+press fire 1
+wait-serial "AGK combat_ready" 1400
+wait 30
+screenshot combat
+hold right+fire
+key 0x45
+wait 30
+wait-serial "AGK title_ready" 600
+wait 60
+screenshot combat_title_held
+release
+wait 30
+press fire 1
+wait-serial "AGK scene_ready" 1000
+key 0x19
+wait 30
+screenshot story_paused
+key 0x37
+wait 30
+hold fire
+key 0x45
+wait 30
+wait-serial "AGK title_ready" 600
+wait 30
+screenshot paused_title_held
+mark muted_title
+wait 60
+mark muted_title_end
+expect-silence muted_title muted_title_end
+release
+wait 30
+press fire 1
+wait-serial "AGK title_input" 100
+wait 10
+key 0x19
+wait 30
+key 0x45
+wait 30
+wait-serial "AGK title_ready" 600
+wait 30
+screenshot preparing_title
+key 0x37
+wait 30
+press fire 1
+wait-serial "AGK combat_ready" 1400
+key 0x19
+wait 30
+screenshot play_paused
+key 0x45
+wait 30
+wait-serial "AGK title_ready" 600
+wait 30
+screenshot play_paused_title
+key 0x45
+wait 60
+expect-serial "AGK escape_quit"
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

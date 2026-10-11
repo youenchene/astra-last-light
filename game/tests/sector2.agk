@@ -1,0 +1,15 @@
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+press right 1
+wait 2
+press fire 1
+wait-serial "AGK combat_ready" 1000
+press fire 120
+screenshot nebula
+# Same-record opening/PLAY assertions: verify-sector-state.py, automatic via tools/agk.
+expect-serial "AGK music sector2"
+expect-no-serial "bullet_hidden=[1-9]"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

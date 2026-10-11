@@ -1,0 +1,38 @@
+{
+  "title": "ASTRA / LAST LIGHT / THE SIGNAL",
+  "fps": 25,
+  "width": 1920,
+  "height": 1080,
+  "seed": 861002,
+  "duration": 90,
+  "score": "score.json",
+  "assets": {
+    "graveyard": "game/art/selected-rd/story-character/bold-marks/graveyard-b.png",
+    "nebula": "game/art/selected-rd/story-character/bold-marks/nebula-b.png",
+    "foundry": "game/art/selected-rd/story-character/bold-marks/foundry-b.png",
+    "citadel": "game/art/selected-rd/story-character/bold-marks/citadel-b.png",
+    "space1": "game/art/galaxy/s1-graveyard-c.png",
+    "space2": "game/art/galaxy/s2-nebula-b.png",
+    "space3": "game/art/galaxy/s3-foundry-b.png",
+    "space4": "game/art/galaxy/s4-citadel-a.png"
+  },
+  "shots": [
+    {"seconds": 6, "mode": "signal", "text": "WE RECEIVED YOUR SIGNAL.", "sub": "INCOMING TRANSMISSION / ORIGIN UNKNOWN"},
+    {"seconds": 4, "mode": "void", "asset": "space1", "text": "You haven't sent it yet.", "sub": "TIMESTAMP: TOMORROW"},
+    {"seconds": 6, "mode": "portrait", "asset": "graveyard", "text": "", "sub": "01 / SOMETHING IN THE WRECKAGE"},
+    {"seconds": 4, "mode": "detail", "asset": "graveyard", "text": "Dead ships don't breathe.", "sub": "LIFE SIGNS: INCONCLUSIVE"},
+    {"seconds": 5, "mode": "gameplay", "clip": "graveyard", "in": 2, "text": "", "sub": "01 / GRAVEYARD / GAMEPLAY AT NORMAL SPEED"},
+    {"seconds": 3, "mode": "signal", "text": "THIS ONE DOES.", "sub": "DO NOT ACKNOWLEDGE"},
+    {"seconds": 6, "mode": "portrait", "asset": "nebula", "text": "The stars are out of order.", "sub": "02 / THE VEIL"},
+    {"seconds": 5, "mode": "gameplay", "clip": "nebula", "in": 8, "zoom": [1.0, 1.25], "focus": [0.3, 0.5], "text": "", "sub": "02 / VEIL NEBULA / GAMEPLAY AT NORMAL SPEED"},
+    {"seconds": 5, "mode": "mirror", "asset": "nebula", "text": "", "sub": "PATTERN REPEATS / PATTERN REMEMBERS"},
+    {"seconds": 6, "mode": "portrait", "asset": "foundry", "text": "The machines dream of you.", "sub": "03 / THE FOUNDRY"},
+    {"seconds": 5, "mode": "gameplay", "clip": "foundry", "in": 8, "zoom": [1.05, 1.3], "focus": [0.3, 0.5], "text": "", "sub": "03 / FOUNDRY / GAMEPLAY AT NORMAL SPEED"},
+    {"seconds": 3, "mode": "signal", "text": "YOU HAVE BEEN HERE BEFORE.", "sub": "PILOT IDENTITY: RECOGNIZED"},
+    {"seconds": 6, "mode": "portrait", "asset": "citadel", "text": "Four sectors. One impossible signal.", "sub": "04 / THE CITADEL"},
+    {"seconds": 5, "mode": "gameplay", "clip": "citadel", "in": 8, "text": "", "sub": "04 / CITADEL / GAMEPLAY AT NORMAL SPEED"},
+    {"seconds": 6, "mode": "eye", "asset": "graveyard", "text": "Don't answer in your own voice.", "sub": "CONNECTION ESTABLISHED"},
+    {"seconds": 11, "mode": "title", "asset": "space4", "text": "ASTRA", "sub": "L A S T   L I G H T"},
+    {"seconds": 4, "mode": "signal", "text": "SIGNAL SENT.", "sub": "TIMESTAMP: YESTERDAY"}
+  ]
+}

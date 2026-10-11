@@ -1,0 +1,4 @@
+0 0x001 transparent
+1 0xFFF white
+2 0xF9B pink
+3 0x4BD cyan

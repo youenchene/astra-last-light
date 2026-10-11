@@ -1,0 +1,1192 @@
+{
+  "method": "Deterministic offline localized eye reshape of RD identity parent; not RD-generated edit",
+  "paid_requests": 0,
+  "cost_usd": 0,
+  "balance_cost": 0,
+  "integrated": true,
+  "input_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "master_sha256": "02a31f5038fe4d641aa021d6dda3c6ece1dbd29d8f381ab33248e87de5ebe1b1",
+  "image_sha256": "33ccbcdaadd3a5dd302be7bee6f576df7abec47c6d9d11bafc171d517f97b3db",
+  "rgb_sha256": "753fa3f0a57895cc159abf5876f1df07e2d68eaeae7e1014f27ce1b076b95883",
+  "original": "../victory-a.png",
+  "parent_master": "../victory-identity-master/master.png",
+  "width": 320,
+  "height": 192,
+  "master_width": 480,
+  "master_height": 288,
+  "original_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "parent_master_sha256": "1a16aa18d4175bd6e02f6a80bcb24f6947a2fb52ffac7a62075899e4f7c98a2e",
+  "parent_runtime_sha256": "b03a1d2612135608bab339eb1c80f11d997c30c5dde8eefd70556d3181b61189",
+  "mask_spans_source": "game/art/selected-rd/victory-eyes-refined/request.json",
+  "mask_spans_source_sha256": "6428ab390de8a4bac9145f55b73213441697533fb76863268d313fbe423ed6bf",
+  "eye_spans_y_xmin_xmax_inclusive": [
+    [
+      [
+        110,
+        106,
+        121
+      ],
+      [
+        111,
+        105,
+        125
+      ],
+      [
+        112,
+        105,
+        127
+      ],
+      [
+        113,
+        105,
+        129
+      ],
+      [
+        114,
+        104,
+        130
+      ],
+      [
+        115,
+        104,
+        131
+      ],
+      [
+        116,
+        104,
+        131
+      ],
+      [
+        117,
+        104,
+        131
+      ],
+      [
+        118,
+        104,
+        131
+      ],
+      [
+        119,
+        104,
+        131
+      ],
+      [
+        120,
+        104,
+        131
+      ],
+      [
+        121,
+        104,
+        131
+      ],
+      [
+        122,
+        104,
+        131
+      ],
+      [
+        123,
+        104,
+        131
+      ],
+      [
+        124,
+        104,
+        131
+      ],
+      [
+        125,
+        104,
+        131
+      ],
+      [
+        126,
+        104,
+        131
+      ],
+      [
+        127,
+        104,
+        131
+      ],
+      [
+        128,
+        104,
+        131
+      ],
+      [
+        129,
+        105,
+        131
+      ],
+      [
+        130,
+        106,
+        130
+      ],
+      [
+        131,
+        107,
+        129
+      ],
+      [
+        132,
+        108,
+        128
+      ],
+      [
+        133,
+        110,
+        126
+      ],
+      [
+        134,
+        112,
+        124
+      ]
+    ],
+    [
+      [
+        110,
+        169,
+        178
+      ],
+      [
+        111,
+        166,
+        182
+      ],
+      [
+        112,
+        165,
+        185
+      ],
+      [
+        113,
+        164,
+        187
+      ],
+      [
+        114,
+        163,
+        189
+      ],
+      [
+        115,
+        163,
+        191
+      ],
+      [
+        116,
+        163,
+        191
+      ],
+      [
+        117,
+        163,
+        191
+      ],
+      [
+        118,
+        163,
+        191
+      ],
+      [
+        119,
+        163,
+        191
+      ],
+      [
+        120,
+        163,
+        191
+      ],
+      [
+        121,
+        163,
+        191
+      ],
+      [
+        122,
+        163,
+        191
+      ],
+      [
+        123,
+        163,
+        191
+      ],
+      [
+        124,
+        163,
+        191
+      ],
+      [
+        125,
+        163,
+        191
+      ],
+      [
+        126,
+        163,
+        191
+      ],
+      [
+        127,
+        163,
+        191
+      ],
+      [
+        128,
+        163,
+        191
+      ],
+      [
+        129,
+        164,
+        190
+      ],
+      [
+        130,
+        165,
+        190
+      ],
+      [
+        131,
+        166,
+        189
+      ],
+      [
+        132,
+        168,
+        188
+      ],
+      [
+        133,
+        170,
+        186
+      ],
+      [
+        134,
+        172,
+        183
+      ]
+    ]
+  ],
+  "master_mask_bounding_boxes_xyxy_inclusive": [
+    [
+      104,
+      110,
+      131,
+      134
+    ],
+    [
+      163,
+      110,
+      191,
+      134
+    ]
+  ],
+  "runtime_mask_bounding_boxes_xyxy_inclusive": [
+    [
+      69,
+      73,
+      87,
+      89
+    ],
+    [
+      109,
+      73,
+      127,
+      89
+    ]
+  ],
+  "transform": "28% vertical compression tapered to zero at outer column boundaries, nearest source pixels; same-column skin fill",
+  "column_mappings": [
+    {
+      "x": 106,
+      "source_y": [
+        110,
+        130
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        106,
+        134
+      ]
+    },
+    {
+      "x": 107,
+      "source_y": [
+        110,
+        131
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        107,
+        135
+      ]
+    },
+    {
+      "x": 108,
+      "source_y": [
+        110,
+        132
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        108,
+        136
+      ]
+    },
+    {
+      "x": 109,
+      "source_y": [
+        110,
+        132
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        109,
+        136
+      ]
+    },
+    {
+      "x": 110,
+      "source_y": [
+        110,
+        133
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        110,
+        137
+      ]
+    },
+    {
+      "x": 111,
+      "source_y": [
+        110,
+        133
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        111,
+        137
+      ]
+    },
+    {
+      "x": 112,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        112,
+        138
+      ]
+    },
+    {
+      "x": 113,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        113,
+        138
+      ]
+    },
+    {
+      "x": 114,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        114,
+        138
+      ]
+    },
+    {
+      "x": 115,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        115,
+        138
+      ]
+    },
+    {
+      "x": 116,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        116,
+        138
+      ]
+    },
+    {
+      "x": 117,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        117,
+        138
+      ]
+    },
+    {
+      "x": 118,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        118,
+        138
+      ]
+    },
+    {
+      "x": 119,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        119,
+        138
+      ]
+    },
+    {
+      "x": 120,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        120,
+        138
+      ]
+    },
+    {
+      "x": 121,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        121,
+        138
+      ]
+    },
+    {
+      "x": 105,
+      "source_y": [
+        111,
+        129
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        105,
+        133
+      ]
+    },
+    {
+      "x": 122,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        122,
+        138
+      ]
+    },
+    {
+      "x": 123,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        123,
+        138
+      ]
+    },
+    {
+      "x": 124,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        129
+      ],
+      "peach_sample_xy": [
+        124,
+        138
+      ]
+    },
+    {
+      "x": 125,
+      "source_y": [
+        111,
+        133
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        125,
+        137
+      ]
+    },
+    {
+      "x": 126,
+      "source_y": [
+        112,
+        133
+      ],
+      "target_y": [
+        113,
+        129
+      ],
+      "peach_sample_xy": [
+        126,
+        137
+      ]
+    },
+    {
+      "x": 127,
+      "source_y": [
+        112,
+        132
+      ],
+      "target_y": [
+        113,
+        129
+      ],
+      "peach_sample_xy": [
+        127,
+        136
+      ]
+    },
+    {
+      "x": 128,
+      "source_y": [
+        113,
+        132
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        128,
+        136
+      ]
+    },
+    {
+      "x": 129,
+      "source_y": [
+        113,
+        131
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        129,
+        135
+      ]
+    },
+    {
+      "x": 104,
+      "source_y": [
+        114,
+        128
+      ],
+      "target_y": [
+        114,
+        128
+      ],
+      "peach_sample_xy": [
+        104,
+        132
+      ]
+    },
+    {
+      "x": 130,
+      "source_y": [
+        114,
+        130
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        130,
+        134
+      ]
+    },
+    {
+      "x": 131,
+      "source_y": [
+        115,
+        129
+      ],
+      "target_y": [
+        115,
+        129
+      ],
+      "peach_sample_xy": [
+        131,
+        133
+      ]
+    },
+    {
+      "x": 169,
+      "source_y": [
+        110,
+        132
+      ],
+      "target_y": [
+        111,
+        127
+      ],
+      "peach_sample_xy": [
+        169,
+        136
+      ]
+    },
+    {
+      "x": 170,
+      "source_y": [
+        110,
+        133
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        170,
+        137
+      ]
+    },
+    {
+      "x": 171,
+      "source_y": [
+        110,
+        133
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        171,
+        137
+      ]
+    },
+    {
+      "x": 172,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        172,
+        138
+      ]
+    },
+    {
+      "x": 173,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        173,
+        138
+      ]
+    },
+    {
+      "x": 174,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        174,
+        138
+      ]
+    },
+    {
+      "x": 175,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        175,
+        138
+      ]
+    },
+    {
+      "x": 176,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        176,
+        138
+      ]
+    },
+    {
+      "x": 177,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        177,
+        138
+      ]
+    },
+    {
+      "x": 178,
+      "source_y": [
+        110,
+        134
+      ],
+      "target_y": [
+        111,
+        128
+      ],
+      "peach_sample_xy": [
+        178,
+        138
+      ]
+    },
+    {
+      "x": 166,
+      "source_y": [
+        111,
+        131
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        166,
+        135
+      ]
+    },
+    {
+      "x": 167,
+      "source_y": [
+        111,
+        131
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        167,
+        135
+      ]
+    },
+    {
+      "x": 168,
+      "source_y": [
+        111,
+        132
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        168,
+        136
+      ]
+    },
+    {
+      "x": 179,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        179,
+        138
+      ]
+    },
+    {
+      "x": 180,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        180,
+        138
+      ]
+    },
+    {
+      "x": 181,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        181,
+        138
+      ]
+    },
+    {
+      "x": 182,
+      "source_y": [
+        111,
+        134
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        182,
+        138
+      ]
+    },
+    {
+      "x": 165,
+      "source_y": [
+        112,
+        130
+      ],
+      "target_y": [
+        112,
+        128
+      ],
+      "peach_sample_xy": [
+        165,
+        134
+      ]
+    },
+    {
+      "x": 183,
+      "source_y": [
+        112,
+        134
+      ],
+      "target_y": [
+        113,
+        129
+      ],
+      "peach_sample_xy": [
+        183,
+        138
+      ]
+    },
+    {
+      "x": 184,
+      "source_y": [
+        112,
+        133
+      ],
+      "target_y": [
+        113,
+        128
+      ],
+      "peach_sample_xy": [
+        184,
+        137
+      ]
+    },
+    {
+      "x": 185,
+      "source_y": [
+        112,
+        133
+      ],
+      "target_y": [
+        113,
+        128
+      ],
+      "peach_sample_xy": [
+        185,
+        137
+      ]
+    },
+    {
+      "x": 164,
+      "source_y": [
+        113,
+        129
+      ],
+      "target_y": [
+        113,
+        128
+      ],
+      "peach_sample_xy": [
+        164,
+        133
+      ]
+    },
+    {
+      "x": 186,
+      "source_y": [
+        113,
+        133
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        186,
+        137
+      ]
+    },
+    {
+      "x": 187,
+      "source_y": [
+        113,
+        132
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        187,
+        136
+      ]
+    },
+    {
+      "x": 163,
+      "source_y": [
+        114,
+        128
+      ],
+      "target_y": [
+        114,
+        128
+      ],
+      "peach_sample_xy": [
+        163,
+        132
+      ]
+    },
+    {
+      "x": 188,
+      "source_y": [
+        114,
+        132
+      ],
+      "target_y": [
+        115,
+        130
+      ],
+      "peach_sample_xy": [
+        188,
+        136
+      ]
+    },
+    {
+      "x": 189,
+      "source_y": [
+        114,
+        131
+      ],
+      "target_y": [
+        114,
+        129
+      ],
+      "peach_sample_xy": [
+        189,
+        135
+      ]
+    },
+    {
+      "x": 190,
+      "source_y": [
+        115,
+        130
+      ],
+      "target_y": [
+        115,
+        129
+      ],
+      "peach_sample_xy": [
+        190,
+        134
+      ]
+    },
+    {
+      "x": 191,
+      "source_y": [
+        115,
+        128
+      ],
+      "target_y": [
+        115,
+        128
+      ],
+      "peach_sample_xy": [
+        191,
+        132
+      ]
+    }
+  ],
+  "runtime_conversion": "Unchanged pixel-center nearest sampling; no palette changes",
+  "sha256": {
+    "master.png": "02a31f5038fe4d641aa021d6dda3c6ece1dbd29d8f381ab33248e87de5ebe1b1",
+    "victory.png": "33ccbcdaadd3a5dd302be7bee6f576df7abec47c6d9d11bafc171d517f97b3db",
+    "runtimevictory.png": "33ccbcdaadd3a5dd302be7bee6f576df7abec47c6d9d11bafc171d517f97b3db",
+    "victory.rgb.hex": "ec64db23ad2038cea4ef89f06fe0d9a2ae60d360e8f2cfc9851db19caa878b9d",
+    "master-mask.png": "2f38b48aba2e5c587fa3a8af79afcd504abe66c314cef49cdd7940c15e78f832",
+    "runtime-mask.png": "b3191181f9aa5384f7b9778cf4585910ac39476f8a95916f26dce178a522032b",
+    "before-after-face-4x.png": "ca6c1c65f754afa1ffc1c2d0c9acd47cdaaf894f8e1e05acc5407e68b2791762",
+    "before-after-runtime.png": "dfcb01351db59566ed25ae6e054db32e405aedc3d5671d024adce5c83c6f08b1"
+  },
+  "helper_sha256": "b870a7f5b556377d7ad191708aba386dd2be6eabe649d5c39d36e33aed1ab53e",
+  "verification": {
+    "master": {
+      "changed_pixels": 671,
+      "mask_pixels": 1262,
+      "outside_mask_changed_pixels": 0,
+      "outside_mask_equal": true
+    },
+    "runtime": {
+      "changed_pixels": 299,
+      "mask_pixels": 564,
+      "outside_mask_changed_pixels": 0,
+      "outside_mask_equal": true
+    }
+  },
+  "palette_verification": "All output master RGB colors already occur in parent; no quantization or runtime palette files edited",
+  "outer_corner_verification": "Extreme mask columns 104,131,163,191 are byte-for-byte unchanged"
+}

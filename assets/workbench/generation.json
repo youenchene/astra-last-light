@@ -1,0 +1,40 @@
+{
+  "drawer": {
+    "provider": "Retro Diffusion",
+    "request": {
+      "prompt": "An original Amiga Workbench drawer icon shaped like a compact alien orbital hangar, open dark navy steel cargo bay with a folder-like raised back tab, silver armored ribs, cyan luminous entrance, tiny orange warning lamps, strange biomechanical science fiction architecture, broad horizontal silhouette, three quarter view, isolated single object, 1990s Amiga pixel art desktop icon, crisp chunky pixel clusters, strong dark outline, entire object visible with generous transparent margin, no lettering, no logo, no frame, no cast shadow, on a plain white background",
+      "prompt_style": "rd_pro__default",
+      "width": 64,
+      "height": 64,
+      "num_images": 1,
+      "seed": 86101,
+      "remove_bg": true
+    },
+    "request_id": "503a30c2-2b52-53e8-8a7c-6fe0fc8dfea8",
+    "quote_usd": 0.18,
+    "status": "complete",
+    "reference": "Verbal description of rd_hero16 only; no image conditioning",
+    "task_id": "9c67c806-e5ad-4b83-a428-c691f0d8950b",
+    "cost_usd": 0.18,
+    "sha256": "923f829324719119b2ac9ed2e1390cbb9871ec5c3d82f159bbdc7f954020dc03"
+  },
+  "interceptor": {
+    "provider": "Retro Diffusion",
+    "request": {
+      "prompt": "An original heroic space interceptor, strict side view flying RIGHT, long pointed silver white fuselage, luminous cyan cockpit, broad swept angular wings, dark navy underside, short vivid orange exhaust only at left, unusual elegant science fiction spaceship, broad horizontal silhouette, isolated single object, 1990s Amiga pixel art desktop icon, crisp chunky pixel clusters, strong dark outline, entire object visible with generous transparent margin, no lettering, no logo, no frame, no cast shadow, on a plain white background",
+      "prompt_style": "rd_pro__default",
+      "width": 64,
+      "height": 64,
+      "num_images": 1,
+      "seed": 86102,
+      "remove_bg": true
+    },
+    "request_id": "2d2acb1e-499e-526a-8941-cb65b8e136c6",
+    "quote_usd": 0.18,
+    "status": "complete",
+    "reference": "Verbal description of rd_hero16 only; no image conditioning",
+    "task_id": "30af1014-0a3d-4d75-8adf-a3759c51d00f",
+    "cost_usd": 0.18,
+    "sha256": "623d830627c7a5156cc819fe36309f5e54d6a757d5e94e1841f389a842cbe15f"
+  }
+}

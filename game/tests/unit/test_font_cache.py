@@ -1,0 +1,93 @@
+"""Verify compact cached rows against independent source glyphs at every scale."""
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import unittest
+
+from test_title_composition import ROOT, function
+from test_presentation_rows import source_fonts, catalog
+
+
+class FontCacheTests(unittest.TestCase):
+    def test_all_glyphs_scales_and_unaligned_write_bounds(self):
+        source = (ROOT / 'game/src/render_world.c').read_text()
+        declaration = re.search(r'static ULONG s_pGlyphMasks[^;]+;', source)[0]
+        declaration += re.search(r'static ULONG s_bossLabel[^;]+;', source)[0]
+        _, glyphs = source_fonts()
+        glyphs += [glyph['regular'] for glyph in catalog()['glyphs'].values()]
+        prelude = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include "../art/localization.h"
+#include <arpa/inet.h>
+typedef uint8_t UBYTE;
+typedef uint16_t UWORD;
+typedef uint32_t ULONG;
+typedef struct { UBYTE *Planes[4]; } tBitMap;
+static UBYTE pixels[40960];
+static tBitMap bitmap, *s_pScreen = &bitmap, *s_pFont;
+static void blitWait(void) {}
+'''
+        prelude += 'static const UBYTE glyphs[LOCALIZATION_GLYPHS][7] = {' + ','.join(
+            '{' + ','.join(map(str, row)) + '}' for row in glyphs) + '};\n'
+        prelude += r'''
+static UBYTE pixelRead(const tBitMap *b, UWORD x, UWORD y) {
+    (void)b; return (glyphs[y / 7][y % 7] >> (4 - x)) & 1;
+}
+'''
+        exercise = r'''
+int main(void) {
+    assert(sizeof(s_pGlyphMasks) == 3 * LOCALIZATION_GLYPHS * 7 * 4);
+    fontMasksCreate();
+    for(unsigned plane = 0; plane < 4; ++plane) bitmap.Planes[plane] = pixels + plane * 40;
+    /* Match 68000 big-endian longword stores on the host, then compare the
+     * complete framebuffer, including randomized exterior bits. */
+    for(unsigned row = 0; row < 7; ++row) s_bossLabel[row] = htonl(s_bossLabel[row]);
+    for(unsigned seed = 1; seed < 16; ++seed) {
+        UBYTE before[40960], expected[40960];
+        memset(pixels, seed * 17, sizeof(pixels));
+        for(unsigned y = 18; y < 25; ++y) for(unsigned x = 166; x < 312; ++x)
+            for(unsigned plane = 0; plane < 4; ++plane) {
+                UBYTE *p = &bitmap.Planes[plane][y * 160 + x / 8];
+                if(!plane) *p |= 128 >> (x & 7); else *p &= ~(128 >> (x & 7));
+            }
+        memcpy(before, pixels, sizeof(pixels));
+        assert(!strcmp(s_localizedText[LANGUAGE_EN][TEXT_BOSS], "BOSS"));
+        assert(!strcmp(s_localizedText[LANGUAGE_FR][TEXT_BOSS], "BOSS"));
+        textDraw(166, 18, s_localizedText[seed % 2][TEXT_BOSS], 1, 11);
+        memcpy(expected, pixels, sizeof(pixels));
+        memcpy(pixels, before, sizeof(pixels));
+        bossLabelDraw();
+        assert(!memcmp(pixels, expected, sizeof(pixels)));
+    }
+    for(unsigned glyph = 0; glyph < LOCALIZATION_GLYPHS; ++glyph) for(unsigned scale = 1; scale <= 4; scale *= 2) {
+      for(unsigned left = 0; left < 8; ++left) for(unsigned color = 0; color < 16; ++color) {
+        if(glyph && color != 6) continue;
+        memset(pixels, 0xa5, sizeof(pixels));
+        unsigned char code = glyph < 26 ? 'A' + glyph : '0' + glyph - 26;
+        if(glyph >= 36) for(unsigned b=1; b<256; ++b)
+            if(localizedGlyph(b) == glyph) { code=b; break; }
+        char text[2] = {(char)code, 0};
+        textDraw(left, 40, text, scale, color);
+        for(unsigned y = 0; y < 256; ++y) for(unsigned x = 0; x < 320; ++x) {
+            unsigned ink = (0xa5 & (128 >> (x & 7))) ? 15 : 0;
+            if(x >= left && x < left + 5 * scale && y >= 40 && y < 40 + 7 * scale &&
+               (glyphs[glyph][(y - 40) / scale] & (1 << (4 - (x - left) / scale)))) ink = color;
+            for(unsigned plane = 0; plane < 4; ++plane)
+                assert(!!(bitmap.Planes[plane][y * 160 + x / 8] & (128 >> (x & 7))) == !!(ink & (1 << plane)));
+        }
+      }
+    }
+}
+'''
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            (path / 'font.c').write_text(prelude + declaration + '\n' +
+                function(source, 'fontMasksCreate') + '\n' + function(source, 'textDraw') +
+                '\n' + function(source, 'bossLabelDraw') + exercise)
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+                            '-I', str(ROOT / 'game/src'),
+                            str(path / 'font.c'), '-o', str(path / 'font')], check=True)
+            subprocess.run([str(path / 'font')], check=True)

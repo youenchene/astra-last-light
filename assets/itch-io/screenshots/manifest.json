@@ -1,0 +1,52 @@
+{
+  "adf_sha256": "6ea2fca060dadb5a29b5ff7bd9c383d2ddee835f0178befbe062f0ad72263a52",
+  "profile": "a500",
+  "hardware": "OCS, 512K chip + 512K slow, 68000",
+  "source": "Existing ordinary-play A500 trailer captures and a release-validation main-menu capture; not a fresh build of the working tree. The top-level disk hash describes gameplay; the menu entry records its own disk hash.",
+  "processing": "320x256 canonical OCS RGB capture enlarged 4x with nearest-neighbor; full screen, no overlays.",
+  "screenshots": [
+    {
+      "file": "00-main-menu.png",
+      "source": ".tmp/release-native-_uoqqhq_/a500/title.screen.png",
+      "source_sha256": "ddb10f9147eb9392df6b7262eeee03fb51a51353678080ab7e4917d269e86e33",
+      "sha256": "f428bea5bf18bbc5df87255304851da3d5c3cfbeb08ae7bbf57037ef4d9ee7bc",
+      "adf_sha256": "5a1d4ae5cb691c2f1950e3b22e779104b77c5ff19987a4a883f3a334418e39dd",
+      "profile": "a500"
+    },
+    {
+      "file": "01-orbital-graveyard.png",
+      "source": ".tmp/astra-gameplay/graveyard/review-0075.png",
+      "source_sha256": "ca315bb5cc7a519eac1c5b91af7235e29090291663d31a1cd79cc75cf7c84ab5",
+      "sha256": "4b4d9ca1a7f5eb62da3ea9b4885d9693267f2b4ddcac12ff09383943a988425d",
+      "capture_frame": 75
+    },
+    {
+      "file": "02-veil-nebula.png",
+      "source": ".tmp/astra-gameplay/nebula/review-0075.png",
+      "source_sha256": "a999b91f912ea21389df72a5dd97ce343741d575cef31c7e9d5a334a45d384f6",
+      "sha256": "d08dfb0aa27063124422fb770b1f7b8d0018d3819d82de381d5d93a6f1c64a26",
+      "capture_frame": 75
+    },
+    {
+      "file": "03-imperial-foundry.png",
+      "source": ".tmp/astra-gameplay/foundry/review-0075.png",
+      "source_sha256": "713c49e377daefd2d05212a52d499d8e66776e1fa76770356f933bc14f3e6e46",
+      "sha256": "13673fb2739f88ca0f65cb45fbd572eda4e44a80e6a646fd838034c9ace766bf",
+      "capture_frame": 75
+    },
+    {
+      "file": "04-stellar-citadel.png",
+      "source": ".tmp/astra-gameplay/citadel/review-0075.png",
+      "source_sha256": "b81eea15ed32d60eae5e9674696ad43e524d35d99cb622fe96e0c4a3869f3af6",
+      "sha256": "a3e51a664906022d2222dc3791e19e3de6fecbc6460b868ba461fe010d1e08d6",
+      "capture_frame": 75
+    },
+    {
+      "file": "05-graveyard-crossfire.png",
+      "source": ".tmp/astra-gameplay/graveyard/review-0275.png",
+      "source_sha256": "cb3974ce30b48b143481ba2b4fa53263b0342dad3824c55b13ec84d4dadad883",
+      "sha256": "7c63573a41135918f37ae65683cfa4d707fe3e2f82ac78fb5baec0dc8a6d8ac2",
+      "capture_frame": 275
+    }
+  ]
+}

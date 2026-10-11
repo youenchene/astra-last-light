@@ -1,0 +1,13 @@
+ace-multiplex/
+.tmp/
+game/build/
+game/vendor/
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key

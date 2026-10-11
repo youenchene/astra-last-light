@@ -1,0 +1,38 @@
+# Full-frame evidence, no golden updates. Each hold remains the preceding image.
+wait-serial "AGK intro_released" 300
+screenshot intro_hold
+wait 16
+screenshot intro_hold_later
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK cut_visible=1 " 600
+screenshot title_first
+wait-serial "AGK title_ready" 600
+screenshot title_repaired
+press right 1
+wait 4
+screenshot title_hold
+wait 16
+screenshot title_hold_later
+wait-serial "AGK title_ready" 600
+screenshot title2
+press fire 1
+wait 4
+screenshot scene_hold
+wait 16
+screenshot scene_hold_later
+wait-serial "AGK cut_visible=3 " 800
+screenshot scene_first
+wait 16
+screenshot scene_repair
+wait-serial "AGK scene_ready" 800
+screenshot scene_ready
+wait 40
+screenshot scene_later
+wait-serial "AGK cut_visible=4 " 800
+screenshot restored_first
+wait-serial "AGK combat_ready" 800
+screenshot restored_ready
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

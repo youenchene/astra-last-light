@@ -1,0 +1,20 @@
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK combat_ready" 1000
+wait 2
+mark battle
+press fire 1
+wait 7
+press fire 120
+screenshot firing
+wait 5
+mark charged
+expect-sound battle charged
+expect-serial "AGK sfx shot"
+expect-serial "AGK sfx charge"
+expect-serial "phase=1 level=1"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

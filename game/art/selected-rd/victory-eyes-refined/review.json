@@ -1,0 +1,13 @@
+{
+  "visual_status": "rejected_candidate_pending_parent_review",
+  "integrated": false,
+  "reason": "Provider redrew and repositioned the portrait despite grayscale mask and soft_inpaint:false. Hard-mask composite preserves the parent elsewhere but inserts visibly misaligned eye content; not an acceptable eyes refinement.",
+  "provider_outside_mask_changed_pixels": 63058,
+  "submitted_jobs": 1,
+  "actual_cost_usd": 0.18,
+  "task_id": "daa217a0-f51f-5743-b788-cae0efc60a0b",
+  "crop_xywh": [0, 0, 256, 256],
+  "master_eye_mask_bounding_boxes_xyxy_inclusive": [[104, 110, 131, 134], [163, 110, 191, 134]],
+  "exact_mask_spans": "request.json:eye_spans_y_xmin_xmax_inclusive",
+  "next_step": "Parent visual review. No further paid job authorized by this phase; retain failed provider output and invariance evidence."
+}

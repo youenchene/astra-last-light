@@ -1,0 +1,27 @@
+# Both buffers must finish bounded composition after each selection.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+screenshot title1
+press right 1
+wait 400
+screenshot title2
+press right 1
+wait 400
+screenshot title3
+press right 1
+wait 400
+screenshot title4
+press right 1
+wait 400
+screenshot wrap_right
+press left 1
+wait 400
+screenshot wrap_left
+expect-serial "phase=0 level=1"
+expect-serial "phase=0 level=2"
+expect-serial "phase=0 level=3"
+expect-serial "phase=0 level=4"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

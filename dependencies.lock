@@ -1,0 +1,7 @@
+# Source revisions tested for Astra: Last Light
+amiga-game-kit https://github.com/codebase/amiga-game-kit 4d825a05a8d8dfcf8d824d70f0cb53b2f350fc7a
+ACE https://github.com/youenchene/ACE feat/multiplexed-sprites 10ca68a321989738e9ac40f895bdd9f1d8e040fe
+SuperRugbyV https://github.com/youenchene/SuperRugbyV 4a659ed550aa74c55b386cbb4884b15055136111
+# ACE additionally receives the pinned kit's patches/ace-agk.patch.
+# Local safety extension: tools/patches/ace-allocation-safety.patch
+# sha256 306d02bb187dd6ae00c953a63e4f887e6129604497d6ef6718f4035af

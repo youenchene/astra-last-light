@@ -1,0 +1,17 @@
+# Preserve original sprite RGB colors while reserving29..31 for bullets.
+0 0x001 transparent
+1 0x112 deep
+2 0x224 shadow
+3 0x346 steel
+4 0x568 lit
+5 0x89A silver
+6 0xCEF ice
+7 0xA43 copper
+8 0x214 violet_shadow
+9 0x536 violet
+10 0xA58 nebula
+11 0xFA6 gold
+12 0x521 ember
+13 0xFFF bullet_white
+14 0xF9B bullet_pink
+15 0x4BD bullet_cyan

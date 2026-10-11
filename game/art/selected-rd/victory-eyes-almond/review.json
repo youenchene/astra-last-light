@@ -1,0 +1,10 @@
+{
+  "status": "parent_approved_selected_for_ending",
+  "integrated": true,
+  "visual_verdict": "Parent approved the before-after eye crop. Vertically narrower open eyes, retained blue-grey irises and catchlights, calmer almond/oval shape without closing or squinting. No obvious mask-edge seam at inspected master or runtime scale. Existing lower outer eye shadows remain.",
+  "inspected": ["before-after-face-4x.png", "master.png", "runtimevictory.png"],
+  "source_pixels": "victory-identity-master/master.png only; rejected RD candidate pixels never used",
+  "mask_definition": "Same shaped spans as the previous candidate request, used only as geometric boundaries",
+  "paid_requests": 0,
+  "cost_usd": 0
+}

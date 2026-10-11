@@ -1,0 +1,23 @@
+# Masked BOB player shot 16x4 (8x4 bolt) in the playfield palette
+colors
+  . transparent
+  1 0x112
+  2 0x224
+  3 0x346
+  4 0x568
+  5 0x89A
+  6 0xCEF
+  7 0xFFF
+  8 0x214
+  9 0x536
+  A 0xA58
+  B 0xF9B
+  C 0x521
+  D 0xA43
+  E 0xFA6
+  F 0x4BD
+frame
+.3FFFF3.........
+F677777F........
+.F6666F.........
+..3333..........

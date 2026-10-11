@@ -1,0 +1,15 @@
+{
+  "input_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "idempotency_key": "d6a7a3e4-698e-4751-a1f2-7eb7da4f1a02",
+  "request": {
+    "prompt_style": "rd_plus__default",
+    "width": 320,
+    "height": 192,
+    "num_images": 1,
+    "seed": 861013,
+    "strength": 0.3,
+    "remove_bg": false,
+    "bypass_prompt_expansion": true,
+    "prompt": "Faithfully enlarge this exact victory scene. Preserve the same composition, purple-haired female space pilot smiling in the left foreground, white and blue space suit, small spacecraft flying across the orange dawn sky on the right, and dark mountain silhouettes. Refine edges and small details at the higher resolution while preserving her face, pose, colors and all objects. Clean crisp pixel art, no text, no added objects or border."
+  }
+}

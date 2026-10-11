@@ -1,0 +1,15 @@
+{
+  "master": {
+    "changed_pixels": 1244,
+    "editable_pixels": 1262,
+    "outside_mask_changed_pixels": 0,
+    "outside_mask_equal": true
+  },
+  "runtime": {
+    "changed_pixels": 558,
+    "editable_pixels": 564,
+    "outside_mask_changed_pixels": 0,
+    "outside_mask_equal": true
+  },
+  "provider_outside_mask_changed_pixels": 63058
+}

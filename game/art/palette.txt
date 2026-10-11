@@ -1,0 +1,17 @@
+# ASTRA midnight, ion blue, imperial violet, furnace amber
+0 0x001 void
+1 0x112 deep space
+2 0x224 shadow
+3 0x346 steel
+4 0x568 lit steel
+5 0x89A silver
+6 0xCEF ice
+7 0xFFF starlight
+8 0x214 violet shadow
+9 0x536 violet
+10 0xA58 nebula
+11 0xF9B rose
+12 0x521 ember
+13 0xA43 copper
+14 0xFA6 gold
+15 0x4BD ion

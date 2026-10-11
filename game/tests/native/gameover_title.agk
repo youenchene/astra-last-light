@@ -1,0 +1,25 @@
+# Ordinary input, production build: no injected lives, collisions or phases.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK gameover_ready" 12000
+hold right+fire
+wait 2
+screenshot gameover
+wait-serial "AGK gameover_title" 200
+wait 500
+screenshot held_title
+release
+wait 2
+press fire 1
+wait 2
+screenshot fresh_intro
+wait-serial "AGK combat_ready" 1000
+wait 2
+screenshot restarted_combat
+expect-serial "AGK gameover_ready"
+expect-serial "AGK gameover_title"
+expect-no-serial "bullet_hidden=[1-9]|ERR|STACK SMASHED|allocation failure"

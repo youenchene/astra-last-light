@@ -1,0 +1,55 @@
+# Production controls, first-target visibility, second-target gate, closing.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+key 0x19
+wait 30
+press fire 1
+wait-serial "AGK cut_visible=2 phase=6" 1000
+screenshot opening_first
+wait-serial "AGK scene_ready" 1000
+key 0x19
+wait 4
+screenshot opening_paused
+hold right+fire
+wait 60
+screenshot opening_paused_late
+mark pause_sound
+wait 60
+mark pause_sound_end
+expect-sound pause_sound pause_sound_end
+key 0x37
+wait 40
+mark pause_muted
+wait 60
+mark pause_muted_end
+expect-silence pause_muted pause_muted_end
+key 0x37
+wait 40
+key 0x19
+release right
+wait 6
+release fire
+wait 2
+screenshot opening_resumed
+wait-serial "AGK cut_visible=3 phase=1" 1000
+screenshot closing_first
+wait-serial "AGK combat_ready" 1000
+screenshot closing_ready
+hold fire
+wait 6
+key 0x19
+wait 4
+screenshot play_paused
+hold right
+# Three periodic 50-tick samples regardless of the entry heartbeat phase.
+wait 160
+screenshot play_paused_late
+release fire
+key 0x19
+release right
+wait 4
+screenshot play_resumed
+expect-no-serial "AGK sfx shot|ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

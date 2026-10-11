@@ -1,0 +1,138 @@
+name: Astra release artifacts
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Numeric version, e.g. 1.2.3
+        required: true
+        type: string
+      ref:
+        description: Source tag or commit to build
+        required: true
+        type: string
+      attach_assets:
+        description: Attach to an existing matching draft release (never publish it)
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: astra-release-${{ github.event.release.tag_name || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      tag: ${{ steps.identity.outputs.tag }}
+      commit: ${{ steps.identity.outputs.commit }}
+      attach: ${{ steps.identity.outputs.attach }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag and source identity
+        id: identity
+        run: python3 tools/release-identity.py
+      - name: Install host dependencies
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools python3-pil
+      - name: Install pinned local kit and ACE
+        env:
+          AGK_KIT: ${{ runner.temp }}/astra-agk
+        run: |
+          set -euo pipefail
+          git clone https://github.com/codebase/amiga-game-kit.git "$AGK_KIT"
+          git -C "$AGK_KIT" checkout --detach 4d825a05a8d8dfcf8d824d70f0cb53b2f350fc7a
+          bash tools/bootstrap.sh
+          mkdir -p "$AGK_KIT/third_party"
+          ln -s "$GITHUB_WORKSPACE/game/vendor/ACE" "$AGK_KIT/third_party/ACE"
+      - name: Packaging boundary tests
+        env:
+          AGK_KIT: ${{ runner.temp }}/astra-agk
+        run: python3 -m unittest discover -s game/tests/unit -p test_release_packaging.py -v
+      - name: Independent Workbench icon regression tests
+        env:
+          AGK_KIT: ${{ runner.temp }}/astra-agk
+        run: python3 -m unittest discover -s game/tests/unit -p test_workbench_icons.py -v
+      - name: Build and verify all five formats
+        env:
+          AGK_KIT: ${{ runner.temp }}/astra-agk
+          RELEASE_VERSION: ${{ steps.identity.outputs.version }}
+        run: bash tools/agk package --version "$RELEASE_VERSION" --out .tmp/ci-release
+      - name: Independently extract and verify all five release formats
+        env:
+          AGK_KIT: ${{ runner.temp }}/astra-agk
+        run: python3 tools/verify-release.py .tmp/ci-release --report .tmp/ci-release-verification.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: astra-release-${{ steps.identity.outputs.version }}
+          path: .tmp/ci-release/
+          if-no-files-found: error
+
+  attach:
+    needs: build
+    if: needs.build.outputs.attach == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: astra-release-${{ needs.build.outputs.version }}
+          path: release
+      - name: Verify identity and attach without publishing or overwriting
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess
+          def api(path):
+              return json.loads(subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GH_REPO'] + path]))
+          tag = os.environ['RELEASE_TAG']
+          assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag)
+          obj = api('/git/ref/tags/' + tag)['object']
+          for _ in range(10):
+              if obj['type'] == 'commit':
+                  break
+              assert obj['type'] == 'tag'
+              obj = api('/git/tags/' + obj['sha'])['object']
+          assert obj['type'] == 'commit' and obj['sha'] == os.environ['SOURCE_COMMIT']
+          release = api('/releases/tags/' + tag)
+          assert not release.get('immutable'), 'Immutable release: attach to a matching draft before publishing'
+          if os.environ['EVENT_NAME'] == 'workflow_dispatch':
+              assert release['draft'], 'Manual attachment requires an existing draft'
+          root = pathlib.Path('release')
+          metadata = json.loads((root / 'release.json').read_text())
+          assert metadata['source_commit'] == obj['sha'] and not metadata['source_dirty']
+          assert metadata['version'] == os.environ['RELEASE_VERSION']
+          prefix = 'Astra-' + metadata['version']
+          manifest = root / (prefix + '-SHA256SUMS')
+          expected = {prefix + s for s in ('', '.adf', '-HD.zip', '-HD.lha', '-WHD.lha')}
+          expected |= {'ReadMe.txt', 'Sources.zip', 'MPL-2.0.txt', 'IntroCredits.txt', 'release.json'}
+          checked = set()
+          for line in manifest.read_text().splitlines():
+              digest, name = line.split('  ')
+              assert name in expected and name not in checked
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest
+              checked.add(name)
+          assert checked == expected
+          assert {p.name for p in root.iterdir()} == expected | {manifest.name}
+          existing = {item['name'] for item in release['assets']}
+          assert not existing.intersection(expected | {manifest.name}), 'Refusing to overwrite existing assets'
+          subprocess.run(['gh', 'release', 'upload', tag, *[str(p) for p in sorted(root.iterdir())]], check=True)
+          PY

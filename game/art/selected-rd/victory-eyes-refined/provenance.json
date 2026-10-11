@@ -1,0 +1,306 @@
+{
+  "original_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "parent_master_sha256": "1a16aa18d4175bd6e02f6a80bcb24f6947a2fb52ffac7a62075899e4f7c98a2e",
+  "parent_runtime_sha256": "b03a1d2612135608bab339eb1c80f11d997c30c5dde8eefd70556d3181b61189",
+  "input_crop_sha256": "b9d98be945242f87ab35c1edcfd38c2d5b0e99ce890a6e5626709a265cafcacc",
+  "mask_sha256": "741092ef517da27108e5a2b730d8265afbfa90d7c184474071d9a80a8994ab3e",
+  "crop_xywh": [
+    0,
+    0,
+    256,
+    256
+  ],
+  "eye_spans_y_xmin_xmax_inclusive": [
+    [
+      [
+        110,
+        106,
+        121
+      ],
+      [
+        111,
+        105,
+        125
+      ],
+      [
+        112,
+        105,
+        127
+      ],
+      [
+        113,
+        105,
+        129
+      ],
+      [
+        114,
+        104,
+        130
+      ],
+      [
+        115,
+        104,
+        131
+      ],
+      [
+        116,
+        104,
+        131
+      ],
+      [
+        117,
+        104,
+        131
+      ],
+      [
+        118,
+        104,
+        131
+      ],
+      [
+        119,
+        104,
+        131
+      ],
+      [
+        120,
+        104,
+        131
+      ],
+      [
+        121,
+        104,
+        131
+      ],
+      [
+        122,
+        104,
+        131
+      ],
+      [
+        123,
+        104,
+        131
+      ],
+      [
+        124,
+        104,
+        131
+      ],
+      [
+        125,
+        104,
+        131
+      ],
+      [
+        126,
+        104,
+        131
+      ],
+      [
+        127,
+        104,
+        131
+      ],
+      [
+        128,
+        104,
+        131
+      ],
+      [
+        129,
+        105,
+        131
+      ],
+      [
+        130,
+        106,
+        130
+      ],
+      [
+        131,
+        107,
+        129
+      ],
+      [
+        132,
+        108,
+        128
+      ],
+      [
+        133,
+        110,
+        126
+      ],
+      [
+        134,
+        112,
+        124
+      ]
+    ],
+    [
+      [
+        110,
+        169,
+        178
+      ],
+      [
+        111,
+        166,
+        182
+      ],
+      [
+        112,
+        165,
+        185
+      ],
+      [
+        113,
+        164,
+        187
+      ],
+      [
+        114,
+        163,
+        189
+      ],
+      [
+        115,
+        163,
+        191
+      ],
+      [
+        116,
+        163,
+        191
+      ],
+      [
+        117,
+        163,
+        191
+      ],
+      [
+        118,
+        163,
+        191
+      ],
+      [
+        119,
+        163,
+        191
+      ],
+      [
+        120,
+        163,
+        191
+      ],
+      [
+        121,
+        163,
+        191
+      ],
+      [
+        122,
+        163,
+        191
+      ],
+      [
+        123,
+        163,
+        191
+      ],
+      [
+        124,
+        163,
+        191
+      ],
+      [
+        125,
+        163,
+        191
+      ],
+      [
+        126,
+        163,
+        191
+      ],
+      [
+        127,
+        163,
+        191
+      ],
+      [
+        128,
+        163,
+        191
+      ],
+      [
+        129,
+        164,
+        190
+      ],
+      [
+        130,
+        165,
+        190
+      ],
+      [
+        131,
+        166,
+        189
+      ],
+      [
+        132,
+        168,
+        188
+      ],
+      [
+        133,
+        170,
+        186
+      ],
+      [
+        134,
+        172,
+        183
+      ]
+    ]
+  ],
+  "mask_format": "8-bit grayscale PNG: 0 protected, 255 editable",
+  "parameters": {
+    "prompt": "Edit only the two masked eyes of this same adult woman space pilot. Replace the large round doll-like eyes with slightly smaller, horizontally almond-shaped adult anime eyes. Relaxed upper eyelids partially cover the smaller blue-grey irises, subtly narrower vertical eye opening, calm confident gentle expression. Natural peach skin fills the removed rounded eye edges. Keep both eyes looking forward consistently, fine crisp pixel-art outlines and small restrained catchlights. Preserve the exact existing peach skin tone, eyebrows, nose, gentle smile, rounded side-part purple bob, salute, suit and background. Only refine the eyes, no other changes.",
+    "seed": 861015,
+    "soft_inpaint": false
+  },
+  "custom_id": "734ba278-7625-4e84-ba02-06b94f6aa82f",
+  "task_id": "daa217a0-f51f-5743-b788-cae0efc60a0b",
+  "balance_cost": 0.18,
+  "charged": true,
+  "method": "RD localized inpainting; hard-mask composite over exact parent pixels",
+  "runtime_conversion": "pixel-center nearest sampling, identical to parent conversion",
+  "api_base": "https://api.retrodiffusion.ai/v2",
+  "api_docs": "https://github.com/Retro-Diffusion/api-examples/blob/main/EDIT_TOOLS.md",
+  "sha256": {
+    "provider-output-crop.png": "dffa1eb7cbdba9740be9e3d7cac155b52c99a7039a01f1023791454bf2736982",
+    "master.png": "eeb103894b80511b4a32c77ef2078004398e4f779b80105f7a243c07252a6bcc",
+    "runtimevictory.png": "4d14b55f60f23136b323ed4df831822803529f7f71c60cc744bc9294e619e00c",
+    "victory.rgb.hex": "e0f9cfe8b6c42c097836a18f2fa65155b8ad6d15492723201af0cd214bb9f00e",
+    "master-mask.png": "2f38b48aba2e5c587fa3a8af79afcd504abe66c314cef49cdd7940c15e78f832",
+    "runtime-mask.png": "b3191181f9aa5384f7b9778cf4585910ac39476f8a95916f26dce178a522032b"
+  },
+  "verification": {
+    "master": {
+      "changed_pixels": 1244,
+      "editable_pixels": 1262,
+      "outside_mask_changed_pixels": 0,
+      "outside_mask_equal": true
+    },
+    "runtime": {
+      "changed_pixels": 558,
+      "editable_pixels": 564,
+      "outside_mask_changed_pixels": 0,
+      "outside_mask_equal": true
+    },
+    "provider_outside_mask_changed_pixels": 63058
+  }
+}

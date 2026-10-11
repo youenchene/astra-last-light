@@ -1,0 +1,991 @@
+{
+  "status": "parent visually approved; phase2 integration",
+  "method": "Literal per-eye pixel assignments only; no generation, resampling or dithering",
+  "coordinates": "zero-based panel-local x,y; viewer-left/right; screen offset (144,68)",
+  "mask": "255 = declared assignment (including unchanged palette-exact pixels); 0 = immutable",
+  "cost_usd": 0,
+  "protected_sha256": {
+    "game/art/palette.txt": "b70089f39812f803317adf278350a8af499da3e1cb41540c97f0294a45b68556",
+    "game/art/selected-rd/citadel-b.png": "74b4b8916ff21bf09d4ff9a0e4a9acdf3bae872444dbfd260d256f390d16e41f",
+    "game/art/selected-rd/citadel-b.rgb.hex": "1da8e4e0ddbe6fe9b49fa4afcea6cb95cf06efe5e3d62602f63fcdbd07d47ec1",
+    "game/art/selected-rd/foundry-b.png": "76253ab50a14bfe5d6c3542bfefa7f2e9a9177c2f9414033218b63344f4e3b19",
+    "game/art/selected-rd/foundry-b.rgb.hex": "ef488fd3f5a7668b64de19f40a925eecebb2ce8b79e8bd6fa709a9dc6ed9740a",
+    "game/art/selected-rd/graveyard-b.png": "af554017ccf1570e1957b34272f9520bdc2a42c5bce27ba87ca806f134418740",
+    "game/art/selected-rd/graveyard-b.rgb.hex": "9299a2055df5c482cba47dff6640dc2ac4a25dca64bf49c368203d841d67dbf3",
+    "game/art/selected-rd/manifest.json": "d2630a56fa58712f5736630c85ac9a2176eba724a49cd4530b99370a0dca5cdd",
+    "game/art/selected-rd/nebula-b.png": "47fdc380e841ab98aced47804f15abbee0c21e1a8b8237f202a8c87b47b0887e",
+    "game/art/selected-rd/nebula-b.rgb.hex": "2668c7402f311f105b09ede642e1414d4225fde9bc719926e4d5f62cbf9e94cb",
+    "game/art/selected-rd/victory-a.png": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+    "game/art/selected-rd/victory-a.rgb.hex": "f78cde5ae95ae2be847d930c8a497bb1b3b29857939744e6961ff42db7ab140b",
+    "game/art/selected-rd/victory-detail-master/accepted.json": "ca8ec113c4e05ebd03f225daee91b2ece0fb92cea9444173ac0ef55bc9ec784c",
+    "game/art/selected-rd/victory-detail-master/master.png": "5d01d3535eb69cc5f9864d46e8a0dc751942408bfc87a8912b4f76fdb599c6d8",
+    "game/art/selected-rd/victory-detail-master/provenance.json": "d888a301291ad098b42f45119e1846c4787643103f5cb554cdaa639fda42492b",
+    "game/art/selected-rd/victory-detail-master/quote.json": "ee36f8040721ccaa8d624941728e6eaa57737bdae91a3452c778990b02f41fdd",
+    "game/art/selected-rd/victory-detail-master/request.json": "148109be9734f269e9fbf1be01e9b9b0fa024b95fbd7b3ed5464bb79892d1ae2",
+    "game/art/selected-rd/victory-detail-master/victory.png": "6ef67d6816a6a7ae30daa0c770e9ca9a93a4fe065b44641da5e665d00e5c081f",
+    "game/art/selected-rd/victory-detail-master/victory.rgb.hex": "b5f3b948f3b4e64c1c5b9e6963aa3a2ee0c426d9b01672ceeb899dd44542310f",
+    "game/art/selected-rd/victory-detail-native/accepted.json": "aaa4bd834639babfc2d3123bf000e5f46a4b29fb068f5092959bd94b22d8d9f3",
+    "game/art/selected-rd/victory-detail-native/master.png": "4b6d36c5fcc575c67b83bf219e31af40bb8a447ee0347b8513fdb9bd28a8fcb2",
+    "game/art/selected-rd/victory-detail-native/provenance.json": "c1ed918d161cd9b342a80bae5c0d699b3cd29dbd9f23c5439837ccdd52933758",
+    "game/art/selected-rd/victory-detail-native/quote.json": "ee36f8040721ccaa8d624941728e6eaa57737bdae91a3452c778990b02f41fdd",
+    "game/art/selected-rd/victory-detail-native/request.json": "0d659a0bcec64439d4d1e07a67c12412708134a51f144796202a19314c982144",
+    "game/art/selected-rd/victory-detail-native/victory.png": "2e546eb4a33c1ad6a2c47d20b4246b0452ab47ea380039562bf26a25124d5ab2",
+    "game/art/selected-rd/victory-detail-native/victory.rgb.hex": "76f4bec130af07ae13d6d27b1617d72e3fc935b8545920c73de2c33b002603ff",
+    "game/art/selected-rd/victory-eyes-almond/after-face-4x.png": "3c2df043f4c3bb8390bf9a071c9439b0c521f7bcbf3339daaf90604e3e1ae4ee",
+    "game/art/selected-rd/victory-eyes-almond/before-after-face-4x.png": "ca6c1c65f754afa1ffc1c2d0c9acd47cdaaf894f8e1e05acc5407e68b2791762",
+    "game/art/selected-rd/victory-eyes-almond/before-after-runtime.png": "dfcb01351db59566ed25ae6e054db32e405aedc3d5671d024adce5c83c6f08b1",
+    "game/art/selected-rd/victory-eyes-almond/before-face-4x.png": "8cef308d5d78236ea0dbceee20024ac287f5d556c39d61a15303938ac14f132a",
+    "game/art/selected-rd/victory-eyes-almond/mask-face-4x.png": "993e7030818bb6d85401eebd8365c67debd974cb1442d59a06a4c2399b9402e5",
+    "game/art/selected-rd/victory-eyes-almond/master-mask.png": "2f38b48aba2e5c587fa3a8af79afcd504abe66c314cef49cdd7940c15e78f832",
+    "game/art/selected-rd/victory-eyes-almond/master.png": "02a31f5038fe4d641aa021d6dda3c6ece1dbd29d8f381ab33248e87de5ebe1b1",
+    "game/art/selected-rd/victory-eyes-almond/provenance.json": "3d3f08d62081a59d68a42f26165346a0dfd64c257eb2aac17b31ca6be8d22b18",
+    "game/art/selected-rd/victory-eyes-almond/review.json": "69759acdc701b01372b9ca5dd4b3ed7b099a6c318ebecccbc9740732a617cea1",
+    "game/art/selected-rd/victory-eyes-almond/runtime-mask.png": "b3191181f9aa5384f7b9778cf4585910ac39476f8a95916f26dce178a522032b",
+    "game/art/selected-rd/victory-eyes-almond/runtimevictory.png": "33ccbcdaadd3a5dd302be7bee6f576df7abec47c6d9d11bafc171d517f97b3db",
+    "game/art/selected-rd/victory-eyes-almond/victory.png": "33ccbcdaadd3a5dd302be7bee6f576df7abec47c6d9d11bafc171d517f97b3db",
+    "game/art/selected-rd/victory-eyes-almond/victory.rgb.hex": "ec64db23ad2038cea4ef89f06fe0d9a2ae60d360e8f2cfc9851db19caa878b9d",
+    "game/art/selected-rd/victory-eyes-refined/accepted.json": "6df35fb8c240f10710779b7cf79d4f0599620181da0867fad7835c8a3dca300f",
+    "game/art/selected-rd/victory-eyes-refined/after-face-4x.png": "89619a0ee397beb9fd7bb5acf88e5da85d5738586fc1373690b5d5a10008836e",
+    "game/art/selected-rd/victory-eyes-refined/before-after-face-4x.png": "130d9395a7b057dd4ceec5a6a2bc356c503190a276fe4fa39d7fad7729d66af4",
+    "game/art/selected-rd/victory-eyes-refined/before-face-4x.png": "8cef308d5d78236ea0dbceee20024ac287f5d556c39d61a15303938ac14f132a",
+    "game/art/selected-rd/victory-eyes-refined/catalog.json": "7143232e8fc3e2c863873b9ad8895054b90fdda16c26f75a0d8c2eecb3fe56c4",
+    "game/art/selected-rd/victory-eyes-refined/export-verification.json": "6bd3b7c4f4ece3bd5d692e30cbf4a7d2478fb6d361d8deb12d20d5eafaa91b7d",
+    "game/art/selected-rd/victory-eyes-refined/input-crop.png": "b9d98be945242f87ab35c1edcfd38c2d5b0e99ce890a6e5626709a265cafcacc",
+    "game/art/selected-rd/victory-eyes-refined/mask-overlay-face-4x.png": "993e7030818bb6d85401eebd8365c67debd974cb1442d59a06a4c2399b9402e5",
+    "game/art/selected-rd/victory-eyes-refined/mask-overlay.png": "40fa1ca31c2f6926162c24d621f56442626bf95e1332a2ffe9b05f63f127f4f5",
+    "game/art/selected-rd/victory-eyes-refined/mask.png": "741092ef517da27108e5a2b730d8265afbfa90d7c184474071d9a80a8994ab3e",
+    "game/art/selected-rd/victory-eyes-refined/master-mask.png": "2f38b48aba2e5c587fa3a8af79afcd504abe66c314cef49cdd7940c15e78f832",
+    "game/art/selected-rd/victory-eyes-refined/master.png": "eeb103894b80511b4a32c77ef2078004398e4f779b80105f7a243c07252a6bcc",
+    "game/art/selected-rd/victory-eyes-refined/provenance.json": "10d2ff972ff05cf7abc5976f8164b07d47719e09486451e6a006ce96a59be595",
+    "game/art/selected-rd/victory-eyes-refined/provider-output-crop.png": "dffa1eb7cbdba9740be9e3d7cac155b52c99a7039a01f1023791454bf2736982",
+    "game/art/selected-rd/victory-eyes-refined/quote.json": "18ef9456bde103910b85a432c38a042098b8cb70d607dd9934cf0b1b78c96884",
+    "game/art/selected-rd/victory-eyes-refined/request.json": "6428ab390de8a4bac9145f55b73213441697533fb76863268d313fbe423ed6bf",
+    "game/art/selected-rd/victory-eyes-refined/review.json": "1c9eef5f41bba1c5979a56cc220ef81b8611ca8bfb28c91c075b3c5c90414e89",
+    "game/art/selected-rd/victory-eyes-refined/runtime-mask.png": "b3191181f9aa5384f7b9778cf4585910ac39476f8a95916f26dce178a522032b",
+    "game/art/selected-rd/victory-eyes-refined/runtimevictory.png": "4d14b55f60f23136b323ed4df831822803529f7f71c60cc744bc9294e619e00c",
+    "game/art/selected-rd/victory-eyes-refined/submission.json": "204007ece7930117f9476b98f42d0848f2b13c06175a59287734fb963c034e59",
+    "game/art/selected-rd/victory-eyes-refined/task.json": "ea920a32b798e3962c0a6ce90bdd7d64675517746e36d724daacfe9d6ca04bce",
+    "game/art/selected-rd/victory-eyes-refined/verification.json": "eee22de06018304ecf0d6c9e2920cdd296d2396017c5817d8f722103d9954724",
+    "game/art/selected-rd/victory-eyes-refined/victory.rgb.hex": "e0f9cfe8b6c42c097836a18f2fa65155b8ad6d15492723201af0cd214bb9f00e",
+    "game/art/selected-rd/victory-identity-master/accepted.json": "5867148917e43072d4134e88e076c3f0fb26b1ef6c2934e64bc4d960b1731eb8",
+    "game/art/selected-rd/victory-identity-master/master.png": "1a16aa18d4175bd6e02f6a80bcb24f6947a2fb52ffac7a62075899e4f7c98a2e",
+    "game/art/selected-rd/victory-identity-master/provenance.json": "0baf393ba29431905599b2962899dd7e6160aff7ad25f221279694db3927a47a",
+    "game/art/selected-rd/victory-identity-master/quote.json": "ee36f8040721ccaa8d624941728e6eaa57737bdae91a3452c778990b02f41fdd",
+    "game/art/selected-rd/victory-identity-master/request.json": "6a83605953b51d7eeac6995193efd45718fa93bdbc5b9d2076a161d1090b47ce",
+    "game/art/selected-rd/victory-identity-master/victory.png": "b03a1d2612135608bab339eb1c80f11d997c30c5dde8eefd70556d3181b61189",
+    "game/art/selected-rd/victory-identity-master/victory.rgb.hex": "1644737876655bc87045179263c72d4160d227248113387cfc2975066d007583",
+    "game/art/selected-rd/victory-upscaled/accepted.json": "2cb2ba8987288ecee5fc4823b3057044cbb0636ad1d15df44a851d1d3508bd73",
+    "game/art/selected-rd/victory-upscaled/provenance.json": "407f3527c6dff5dfb7e485d2776798f179c7e794d2aabe2054c1c3b7b8980948",
+    "game/art/selected-rd/victory-upscaled/quote.json": "ee36f8040721ccaa8d624941728e6eaa57737bdae91a3452c778990b02f41fdd",
+    "game/art/selected-rd/victory-upscaled/request.json": "b97e4386a13ca812a48885ca9d32fbcacfe3545425cae6fca0b0dc74b8ddb931",
+    "game/art/selected-rd/victory-upscaled/victory.png": "a8cec09862ee8b10bfbd6fb784f0e6aa80e2ec88b9bd4b3fc91542618449ecc8",
+    "game/art/selected-rd/victory-upscaled/victory.rgb.hex": "33f115b83f7095a1b1f31c3bc3b2406bc4c5df82823f3b3393dc487060bc99ca"
+  },
+  "panels": [
+    {
+      "name": "graveyard-b",
+      "width": 160,
+      "height": 96,
+      "eyes": [
+        {
+          "side": "viewer-left",
+          "pixels": [
+            {
+              "x": 23,
+              "y": 53,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 24,
+              "y": 53,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 24,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 23,
+              "y": 54,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 23,
+              "y": 52,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "side": "viewer-right",
+          "pixels": [
+            {
+              "x": 36,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 35,
+              "y": 54,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 35,
+              "y": 53,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "original_sha256": "af554017ccf1570e1957b34272f9520bdc2a42c5bce27ba87ca806f134418740",
+      "output_sha256": "3da1bc665c1fac79c9e61402e25431f6c985b6890a8eba5c4c130f594dbb587b",
+      "rgb_sha256": "ddba4d8989b2cbb189f231325513109df7f44fb44951f17beee5fda70dd975cd",
+      "changed_pixels": 4,
+      "displayed_changed_pixels": 4,
+      "changed_coordinates": [
+        [
+          23,
+          52
+        ],
+        [
+          35,
+          53
+        ],
+        [
+          23,
+          54
+        ],
+        [
+          35,
+          54
+        ]
+      ],
+      "outside_mask_changes": 0
+    },
+    {
+      "name": "nebula-b",
+      "width": 160,
+      "height": 96,
+      "eyes": [
+        {
+          "side": "viewer-left",
+          "pixels": [
+            {
+              "x": 25,
+              "y": 24,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 25,
+              "y": 25,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 27,
+              "y": 25,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 26,
+              "y": 25,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 26,
+              "y": 24,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                85,
+                102,
+                136
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "side": "viewer-right",
+          "pixels": [
+            {
+              "x": 39,
+              "y": 24,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 39,
+              "y": 25,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 38,
+              "y": 26,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 38,
+              "y": 25,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 38,
+              "y": 24,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "original_sha256": "47fdc380e841ab98aced47804f15abbee0c21e1a8b8237f202a8c87b47b0887e",
+      "output_sha256": "9cfd16b4520cbfb672fe72d908a9eb0de00c65b22ff041f0d04a3a6f88b3d360",
+      "rgb_sha256": "30ade77cd614ae3e5532b028d8ed52a07ac80b8d14a29a8b5d01a963bb72e3e1",
+      "changed_pixels": 5,
+      "displayed_changed_pixels": 5,
+      "changed_coordinates": [
+        [
+          26,
+          24
+        ],
+        [
+          38,
+          24
+        ],
+        [
+          26,
+          25
+        ],
+        [
+          38,
+          25
+        ],
+        [
+          39,
+          25
+        ]
+      ],
+      "outside_mask_changes": 0
+    },
+    {
+      "name": "foundry-b",
+      "width": 160,
+      "height": 96,
+      "eyes": [
+        {
+          "side": "viewer-left",
+          "pixels": [
+            {
+              "x": 25,
+              "y": 55,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 26,
+              "y": 56,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 26,
+              "y": 57,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 25,
+              "y": 57,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                136,
+                153,
+                170
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 25,
+              "y": 56,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 26,
+              "y": 55,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "side": "viewer-right",
+          "pixels": [
+            {
+              "x": 39,
+              "y": 56,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 39,
+              "y": 57,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                0,
+                0,
+                17
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 38,
+              "y": 57,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 38,
+              "y": 56,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 38,
+              "y": 55,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                68,
+                187,
+                221
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "original_sha256": "76253ab50a14bfe5d6c3542bfefa7f2e9a9177c2f9414033218b63344f4e3b19",
+      "output_sha256": "6f52fd4a3f4960c8af523695ac68e4d75cb107b276363475c08b49d9f10e0716",
+      "rgb_sha256": "25372b3087d96703d1e79cf775bab0348cb14599e58f15507fed134243cbc0cc",
+      "changed_pixels": 7,
+      "displayed_changed_pixels": 7,
+      "changed_coordinates": [
+        [
+          26,
+          55
+        ],
+        [
+          38,
+          55
+        ],
+        [
+          25,
+          56
+        ],
+        [
+          26,
+          56
+        ],
+        [
+          38,
+          56
+        ],
+        [
+          25,
+          57
+        ],
+        [
+          39,
+          57
+        ]
+      ],
+      "outside_mask_changes": 0
+    },
+    {
+      "name": "citadel-b",
+      "width": 160,
+      "height": 96,
+      "eyes": [
+        {
+          "side": "viewer-left",
+          "pixels": [
+            {
+              "x": 29,
+              "y": 53,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 29,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 30,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 31,
+              "y": 53,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 32,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                0,
+                0,
+                17
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 31,
+              "y": 54,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 30,
+              "y": 53,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        },
+        {
+          "side": "viewer-right",
+          "pixels": [
+            {
+              "x": 46,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                0,
+                0,
+                17
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 48,
+              "y": 54,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 48,
+              "y": 55,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                204,
+                238,
+                255
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 46,
+              "y": 55,
+              "role": "blue",
+              "ink": 15,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                68,
+                187,
+                221
+              ]
+            },
+            {
+              "x": 47,
+              "y": 55,
+              "role": "pupil",
+              "ink": 1,
+              "before": [
+                0,
+                0,
+                17
+              ],
+              "after": [
+                17,
+                17,
+                34
+              ]
+            },
+            {
+              "x": 47,
+              "y": 54,
+              "role": "glint",
+              "ink": 7,
+              "before": [
+                17,
+                17,
+                34
+              ],
+              "after": [
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "original_sha256": "74b4b8916ff21bf09d4ff9a0e4a9acdf3bae872444dbfd260d256f390d16e41f",
+      "output_sha256": "e9d32c6826d905f9a3975e16642cd847db3b214cbef84a9ca4a397d54e5c13bc",
+      "rgb_sha256": "c4e3056600d884e8184184e9dee1313f3596a2e66a448eddf08178cea76feccf",
+      "changed_pixels": 12,
+      "displayed_changed_pixels": 12,
+      "changed_coordinates": [
+        [
+          29,
+          53
+        ],
+        [
+          30,
+          53
+        ],
+        [
+          31,
+          53
+        ],
+        [
+          29,
+          54
+        ],
+        [
+          30,
+          54
+        ],
+        [
+          32,
+          54
+        ],
+        [
+          46,
+          54
+        ],
+        [
+          47,
+          54
+        ],
+        [
+          48,
+          54
+        ],
+        [
+          46,
+          55
+        ],
+        [
+          47,
+          55
+        ],
+        [
+          48,
+          55
+        ]
+      ],
+      "outside_mask_changes": 0
+    }
+  ],
+  "script_sha256": "cc523aa7afbb2c4481b209cea762639d671deaf6e0488de1d158cae3717677e1",
+  "output_files_sha256": {
+    "graveyard-b.png": "3da1bc665c1fac79c9e61402e25431f6c985b6890a8eba5c4c130f594dbb587b",
+    "graveyard-b.rgb.hex": "3cfb493509829d6a1147bfdd680c96afbf526b1cf37a331a5562d3619c4afee3",
+    "graveyard-b.mask.png": "2356b9702e532cb747b3fd5b3ef64ad520603f716de919881d679ced3e23865b",
+    "graveyard-b.displayed.png": "90d2ab8ecd8314a29f8b1552ce4eca53fbe1f2ea62cab2f71ff1803efb3695a2",
+    "nebula-b.png": "9cfd16b4520cbfb672fe72d908a9eb0de00c65b22ff041f0d04a3a6f88b3d360",
+    "nebula-b.rgb.hex": "cbac51e097440f6a551f9800b357185ec533626ea928818ab9a8b9dafc227fea",
+    "nebula-b.mask.png": "3e4ea335abc956578d431de54357a62c3d010961df796681bd410c83ebd7e36a",
+    "nebula-b.displayed.png": "304b5791b63865f257728f1b5e31e2a96fd84b04b048f68923bd4456f78f0dcc",
+    "foundry-b.png": "6f52fd4a3f4960c8af523695ac68e4d75cb107b276363475c08b49d9f10e0716",
+    "foundry-b.rgb.hex": "c6f7db12648733ba1a15ea47541ffab5f0b0039942b421047245088ac7b61c99",
+    "foundry-b.mask.png": "5120c10023a544c8868fa60997badc64c2413031d3e225e26d7ed04e9ca432b7",
+    "foundry-b.displayed.png": "dbdbfbca5594bab4a7c9f84973448a2d265b6d182e6613ef817989d8c4c7c3ea",
+    "citadel-b.png": "e9d32c6826d905f9a3975e16642cd847db3b214cbef84a9ca4a397d54e5c13bc",
+    "citadel-b.rgb.hex": "5301ac8e81f5b4e9572a46f2e24e37aa7b91f7a48930b6ed7b77ad0f2698a922",
+    "citadel-b.mask.png": "44b70f31dbc90bd683ca2e295607151d14c53f0177e553d48a82eae73c0b7e4d",
+    "citadel-b.displayed.png": "888fe95f0f8ff0cffff5b79472b9cd2069e0f8d96cda7928bebdd47c606966fe",
+    "eyes-before-after.png": "effcddcd3a444112ced17c0f285722eb84aeb9df075b8b806c21b7d8bd0e37c9",
+    "panels-native-before-after.png": "436b6a2f3aeb576c0d104279c2990abc744e1baea17713bd30e710abc720b81c"
+  }
+}

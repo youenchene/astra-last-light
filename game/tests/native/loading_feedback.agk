@@ -1,0 +1,56 @@
+# Production path: retained outgoing frames AND first-complete incoming frames
+# must explain why input is blocked. No injected campaign state or golden updates.
+wait 5
+press fire 40
+wait-serial "AGK intro_released" 600
+wait 10
+screenshot language_loading_old
+wait 55
+screenshot language_loading_new
+wait-serial "AGK language_ready" 600
+wait 2
+screenshot language_default
+expect-serial "AGK language=1"
+press fire 40
+screenshot language_release
+wait 10
+screenshot title_loading_old
+wait-serial "AGK cut_visible=1 " 600
+screenshot title_loading_new
+wait-serial "AGK title_ready" 600
+wait 2
+screenshot title_ready
+press fire 1
+wait 10
+screenshot opening_loading_old
+wait-serial "AGK cut_visible=2 " 800
+screenshot opening_loading_new
+wait-serial "AGK scene_ready" 800
+wait 2
+screenshot opening_ready
+wait 150
+screenshot opening_closing
+wait-serial "AGK combat_ready" 800
+wait 2
+screenshot combat_ready
+key 0x45
+wait-serial "AGK title_ready" 600
+key 0x58
+wait 10
+screenshot ending_loading_old
+wait-serial "AGK scene_ready" 1000
+wait 2
+screenshot ending_wait
+wait 30
+screenshot ending_continue
+press fire 1
+wait 10
+screenshot ending_loading_exit
+wait-serial "AGK scene_ready" 1000
+wait 2
+screenshot restart_ready
+expect-serial "AGK ui_status=1"
+expect-serial "AGK ui_status=2"
+expect-serial "AGK ui_status=3"
+expect-serial "AGK ui_status=4"
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

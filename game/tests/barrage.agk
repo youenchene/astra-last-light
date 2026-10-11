@@ -1,0 +1,21 @@
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK combat_ready" 1000
+press fire 1
+wait 7
+press fire 92
+screenshot first_fan
+press fire 50
+screenshot individual_bullets
+# Larger, spaced chevrons: every admitted on-screen bullet must be visible.
+expect-serial "hostile_bullets=([7-9]|[12][0-9]|3[0-2]) "
+expect-serial "bullet6=[1-9]"
+expect-serial "bullet7=[1-9]"
+expect-serial "bullet_hidden=0"
+expect-no-serial "bullet_hidden=[1-9]"
+expect-serial "shot_bobs=[1-9]"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

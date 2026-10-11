@@ -1,0 +1,19 @@
+# Ordinary input: one-tick hold, normal release, then idle until retirement.
+wait-serial "AGK language_ready" 600
+press right 1
+wait 24
+press fire 1
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK combat_ready" 1000
+wait 8
+press fire 1
+wait 3
+screenshot normal_release
+expect-serial "AGK sfx shot"
+expect-serial "shot_bobs=1"
+wait 100
+screenshot idle_after_tap
+expect-serial "shot_bobs=0 .*stage=[5-9][0-9]"
+expect-no-serial "AGK sfx charge|AGK sfx lance|shot_bobs=[2-9]"
+expect-no-serial "ERR|STACK SMASHED|allocation failure"

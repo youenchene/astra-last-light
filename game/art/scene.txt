@@ -1,0 +1,84 @@
+# Distant vistas: ringworld, nebula, foundry, citadel (16 x 16).
+colors
+  . transparent
+  b 0x224
+  c 0x346
+  d 0x568
+  e 0x89A
+  f 0xCEF
+  v 0x214
+  w 0x536
+  x 0xA58
+  y 0xF9B
+  r 0x521
+  s 0xA43
+  t 0xFA6
+  i 0x4BD
+frame
+................
+......cccc......
+....ccddddcb....
+...cdeeedccbb...
+..cdeffeddccbb..
+..cdeeeeddccbb..
+.cddddddccccbbb.
+eeeeeeeeeeeeeeee
+fffddddddddddfff
+cccccccccccccccc
+.ccddddcccbbbbb.
+..ccddcccbbbbb..
+..cccccccbbbbb..
+...cccccbbbbb...
+....cccbbbbb....
+......bbbb......
+frame
+............vv..
+...vv......vwwv.
+..vwwv....vwxwv.
+.vwxwv...vwxywv.
+vwxxywv.vwxyxwv.
+vwxxyxwvwxxywv..
+vwxxyyxxxyyxwv..
+.vwxyyyyyyxwv...
+..vwxyyyyxxwv...
+...vwxyyxxwv....
+....vwxxxwv.....
+.....vwxwv......
+......vwwv......
+.......vv.......
+................
+................
+frame
+..bb........bb..
+..cc........cc..
+.cddc......cddc.
+.cssc......cssc.
+.cssc......cssc.
+ccssccccccccsscc
+ddttddddddddttdd
+cccccccccccccccc
+brssrbbrssrbbrss
+brttrbbrttrbbrtt
+brttrbbrttrbbrtt
+brssrbbrssrbbrss
+cccccccccccccccc
+bbccbbbbccbbbbcc
+..cc....cc....cc
+..bb....bb....bb
+frame
+.......ee.......
+......effe......
+......diid......
+.....cdiidc.....
+..d..cdiidc..d..
+.ded.cdiidc.ded.
+.didccdiidccdid.
+.didcddiiddcdid.
+.didcddiiddcdid.
+cciicddiiddciicc
+cciicddiiddciicc
+cdiicddiiddciidc
+cdiicddiiddciidc
+ddiicddiiddciidd
+cccccccccccccccc
+bbbbbbbbbbbbbbbb

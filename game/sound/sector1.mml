@@ -1,0 +1,40 @@
+; Original: Graveyard Relay. 16 bars, E minor; late Dorian glimmer.
+; Looped mathematical waves and one synthesized kick; no WAV bank.
+#title Graveyard Relay
+#tempo 96
+#grid 4
+#inst veil triangle vol=26
+#inst glass pulse12 vol=22 decay=2
+#inst bass triangle vol=42 decay=1
+#inst kick kick vol=34
+
+; A: beacon fifth, falling third, unresolved second; silence between calls.
+A @veil o3 q6 v15 e2 b4 g4 | f+2 r2
+A e2 g4 b4 | a2 r4 g4
+A g2 d4 b4 | a2 g4 r4
+A f+2 a4 e4 | d+2 r2
+A e4 b4 g4 f+4 | e2 r4 c+4
+A e2 g4 b4 | a4 g4 e2
+A g2 b4 a4 | g4 e4 d4 r4
+A f+4 a4 g4 e4 | d+2 r2
+
+; B: broken triads leave offbeat holes; C-natural becomes C-sharp in bar 10.
+B @glass o4 q4 v15 [e8 b8 g8 r8 f+8 b8 g8 r8]2
+B [c8 g8 e8 r8 d8 g8 e8 r8]2
+B [o3 g8 o4 d8 b8 r8 a8 d8 b8 r8]2
+B [o4 d8 a8 f+8 r8 e8 a8 f+8 r8]2
+B e8 g8 b8 r8 f+8 g8 b8 r8 | e8 g8 c+8 r8 b8 g8 f+8 r8
+B c8 e8 g8 r8 b8 g8 e8 r8 | c8 e8 a8 r8 g8 e8 d8 r8
+B o3 g8 o4 b8 d8 r8 e8 d8 b8 r8 | g8 e8 d8 r8 b8 g8 e8 r8
+B f+8 a8 b8 r8 a8 f+8 d+8 r8 | f+4 r4 r2
+
+; C: bass and kick share the same physical voice.
+C q6 v15 [@kick o4 c8 @bass o2 e4. @kick o4 c8 @bass o2 b4.
+C @kick o4 c8 @bass o2 e4. @kick o4 c8 @bass o2 e4.
+C @kick o4 c8 @bass o2 c4. @kick o4 c8 @bass o2 g4.
+C @kick o4 c8 @bass o2 c4. @kick o4 c8 @bass o2 c4.
+C @kick o4 c8 @bass o1 g4. @kick o4 c8 @bass o2 d4.
+C @kick o4 c8 @bass o1 g4. @kick o4 c8 @bass o2 g4.
+C @kick o4 c8 @bass o1 b4. @kick o4 c8 @bass o2 f+4.
+C @bass o1 b4 r4 r2]2
+D [r1]16

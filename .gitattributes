@@ -1,0 +1,2 @@
+# Unified-diff context prefixes are data; preserve exact reproducible patch bytes.
+tools/patches/*.patch -text -whitespace

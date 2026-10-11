@@ -1,0 +1,9 @@
+Parent nearest-base ink grid (hex index); x=19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44
+60: E E E E E E E E E E E E E E 5 E E E E E E 5 0 1 9 9
+61: E E E E 3 4 5 E E E E E E E E A E E D 5 5 5 0 0 9 9
+62: E E E 3 2 2 5 E E E E E E E E 3 D E E 4 4 3 0 0 9 9
+63: E E 3 3 3 3 E E E E E E E D D 1 E E E E 4 0 2 2 1 A
+64: E E 4 3 3 E E E E E E E E A A E E E E E 5 0 2 2 0 9
+65: 5 E E 3 E 4 E E E E E E E E E E E E E E 3 2 8 8 0 0
+66: A 5 E E 3 E 5 E E E E E E E E E E E E E 0 8 8 8 0 0
+67: 0 A E E E E E E E E 5 C C 9 9 E E E E D 0 8 8 0 0 0

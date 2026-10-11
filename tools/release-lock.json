@@ -1,0 +1,10 @@
+{
+  "toolchain_image": "amigadev/crosstools@sha256:7112caa8dee94f2a5fb0e3fd0b37a33389b986275168ec830176f86702db226b",
+  "platform": "linux/amd64",
+  "agk_commit": "4d825a05a8d8dfcf8d824d70f0cb53b2f350fc7a",
+  "ace_commit": "10ca68a321989738e9ac40f895bdd9f1d8e040fe",
+  "sdk_url": "https://www.whdload.de/whdload/WHDLoad_dev.lha",
+  "sdk_sha256": "f177636d615345fddeeec2df7b6b588d1f8d154925e2e1af12d68d31f894c0ce",
+  "sdk_version": "20.0 (27.03.2026)",
+  "sdk_review": "Fresh official download and History.txt, kick.readme, kick13.s, kickfs.s reviewed 2026-10-11; not the 20.1 beta. vasm 2.0f is supplied by the digest-pinned toolchain."
+}

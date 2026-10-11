@@ -1,0 +1,15 @@
+{
+  "input_sha256": "35db36fca78bd8ff308dc8250b82ea2658bb28e55071110931a9f6cb9662b7f5",
+  "idempotency_key": "25043db3-9cf3-4de9-b753-76018cc6652d",
+  "request": {
+    "prompt_style": "rd_plus__environment",
+    "width": 480,
+    "height": 288,
+    "num_images": 1,
+    "seed": 861013,
+    "strength": 0.55,
+    "remove_bg": false,
+    "bypass_prompt_expansion": true,
+    "prompt": "Faithful high-definition redraw of this exact reference illustration. The adult female space pilot must look like the SAME woman as the reference: a short smooth rounded purple bob ending at the jaw, an off-center side part and long diagonal side-swept fringe crossing her forehead. Preserve the asymmetric sweep and clean rounded bob silhouette exactly; do not give her straight chopped bangs, spiky hair, shaggy nape strands, a pixie cut or a younger face. Restore the reference natural peach and warm rosy skin tone, with subtle rose cheek shading, softly defined nose, blue-grey eyes and her gentle confident smile. Skin is lit neutrally: no yellow cast, no golden yellow skin, no bright pink or magenta face. The orange sunset belongs to the sky, not the skin. Preserve the same salute, white and blue armored pilot suit, left foreground portrait, small white fighter squadron in the right sky and dark distant mountain horizon. Add fine individual hair strands inside the original haircut, precise eye details, glove joints, suit seams and small spacecraft details at the new resolution. Elegant high-definition pixel art with thin outlines and small pixel clusters, keeping the original character design and composition. No text, logos, frame or border."
+  }
+}

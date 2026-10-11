@@ -1,0 +1,39 @@
+; Original: Parallax Veil. 16 bars, C-sharp minor with Phrygian D-natural.
+#title Parallax Veil
+#tempo 88
+#grid 4
+#inst mist sine vol=29
+#inst prism triangle vol=25 decay=1
+#inst bass triangle vol=40
+#inst kick kick vol=30
+
+; A: long suspended gestures, then chromatic falling answers.
+A @mist o4 q7 v15 c+2. g+4 | e2 d2
+A c+1 | r2 e4 b4
+A g+2. f+4 | e2 b2
+A d+2 a4 g+4 | f+2 r2
+A c+2 g+2 | e4 d4 c+2
+A e2 b2 | a2 g+4 r4
+A g+2 b4 f+4 | e2 d4 c+4
+A d+2 f+4 a4 | g+2 r2
+
+; B: half-time glass replies; asymmetrical 3+3+2 eighth-note grouping.
+B @prism o3 q5 v15 r2 g+4 b4 | e4. g+4. d4
+B r2 a4 o4 c+4 | o3 e4. a4. b4
+B r2 b4 o4 e4 | o3 g+4. b4. f+4
+B r2 f+4 a4 | d+4. f+4. g+4
+B c+4. g+4. e4 | d4 r4 c+4 g+4
+B a4. o4 c+4. o3 e4 | b4 r4 a4 e4
+B e4. b4. g+4 | f+4 r4 e4 b4
+B d+4. a4. f+4 | g+4 r4 r2
+
+; C: one kick per bar, sustained root/fifth rather than eighth-note pumping.
+C q7 v15 [@kick o4 c4 @bass o2 c+2 g+4
+C @bass o2 c+2 r4 g+4
+C @kick o4 c4 @bass o1 a2 o2 e4
+C @bass o1 a2 r4 o2 e4
+C @kick o4 c4 @bass o2 e2 b4
+C @bass o2 e2 r4 b4
+C @kick o4 c4 @bass o1 b2 o2 f+4
+C @bass o1 b2 r2]2
+D [r1]16

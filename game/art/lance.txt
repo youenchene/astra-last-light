@@ -1,0 +1,40 @@
+# Masked BOB charged lance 16x10, two flash frames
+colors
+  . transparent
+  1 0x112
+  2 0x224
+  3 0x346
+  4 0x568
+  5 0x89A
+  6 0xCEF
+  7 0xFFF
+  8 0x214
+  9 0x536
+  A 0xA58
+  B 0xF9B
+  C 0x521
+  D 0xA43
+  E 0xFA6
+  F 0x4BD
+frame
+.......3FFFF3...
+....3FF677776F..
+..3F6677777776F.
+.F66776FFFF6776F
+F67776F777F6777F
+.F66776FFFF6776F
+..3F6677777776F.
+....3FF677776F..
+.......3FFFF3...
+.........33.....
+frame
+......9ABBA9....
+...9AB67776BA9..
+.9AB67777776BA9.
+AB67776FF67776B9
+B7776FF77FF6777B
+AB67776FF67776B9
+.9AB67777776BA9.
+...9AB67776BA9..
+......9ABBA9....
+........99......
