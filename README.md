@@ -81,11 +81,17 @@ is required; no ROM is included.
 | Fire after victory | Restart from sector 1 |
 | Escape | Return to AmigaOS |
 
+## Performance
+
+The game runs at **50fps on an Amiga 1200**. On the **Amiga 500**, there are
+still slowdowns at certain moments. A steady PAL 50fps on the A500 remains
+the target.
+
 ## Project status
 
-**Work in progress.** The four-sector campaign is implemented, but the target of
-locked PAL 50fps has not yet been achieved. I’ve completed the campaign in
-playtesting; formal full-campaign validation and real-hardware validation remain open.
+**Work in progress.** The four-sector campaign is implemented, with further
+A500 performance tuning needed. I’ve completed the campaign in playtesting;
+formal full-campaign validation remains open.
 
 ## Credits
 
@@ -96,10 +102,6 @@ artwork and offline refinements. Music includes the original title theme,
 **Astra Dusk Signal**, and four sector tracks: **Graveyard Relay**, **Parallax
 Veil**, **Alloy Oracle** and **Horizon Engine**.
 
-The ACE and Micrix Production intros are adapted from
-[SuperRugbyV](https://github.com/youenchene/SuperRugbyV).
-**Licensing is mixed:** ACE intro material carries MPL-2.0 provenance; Micrix
-material is CC BY-NC-SA 4.0. See the
 [intro credits and licensing notices](game/art/intro/README.md) for attribution
 and restrictions.
 
