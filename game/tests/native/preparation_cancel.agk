@@ -1,0 +1,18 @@
+# Cancel while the second story target is being copied, not after readiness.
+wait-serial "AGK language_ready" 600
+press fire 1
+wait-serial "AGK title_ready" 600
+press fire 1
+wait-serial "AGK cut_visible=2 " 800
+wait 8
+screenshot copying_story
+key 0x45
+wait-serial "AGK title_ready" 600
+wait 2
+screenshot cancelled_title
+press fire 1
+wait-serial "AGK scene_ready" 800
+wait 2
+screenshot restarted_story
+expect-serial "AGK escape_title"
+expect-no-serial "ERR|STACK SMASHED|allocation failure|bullet_hidden=[1-9]"

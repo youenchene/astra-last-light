@@ -59,6 +59,13 @@ static tBitMap bitmaps[2], *s_buffers[2] = {bitmaps, bitmaps + 1}, *s_pScreen;
 static tVPort viewport, *s_pVPort = &viewport;
 static unsigned rows, glyphs, outside, clearing, scenery, hud;
 static void blitWait(void) {}
+static void blitCopyAligned(tBitMap *src, UWORD sx, UWORD sy,
+                           tBitMap *dst, UWORD dx, UWORD dy, UWORD w, UWORD h) {
+    assert(src != dst && h <= 8);
+    rows += h;
+    for(unsigned y=0;y<h;++y)
+        memcpy(&dst->pixels[dy+y][dx], &src->pixels[sy+y][sx], w);
+}
 static UBYTE titleIconStep(UWORD x,UWORD y,UBYTE right,UWORD *cursor) {
     (void)x;(void)y;(void)right;
     rows += 3; *cursor += 3; return *cursor == 9;
@@ -181,6 +188,24 @@ int main(void) {
     renderWorldBegin(&state);
     assert(complete() > 60 && viewport.pPalette[0] == 0x001);
     assert(viewport.pPalette[11] == 0xf9b && viewport.pPalette[4] == 0x568);
+    /* A frozen completed target may also contain a fully composed overlay.
+     * Copy every pixel and the physical HUD/star provenance, with readiness
+     * withheld until the 32nd bounded strip has finished. */
+    unsigned source=s_buffer;
+    bitmaps[source].pixels[80][100]=13;
+    HISTORY.score=1234; HISTORY.stars[5]=77; HISTORY.paused=1;
+    s_starsDirty[source]=0;
+    renderWorldBind(bitmaps+!source);
+    for(unsigned i=0;i<31;++i) {
+        rows=glyphs=0;
+        assert(!renderWorldStep());
+        assert(!s_isValid && rows==8 && !glyphs);
+    }
+    assert(renderWorldStep());
+    assert(s_isValid && !s_preparing && s_titleStable[s_buffer]);
+    assert(!memcmp(bitmaps[0].pixels,bitmaps[1].pixels,sizeof bitmaps[0].pixels));
+    assert(HISTORY.score==1234 && HISTORY.stars[5]==77 && HISTORY.paused==1);
+    assert(!s_starsDirty[s_buffer]);
     state.phase = WIN;
     renderWorldBegin(&state);
     assert(viewport.pPalette[11] == 0xfa9);

@@ -1,5 +1,7 @@
 # KEY_RETURN confirms French; its press must not start gameplay on TITLE.
 wait-serial "AGK language_ready" 600
+press left 1
+wait 24
 key 0x44
 wait-serial "AGK title_ready" 600
 screenshot language_return_title

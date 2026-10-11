@@ -17,6 +17,7 @@
 #include "campaign_audio.h"
 #include "title_confirm.h"
 #include "language_select.h"
+#include "render_status.h"
 #include "combat_perf.h"
 #include "galaxy_trace.h"
 #ifdef ASTRA_CAMPAIGN_PROBE
@@ -76,7 +77,7 @@ static void previewEnding(const tInput *input) {
 }
 
 static UBYTE createDisplay(void) {
-	UWORD count = ASTRA_COP_DECOR + ASTRA_COP_DECOR_COUNT;
+	UWORD count = ASTRA_COP_STATUS + ASTRA_COP_STATUS_COUNT;
 	s_pView = viewCreate(0,
 		TAG_VIEW_COPLIST_MODE, VIEW_COPLIST_MODE_RAW,
 		TAG_VIEW_COPLIST_RAW_COUNT, count,
@@ -325,6 +326,15 @@ void genericProcess(void) {
 	if(!s_isLoaded) { agkPerfEnd(); gameExit(); return; }
 	renderBindBack(s_pBuffer->pBack);
 	acknowledgeFrame();
+	/* Independent copper footer updates even while publication is held. Both
+	 * lists are still before their bottom-raster commands at this vblank boundary. */
+	tUiStatus status = uiStatus(&s_sState, &s_language, s_isLanguage, s_isIntroDone, s_confirm.active);
+	renderStatusUpdate(status, s_isLanguage ? s_language.selected : languageGet());
+	static tUiStatus lastStatus;
+	if(status != lastStatus) {
+		agkState("ui_status", status); agkEnd();
+		lastStatus = status;
+	}
 	keyProcess();
 	joyProcess();
 #ifdef AGK_SERIAL_ENABLED

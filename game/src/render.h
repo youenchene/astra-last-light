@@ -29,6 +29,8 @@
  * plus the PAL line-255 rollover guard, after simpleBuffer's reservation. */
 #define ASTRA_COP_DECOR (ASTRA_COP_BUFFER + simpleBufferGetRawCopperlistInstructionCount(4))
 #define ASTRA_COP_DECOR_COUNT 57
+#define ASTRA_COP_STATUS (ASTRA_COP_DECOR + ASTRA_COP_DECOR_COUNT)
+#define ASTRA_COP_STATUS_COUNT 16
 
 UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer);
 void renderPalette(void);

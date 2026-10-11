@@ -1,5 +1,116 @@
 # Rendering, publication and memory
 
+## Faster preparation with loading feedback retained (2026-10-11)
+
+Preparation now reuses the first complete static framebuffer instead of decoding
+the same title/world/story twice. Only the bound back bitmap is written, in
+**eight-row blitter copies**, with readiness withheld until all32 strips finish.
+World HUD/star/paused/title provenance and scene history are adopted together.
+The source stays frozen and published; no third buffer or allocation is added.
+Live combat, BOB restore histories and opening-close patches retain their existing
+paths. Warm title sector changes keep their faster partial plate/caption repair.
+
+The language selector clears its blank margins eight rows at a time while keeping
+the expensive flag/border region at two rows. Full reference-pixel tests still
+pass. English remains the default; French fixtures explicitly select left.
+
+Measured preparation, excluding intentional story dwell and user-held buttons:
+
+| Transition | Before | After | Reduction |
+|---|---:|---:|---:|
+| Language screen, both targets | 256 ticks /5.12s | 120 ticks /2.40s | 53% |
+| Cold TITLE, both targets | 208 frames /4.16s | 136 frames /2.72s | 35% |
+| Sector1 opening, both targets | 340 frames /6.80s | 202 frames /4.04s | 41% |
+| WIN, both targets | 320 frames /6.40s | 192 frames /3.84s | 40% |
+
+Publication vblank deltas match on A500 and AROS. Second-target preparation is
+now32 frames/0.64s for those static screens. Language counts are additionally
+asserted in the production-module host test. All loading/release/wait prompts
+remain; eight complete ready/prompt screens exactly match the slower baseline.
+
+Evidence: `game/build/preparation-baseline/` preserves the previous executable/ADF;
+`preparation-compact/` contains the both-profile loading replay. Run
+`tools/verify-preparation-latency.py <serial.txt>` for the32-frame second-target
+gate and `tools/verify-loading-feedback.py game/build/preparation-compact` for
+exact footer pixels and17 complete cross-profile captures. Loading replay:
+27 emitted performance windows, **0 drops /90% peak A500, 0 /88% AROS**.
+
+171 Python tests, C rules and build pass. `preparation-regression/` has59 complete
+cross-profile pairs covering rapid title retaps/fire, pause/ship continuity, live
+opening shots, GAMEOVER/restart, both languages, four titles, Nebula and BOBs.
+Sector source pixels, pause/lifecycle checks and768 BOB restoration pixels pass.
+`preparation-cancel/` exercises ESC during the second story copy and clean restart.
+Native-resolution review sheets are under `preparation-regression/review-*.png`.
+No golden updates. No32-bit arithmetic helpers were introduced in the changed
+renderer/language/status objects. Full injected boss campaign was not rerun.
+
+The initial larger-code candidate hit `ACE audio allocation failure` (retained in
+`preparation-fast/`). Compiling only the startup status-font constructor for size
+removes864 bytes of unrolled setup code and restores audio without frame-loop
+changes. Final executable545,396 bytes; A500 startup free CHIP/total4,192/4,224
+bytes, versus3,872/3,880 before optimization. All probe/diagnostic flags stay OFF.
+No new runtime allocations. These readings are not a worst-case memory proof.
+Broader regression windows have zero drops but BOB combat still peaks98%/92%
+(previous100%/93%); global zero-drop/90% full-game acceptance remains open.
+
+## Loading feedback and English default (2026-10-11)
+
+Cold language selection now highlights **English**. Confirmed language selection
+still persists for the session. All presentation preparation (language, TITLE,
+sector/boss entry, opening closure, CLEAR, WIN and GAMEOVER) has a gently pulsing
+`LOADING` / `CHARGEMENT` footer. Release guards say `RELEASE FIRE` / `RELACHEZ FEU`;
+blocking cards show `PLEASE WAIT` during their existing 25-tick skip guard, then
+`FIRE TO CONTINUE`. Live sector/boss openings retain movement and their normal HUD.
+Input rules, deliberate scene dwell and two-buffer acknowledgement are unchanged.
+
+`ui_status.h` derives feedback from the actual input gates. `render_status.c`
+owns eight immutable 96x8 one-plane labels (768 CHIP bytes) and 16 extra copper
+commands per list (128 CHIP bytes). It fetches the centered 96px strip at y248,
+restoring four-plane controls after the final visible fetch. Idle delays its
+overrides until after the viewport. It never edits a framebuffer or sprite stream.
+
+**Narrow publication exception:** immediately after vblank acknowledgement, main
+updates this bottom-only reservation in **both** physical copper lists. This is
+necessary to signal loading while the completed outgoing/incoming frame is held.
+The beam is still before these commands; all scene pixels, palettes above the
+footer, DMA streams and buffer identities retain their existing ownership. The
+decor-disabled path now also keeps its PAL line-255 rollover guard. Stable idle
+has no recurring CPU copper work; active feedback updates only WAIT/value fields.
+
+Validation evidence:
+
+- `bash tools/agk unit`, 171 Python unit tests, build and allocation-safety checker
+  pass. The status rule test covers every preparation phase, publication, release
+  arming and the skip guard. No golden images were updated.
+- `game/tests/native/loading_feedback.agk` passes on both profiles. Independent
+  `tools/verify-loading-feedback.py game/build/loading-feedback-pass` checks every
+  footer pixel and all 17 complete cross-profile capture pairs. Native-size review
+  sheets are in that directory. Both outgoing holds and incoming first-target
+  repair show loading, including ending exit and opening closure.
+  French `CHARGEMENT` / `RELACHEZ FEU` pixels also pass on both profiles in
+  `game/build/loading-french/`. The status object's undefined-symbol audit has
+  no 32-bit multiply/divide helpers.
+- Language toggle/Return confirmation, ordinary GAMEOVER/restart, all four title
+  sectors/wraps, Nebula and BOB restoration pass on both profiles under
+  `game/build/loading-regression-pass/`. All 21 complete capture pairs match.
+  Sector source-pixel, GAMEOVER lifecycle and all 768 BOB restoration pixels pass.
+- Loading replay's 41 emitted performance windows: zero drops, peak89% A500 /
+  87% AROS. Broader focused replays: zero drops but up to92% A500 /90% AROS.
+  These are emitted windows, not full-campaign performance acceptance. Full boss
+  campaign capture was not rerun; boss/CLEAR feedback shares the tested busy gate.
+- Production executable545,688 bytes, all diagnostic/probe flags OFF. Fresh A500
+  startup free CHIP/total:3,872/3,880 bytes (baseline5,296/7,184). This fits but is
+  not a formal worst-case memory bound. Text+copper alone cost896 bytes; loader
+  placement and code/data account for the remainder.
+
+Rejected larger setup variants exposed `AGK ACE audio allocation failure` on A500
+(captures/logs retained in `loading-feedback-final`, `loading-feedback-compact`
+and `loading-feedback-accepted`). Compact table-based initialization fixes the
+startup without removing audio. The existing `plan-bonus-flight --check` still
+rejects the language-selector prelude: its generator/parser expects TITLE first.
+Its native fixtures and independent restoration pixel checks pass; the generator
+was not rewritten. Global50fps acceptance remains open.
+
 Current localized primary/performance integration:
 [merge evidence and production artifact](performance-integration-2026-10-11.md).
 It retains160×96 stories, the current320×192 peach ending, English/French UI and

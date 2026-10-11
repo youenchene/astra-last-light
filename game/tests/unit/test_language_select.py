@@ -12,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class LanguageSelectTests(unittest.TestCase):
+    def test_english_is_the_cold_start_default(self):
+        self.compile_run(r'''
+#include <assert.h>
+#include "language_select.h"
+int main(void) {
+    tLanguageSelect choice;
+    languageSelectBegin(&choice);
+    assert(languageGet() == LANGUAGE_EN);
+    assert(choice.selected == LANGUAGE_EN);
+}
+''')
+
     def test_startup_fixtures_confirm_language_only_before_first_title(self):
         for path in (ROOT / "game/tests").rglob("*.agk"):
             text = path.read_text()
@@ -21,6 +33,52 @@ class LanguageSelectTests(unittest.TestCase):
             with self.subTest(scenario=path.name):
                 self.assertEqual(text.count('wait-serial "AGK language_ready"'), 1)
                 self.assertLess(text.index('wait-serial "AGK language_ready"'), first_title)
+
+    def test_status_tracks_actual_input_gates(self):
+        self.compile_run(r'''
+#include <assert.h>
+#include "ui_status.h"
+int main(void) {
+    tGameState s;
+    tLanguageSelect c;
+    tInput neutral = {0};
+    logicInit(&s);
+    languageSelectBegin(&c);
+    assert(uiStatus(&s,&c,0,0,0)==UI_IDLE);
+    assert(uiStatus(&s,&c,1,0,0)==UI_LOADING);
+    c.row[0]=c.row[1]=256;
+    c.borderRow[0]=c.borderRow[1]=72;
+    c.drawn[0]=c.drawn[1]=c.selected;
+    languageSelectPresented(&c,0);
+    assert(uiStatus(&s,&c,1,0,0)==UI_LOADING);
+    languageSelectPresented(&c,1);
+    assert(uiStatus(&s,&c,1,0,0)==UI_RELEASE);
+    languageSelectInput(&c,0,0);
+    assert(uiStatus(&s,&c,1,0,0)==UI_IDLE);
+    languageSelectInput(&c,0,1);
+    assert(uiStatus(&s,&c,1,0,0)==UI_RELEASE);
+    const tPhase phases[]={TITLE, SECTOR_INTRO, PLAY, BOSS_INTRO, BOSS, CLEAR, WIN, GAMEOVER};
+    for(unsigned i=0;i<sizeof phases/sizeof *phases;++i) {
+        s.phase=phases[i];
+        logicSetPresentationBusy(&s,1);
+        assert(uiStatus(&s,&c,0,1,0)==UI_LOADING);
+    }
+    logicSetPresentationBusy(&s,0);
+    s.phase=TITLE; s.titleInputBlocked=1;
+    assert(uiStatus(&s,&c,0,1,0)==UI_RELEASE);
+    logicUpdate(&s,&neutral);
+    assert(uiStatus(&s,&c,0,1,0)==UI_IDLE);
+    assert(uiStatus(&s,&c,0,1,1)==UI_LOADING);
+    s.phase=WIN; s.sceneReady=1; s.phaseFrame=0;
+    assert(uiStatus(&s,&c,0,1,0)==UI_WAIT);
+    for(unsigned i=0;i<SCENE_SKIP_FRAMES;++i) logicUpdate(&s,&neutral);
+    assert(uiStatus(&s,&c,0,1,0)==UI_CONTINUE);
+    s.sceneArmed=0;
+    assert(uiStatus(&s,&c,0,1,0)==UI_RELEASE);
+    s.manualPause=1;
+    assert(uiStatus(&s,&c,0,1,0)==UI_IDLE);
+}
+''')
 
     def compile_run(self, source):
         with tempfile.TemporaryDirectory() as temp:
@@ -56,12 +114,14 @@ static void finish(tLanguageSelect *c) {
 int main(void) {
     tLanguageSelect c;
     tGameState game;
-    assert(languageGet()==LANGUAGE_FR);
+    assert(languageGet()==LANGUAGE_EN);
     languageSelectBegin(&c);
     memset(pixels,255,sizeof pixels);
-    for(int n=0;n<127;++n) {
+    for(int n=0;n<59;++n) {
+        unsigned before=c.row[0];
         step(&c,0);
-        assert(c.row[0]==(n+1)*2 && c.row[1]==0);
+        assert(c.row[0]>before && c.row[0]<=before+8 && c.row[1]==0);
+        if(before>=74 && before<146) assert(c.row[0]==before+2);
         assert(pixels[1][0]==255 && pixels[0][40959]==255);
         assert(!languageSelectInput(&c,2,1));
         languageSelectPresented(&c,0);
@@ -70,16 +130,16 @@ int main(void) {
     step(&c,0);
     assert(languageSelectTargetReady(&c,0));
     languageSelectPresented(&c,0);
-    for(int n=0;n<128;++n) step(&c,1);
+    for(int n=0;n<60;++n) step(&c,1);
     assert(!languageSelectReady(&c)); /* hidden completion is not publication */
     languageSelectPresented(&c,1);
     assert(languageSelectReady(&c));
     assert(!languageSelectInput(&c,2,1) && !c.confirmed); /* held skip/fire */
     languageSelectInput(&c,2,0);
-    assert(c.selected==LANGUAGE_FR); /* held entry direction consumed */
+    assert(c.selected==LANGUAGE_EN); /* held entry direction consumed */
     languageSelectInput(&c,0,0);
-    languageSelectInput(&c,2,1); /* fresh right and fire: render before confirm */
-    assert(c.selected==LANGUAGE_EN && !c.confirmed && !c.armed);
+    languageSelectInput(&c,1,1); /* fresh left and fire: render before confirm */
+    assert(c.selected==LANGUAGE_FR && !c.confirmed && !c.armed);
     for(int n=0;n<9;++n) {
         step(&c,0);
         assert(c.borderRow[0]==(n+1)*8);
@@ -144,17 +204,17 @@ int main(void) {
     languageSelectBegin(&c);
     finish(&c);
     languageSelectInput(&c,0,0);
-    languageSelectInput(&c,2,0);
+    languageSelectInput(&c,1,0);
     finish(&c);
     languageSelectInput(&c,0,0);
-    languageSelectInput(&c,1,0);
+    languageSelectInput(&c,2,0);
     finish(&c);
     assert(g_languagePalette[0]==0x011 && g_languagePalette[1]==0x149);
     assert(g_languagePalette[2]==0xfed && g_languagePalette[3]==0xc23);
 }
 ''')
         self.assertEqual(len(data), 40960 * 3)
-        for capture, selected in enumerate((0, 1, 0)):
+        for capture, selected in enumerate((1, 0, 1)):
             planar = data[capture * 40960:(capture + 1) * 40960]
             actual = [[sum(((planar[y * 160 + p * 40 + x // 8] >>
                              (7 - x % 8)) & 1) << p for p in range(4))

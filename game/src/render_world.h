@@ -29,7 +29,9 @@ void renderWorldAnimate(const tGameState *pState);
 void renderWorldInvalidate(UBYTE resetScroll);
 UBYTE renderWorldMatches(const tGameState *pState);
 void renderWorldBegin(const tGameState *pState);
-void renderWorldStep(void);
+/* Returns 1 only when the other complete static target was copied, including
+ * any scene overlay. Caller must adopt that target's scene history too. */
+UBYTE renderWorldStep(void);
 /* Opening exit repairs only the opaque window, using this bitmap's frozen
  * star positions. Call after its BOB restore; <=8 corridor rows per step. */
 /* Repeat the same rectangle until complete; cursor belongs to bound bitmap. */

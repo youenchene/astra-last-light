@@ -373,6 +373,8 @@ void renderWorldBind(tBitMap *pScreen) {
 static void decorCopperDisable(tCopCmd *commands) {
 	for(UBYTE i = 0; i < ASTRA_COP_DECOR_COUNT; ++i)
 		copSetMove(&commands[i].sMove, &g_pCustom->bplcon2, 0x24);
+	/* Shared PAL wrap for the independent bottom status strip, including menus. */
+	copSetWait(&commands[28].sWait, 0xdf, 0xff);
 }
 
 /* ACE simplebuffer/fetchmode.h schedules controls after the preceding line's
@@ -866,8 +868,23 @@ static void titleRows(UWORD row) {
 	blitCopy(s_pTitle, 0, row, s_pScreen, 96, 26 + row, 128, 8, MINTERM_COOKIE);
 }
 
-void renderWorldStep(void) {
-	if(!s_preparing) return;
+UBYTE renderWorldStep(void) {
+	if(!s_preparing) return 0;
+	/* The first complete static target is frozen while this back bitmap is
+	 * prepared. Copy its pixels instead of decoding the same world/card twice.
+	 * Keep faster partial TITLE repairs and live combat/BOB histories separate. */
+	if(s_history[!s_buffer].valid && !combatBackground(s_ePhase) &&
+		(s_ePhase != TITLE || !s_titleStable[s_buffer])) {
+		blitCopyAligned(s_buffers[!s_buffer], 0, s_prepareRow,
+			s_pScreen, 0, s_prepareRow, WORLD_W, 8);
+		s_prepareRow += 8;
+		if(s_prepareRow != WORLD_H) return 0;
+		blitWait();
+		HISTORY = s_history[!s_buffer];
+		s_titleStable[s_buffer] = s_titleStable[!s_buffer];
+		s_starsDirty[s_buffer] = s_starsDirty[!s_buffer];
+		return 1;
+	}
 	if(s_prepareStage == 0) {
 		blitRect(s_pScreen, 0, s_prepareRow, WORLD_W, 8, 0);
 		s_prepareRow += 8;
@@ -942,13 +959,14 @@ void renderWorldStep(void) {
 				starToggle(s_prepareRow, s_pStarX[s_prepareRow]);
 				HISTORY.stars[s_prepareRow] = s_pStarX[s_prepareRow];
 			}
-			if(s_prepareRow < STAR_COUNT) return;
+			if(s_prepareRow < STAR_COUNT) return 0;
 			HISTORY.starTick = s_ubDecorTick;
 		}
 		blitWait();
 		s_isValid = 1; s_preparing = 0;
 		if(s_ePhase == TITLE) s_titleStable[s_buffer] = 1;
 	}
+	return 0;
 }
 
 void renderWorldDestroy(void) {

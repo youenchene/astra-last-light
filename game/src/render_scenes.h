@@ -23,6 +23,8 @@ UBYTE renderScenesCreate(tBitMap *front, tBitMap *screen, tVPort *viewport);
 void renderScenesBind(tBitMap *screen);
 void renderScenesBegin(UBYTE id, UWORD epoch);
 void renderScenesStep(void);
+/* World copied all pixels from the frozen complete peer, including this card. */
+void renderScenesCopyReady(void);
 void renderScenesClose(void);
 void renderScenesEraseStep(void);
 UBYTE renderScenesReady(void);

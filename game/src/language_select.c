@@ -19,7 +19,7 @@ static const uint8_t s_glyphs[][7] = {
 static const uint8_t s_french[8] = {0,1,2,3,4,2,5,6};
 static const uint8_t s_english[7] = {7,3,8,9,5,6,10};
 const uint16_t g_languagePalette[4] = {0x011,0x149,0xfed,0xc23};
-static tLanguage s_language = LANGUAGE_FR;
+static tLanguage s_language = LANGUAGE_EN;
 
 tLanguage languageGet(void) { return s_language; }
 
@@ -129,7 +129,12 @@ static void labels(uint8_t *const planes[4], uint16_t offset, uint8_t row) {
 void languageSelectStep(tLanguageSelect *choice, uint8_t target,
 	uint8_t *const planes[4], uint16_t stride) {
 	if(choice->row[target] < 256) {
-		for(uint8_t count = 0; count < 2; ++count) {
+		/* Blank margins are cheap; retain the two-row bound for flag pixels.
+		 * Stop at the border so a fast blank step never includes expensive art. */
+		uint16_t row = choice->row[target];
+		uint16_t end = row < 74 ? 74 : row < 146 ? 146 : 256;
+		uint8_t rows = row < 74 || row >= 146 ? 8 : 2;
+		for(uint8_t count = 0; count < rows && choice->row[target] < end; ++count) {
 			uint16_t y = choice->row[target]++;
 			uint16_t offset = y * stride;
 			for(uint8_t p = 0; p < 4; ++p)

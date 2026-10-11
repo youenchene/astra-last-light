@@ -1,6 +1,8 @@
 # NON-SHIPPING campaign probe required; French all13 source-pixel fixture.
 # Use verify-precomputed-cards.py --language fr on this capture directory.
 wait-serial "AGK language_ready" 600
+press left 1
+wait 24
 press fire 1
 wait-serial "AGK title_ready" 600
 press fire 1

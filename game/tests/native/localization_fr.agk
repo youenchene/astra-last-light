@@ -1,5 +1,7 @@
 # Production French UI. Inspect captures; no blind golden updates.
 wait-serial "AGK language_ready" 600
+press left 1
+wait 24
 press fire 1
 wait-serial "AGK title_ready" 600
 screenshot fr_title1

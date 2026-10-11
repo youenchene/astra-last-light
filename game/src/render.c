@@ -5,6 +5,7 @@
 #include "render_bobs.h"
 #include "render_world.h"
 #include "render_scenes.h"
+#include "render_status.h"
 #include "art.h"
 #include "combat_perf.h"
 #include "galaxy_trace.h"
@@ -91,6 +92,7 @@ UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer) 
 	if(!constructionResult(renderWorldCreate(pVPort, pBuffer->pFront, pBuffer->pBack), 4)) return 0;
 	if(!constructionResult(renderScenesCreate(pBuffer->pFront, pBuffer->pBack, pVPort), 5)) return 0;
 	if(!constructionResult(renderBobsCreate(pBuffer->pFront, pBuffer->pBack), 6)) return 0;
+	if(!constructionResult(renderStatusCreate(pVPort), 7)) return 0;
 	renderPalette();
 	return 1;
 }
@@ -151,9 +153,11 @@ void renderFrame(tGameState *pState) {
 			++s_revision;
 			logicSetPresentationBusy(pState, 1);
 		}
-		/* One bounded step total, not one world step plus one overlay step.
-		 * Both targets rebuild the same frozen scenery before their window. */
-		if(!renderWorldTargetReady()) renderWorldStep();
+		/* One bounded step total. Compose the first frozen world/window once;
+		 * the second target can copy it and adopt its scene history together. */
+		if(!renderWorldTargetReady()) {
+			if(renderWorldStep()) renderScenesCopyReady();
+		}
 		else renderScenesStep();
 		s_targetReady = renderWorldTargetReady() && renderScenesTargetReady();
 		if((pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO) && renderBothReady()) {
@@ -227,6 +231,7 @@ UWORD renderSceneReadyEpoch(void) { return renderScenesReadyEpoch(); }
 
 void renderDestroy(void) {
 	blitWait();
+	renderStatusDestroy();
 	renderBobsDestroy();
 	renderBulletsDestroy();
 	renderEnemiesDestroy();

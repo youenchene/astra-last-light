@@ -63,6 +63,10 @@ void renderScenesClose(void) {
 	for(UBYTE i = 0; i < 2; ++i) { s_history[i].ready = 0; s_history[i].row = 0; }
 }
 
+void renderScenesCopyReady(void) {
+	s_history[s_buffer] = s_history[!s_buffer];
+}
+
 void renderScenesEraseStep(void) {
 	if(s_ready) return;
 	/* Finishing the patch and submitting a large boss BOB in the same frame
