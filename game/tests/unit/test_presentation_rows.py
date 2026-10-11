@@ -70,7 +70,7 @@ def reference_card(index, language='en'):
     font, _ = source_fonts()
     messages = [(caption, 168, 6), (reply, 186, 14)]
     if index not in (0, 3, 6, 9):
-        messages.insert(0, (title, 60, accent))
+        messages.insert(0, (title, 59, accent))
     for message, y, color in messages:
         for row, line in enumerate(textwrap.wrap(message, 28)):
             paint_text(image, line, 144, y + row * 8, color, font, 4)
@@ -217,7 +217,7 @@ unsigned testOperations(unsigned card, unsigned id, unsigned first, unsigned end
         for language in ('fr', 'en'):
             for entry in entries[:12]:
                 title, caption, reply = entry[language]
-                for message, y, bottom in ((title, 60, 66), (caption, 168, 184), (reply, 186, 208)):
+                for message, y, bottom in ((title, 59, 66), (caption, 168, 184), (reply, 186, 208)):
                     lines = textwrap.wrap(message, 28)
                     self.assertEqual(' '.join(lines), message)
                     self.assertLessEqual(y + (len(lines) - 1) * 8 + 6, bottom)

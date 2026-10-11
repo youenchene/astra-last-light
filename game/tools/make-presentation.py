@@ -85,7 +85,7 @@ def layers(language):
         accent = [5, 11, 7, 14][scene['style']]
         rect(image, 6, 10, 164, 100, accent)
         if index % 3:
-            wrapped(image, 4, title, accent, small, 10)
+            wrapped(image, 3, title, accent, small, 10)
         wrapped(image, 112, caption, 6, small, 128)
         wrapped(image, 130, reply, 14, small, 152)
         cards.append(image)
