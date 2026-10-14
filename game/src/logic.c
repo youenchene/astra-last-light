@@ -15,6 +15,12 @@ static const uint8_t s_bossRays[LEVEL_COUNT] = {5, 7, 7, 9};
 static const int16_t s_laneLow[FORMATION_SIZE] = {56, 83, 110, 137, 164, 191};
 static const uint16_t s_bossHealth[LEVEL_COUNT] = {216, 336, 432, 480};
 static const uint16_t s_waveDelay[LEVEL_COUNT] = {150, 140, 130, 120};
+const uint8_t g_stageWaveKinds[LEVEL_COUNT][5] = {
+	{ENEMY_SCOUT, ENEMY_WEAVER, ENEMY_GUNNER, ENEMY_DART, ENEMY_ASTEROID},
+	{ENEMY_WEAVER, ENEMY_DART, ENEMY_WEAVER, ENEMY_GUNNER, ENEMY_ASTEROID},
+	{ENEMY_GUNNER, ENEMY_SCOUT, ENEMY_GUNNER, ENEMY_DART, ENEMY_ASTEROID},
+	{ENEMY_DART, ENEMY_GUNNER, ENEMY_WEAVER, ENEMY_DART, ENEMY_ASTEROID}
+};
 
 static int16_t halfStep(int8_t velocity, uint32_t frame) {
 	return velocity / 2 + ((frame & 1) ? velocity % 2 : 0);
@@ -207,14 +213,8 @@ static void updateHero(tGameState *s, const tInput *input) {
 }
 
 static void spawnWave(tGameState *s) {
-	static const uint8_t kinds[LEVEL_COUNT][5] = {
-		{ENEMY_SCOUT, ENEMY_WEAVER, ENEMY_GUNNER, ENEMY_DART, ENEMY_ASTEROID},
-		{ENEMY_WEAVER, ENEMY_DART, ENEMY_WEAVER, ENEMY_GUNNER, ENEMY_ASTEROID},
-		{ENEMY_GUNNER, ENEMY_SCOUT, ENEMY_GUNNER, ENEMY_DART, ENEMY_ASTEROID},
-		{ENEMY_DART, ENEMY_GUNNER, ENEMY_WEAVER, ENEMY_DART, ENEMY_ASTEROID}
-	};
 	uint8_t member, slot, freeSlots = 0;
-	uint8_t kind = kinds[s->level][s->wave % 5];
+	uint8_t kind = g_stageWaveKinds[s->level][s->wave % 5];
 	tWaveTrack *track = 0;
 	/* Preflight before mutating either pool or counter: allocation cannot
 	 * partially succeed, and a refused attempt remains due for retry. */

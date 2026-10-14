@@ -54,6 +54,34 @@ static UBYTE gatherEnemies(tGameState *pState, tEntity **pList) {
 	return count;
 }
 
+/* Retiring formations leave unused DMA slots. Warm one attached slot per tick
+ * for the next kind instead of reloading all six on the spawn frame. Only pixel
+ * rows behind the terminator in the BACK stream are touched; control words and
+ * the displayed stream remain intact. Event frames keep their existing budget;
+ * writer cache fallback handles fast kills. Keep this cold copy loop compact to
+ * preserve A500 startup audio allocation headroom. */
+static void __attribute__((noinline, optimize("Os"))) prepareNextWave(const tGameState *pState, UBYTE buffer, UBYTE used) {
+	if(pState->events || used == ENEMY_SPRITE_CAPACITY ||
+		pState->phase != PLAY || pState->level >= LEVEL_COUNT ||
+		pState->wave >= g_stageWaveQuota[pState->level]) return;
+	UBYTE frame = pState->level * ACTOR_KINDS + g_stageWaveKinds[pState->level][pState->wave % 5];
+	for(UBYTE slot = used; slot < ENEMY_SPRITE_CAPACITY; ++slot) {
+		if(s_pStreams[0].pLoaded[buffer][slot] == s_pPixels[frame][0] &&
+			s_pStreams[1].pLoaded[buffer][slot] == s_pPixels[frame][1]) continue;
+		const ULONG *pixelsLow = s_pPixels[frame][0], *pixelsHigh = s_pPixels[frame][1];
+		UWORD offset = slot * (ACTOR_HEIGHT + 1) + 1;
+		ULONG *destLow = s_pStreams[0].pRows[buffer] + offset;
+		ULONG *destHigh = s_pStreams[1].pRows[buffer] + offset;
+		s_pStreams[0].pLoaded[buffer][slot] = pixelsLow;
+		s_pStreams[1].pLoaded[buffer][slot] = pixelsHigh;
+		for(UBYTE row = 0; row < ACTOR_HEIGHT; ++row) {
+			*destLow++ = *pixelsLow++;
+			*destHigh++ = *pixelsHigh++;
+		}
+		break;
+	}
+}
+
 void renderEnemiesDraw(tGameState *pState) {
 	if(!pState || !s_pView) return;
 	tEntity *pList[ENEMY_SPRITE_CAPACITY];
@@ -80,6 +108,7 @@ void renderEnemiesDraw(tGameState *pState) {
 	}
 	spriteWriterPublish(&low, s_pView);
 	spriteWriterPublish(&high, s_pView);
+	prepareNextWave(pState, buffer, low.ubCount);
 }
 
 void renderEnemiesDestroy(void) {

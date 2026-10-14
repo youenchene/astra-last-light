@@ -143,6 +143,8 @@ extern const char *const g_stageNames[LEVEL_COUNT];
 extern const uint16_t g_stageFrames[LEVEL_COUNT];
 /* g_stageFrames retains historical timer cutoffs for probes, not boss gating. */
 extern const uint16_t g_stageWaveQuota[LEVEL_COUNT];
+/* Zero-based repeating cycle; shared with bounded next-wave sprite preparation. */
+extern const uint8_t g_stageWaveKinds[LEVEL_COUNT][5];
 
 /* One update = 1/50s; no allocations/hardware/randomness. Init enters TITLE.
  * Fresh fire press starts from TITLE via SECTOR_INTRO. GAMEOVER returns to
