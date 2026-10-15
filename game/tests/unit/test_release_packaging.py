@@ -275,6 +275,37 @@ class ReleaseBoundaries(unittest.TestCase):
                     prepare_sdk(root)
                 self.assertEqual(extract.call_count, 2)
 
+    def test_sdk_download_uses_archived_pin_and_rejects_changed_bytes(self):
+        import io
+        from release_build import LOCK, sha
+        self.assertEqual(LOCK['sdk_url'],
+                         'https://www.whdload.de/whdload/old-whdload/WHDLoad_dev.lha')
+        self.assertEqual(LOCK['sdk_sha256'],
+                         'f177636d615345fddeeec2df7b6b588d1f8d154925e2e1af12d68d31f894c0ce')
+        reviewed = b'reviewed SDK fixture'
+
+        def extract_fixture(source, destination):
+            docs = destination / 'WHDLoad/Docs'
+            docs.mkdir(parents=True)
+            (docs / 'History.txt').write_bytes(b'*** 20.0 (27.03.2026)\n')
+
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                with patch.dict('release_sdk.LOCK', {'sdk_sha256': sha(reviewed)}), \
+                        patch('release_sdk.urllib.request.urlopen',
+                              return_value=io.BytesIO(b'upstream replacement' if changed else reviewed)) as download, \
+                        patch('release_sdk.extract_lha', side_effect=extract_fixture) as extract:
+                    if changed:
+                        with self.assertRaisesRegex(ReleaseError, 'Downloaded SDK checksum'):
+                            prepare_sdk(root)
+                        extract.assert_not_called()
+                        self.assertFalse((root / '.tmp/release-deps/WHDLoad_dev.lha').exists())
+                    else:
+                        self.assertTrue((prepare_sdk(root) / 'Docs/History.txt').exists())
+                        extract.assert_called_once()
+                    download.assert_called_once_with(LOCK['sdk_url'], timeout=60)
+
     def test_release_uses_tag_commit_not_target_branch(self):
         event = {"release": {"tag_name": "v1.2.3", "target_commitish": "main"}}
         self.assertEqual(identity(event, "a" * 40, lambda ref: "a" * 40)["commit"], "a" * 40)
