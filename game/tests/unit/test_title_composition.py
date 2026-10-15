@@ -58,6 +58,7 @@ typedef struct { UWORD pPalette[32]; } tVPort;
 static tBitMap bitmaps[2], *s_buffers[2] = {bitmaps, bitmaps + 1}, *s_pScreen;
 static tVPort viewport, *s_pVPort = &viewport;
 static unsigned rows, glyphs, outside, clearing, scenery, hud;
+static void renderPaletteChanged(void) {}
 static void blitWait(void) {}
 static void blitCopyAligned(tBitMap *src, UWORD sx, UWORD sy,
                            tBitMap *dst, UWORD dx, UWORD dy, UWORD w, UWORD h) {

@@ -1,6 +1,15 @@
 #include "logic.h"
 #include <string.h>
 
+/* Entity/state objects contain words and are even-aligned on every target.
+ * GCC otherwise expands their small memset calls into byte writes on 68000. */
+static inline __attribute__((always_inline)) void clearAligned(void *buffer, uint16_t bytes) {
+#if defined(__GNUC__)
+	buffer = __builtin_assume_aligned(buffer, 2);
+#endif
+	memset(buffer, 0, bytes);
+}
+
 const char *const g_stageNames[LEVEL_COUNT] = {
 	"Orbital Graveyard", "Veil Nebula", "Imperial Foundry", "Stellar Citadel"
 };
@@ -58,26 +67,11 @@ static void addScore(tGameState *s, uint16_t points) {
 }
 
 static void clearPools(tGameState *s) {
-	memset(s->enemies, 0, sizeof(s->enemies));
-	memset(s->shots, 0, sizeof(s->shots));
-	memset(s->hostile, 0, sizeof(s->hostile));
-	memset(s->pickups, 0, sizeof(s->pickups));
+	clearAligned(s->enemies, sizeof(s->enemies));
+	clearAligned(s->shots, sizeof(s->shots));
+	clearAligned(s->hostile, sizeof(s->hostile));
+	clearAligned(s->pickups, sizeof(s->pickups));
 	memset(s->waves, 0, sizeof(s->waves));
-}
-
-uint8_t logicCombatActive(const tGameState *s) {
-	return s && (s->phase == PLAY || s->phase == BOSS);
-}
-
-uint8_t logicWorldScrolling(const tGameState *s) {
-	return s && s->phase == PLAY && !s->manualPause;
-}
-
-uint8_t logicHostileChannelMask(const tGameState *s) {
-	tPhase phase;
-	if(!s) return 0;
-	phase = s->phase == HERO_DYING ? s->resumePhase : s->phase;
-	return phase == PLAY ? 0xc0 : phase == BOSS ? 0xf0 : 0;
 }
 
 static uint8_t isScene(tPhase phase) {
@@ -124,7 +118,7 @@ static void updateEffects(tGameState *s) {
 
 void logicInit(tGameState *s) {
 	if(!s) return;
-	memset(s, 0, sizeof(*s));
+	clearAligned(s, sizeof(*s));
 	s->x = 32; s->y = 126;
 	s->lives = 3;
 	s->phase = TITLE;
@@ -132,8 +126,8 @@ void logicInit(tGameState *s) {
 
 static void startStage(tGameState *s) {
 	clearPools(s);
-	memset(s->effects, 0, sizeof(s->effects));
-	memset(&s->boss, 0, sizeof(s->boss));
+	clearAligned(s->effects, sizeof(s->effects));
+	clearAligned(&s->boss, sizeof(s->boss));
 	enterScene(s, SECTOR_INTRO, 3 * s->level);
 	s->stageFrame = 0; s->phaseFrame = 0;
 	s->waveTimer = 25; s->wave = 0;
@@ -152,7 +146,7 @@ static tEntity *spawn(tEntity *pool, uint8_t count, int16_t x, int16_t y,
 	for(i = 0; i < count; ++i) {
 		tEntity *e = &pool[i];
 		if(e->active) continue;
-		memset(e, 0, sizeof(*e));
+		clearAligned(e, sizeof(*e));
 		e->x = x; e->y = y; e->kind = kind; e->hp = hp;
 		e->vx = vx; e->vy = vy;
 		/* A new object must be scheduled and shown before it can collide. */
@@ -299,7 +293,24 @@ static void updatePickups(tGameState *s) {
 /* Upper bound on remaining ticks: 1.5px/tick left (683/1024 > 2/3) and
  * |vy|/2 px/tick toward the corridor edge. No division on the 68000. */
 static uint16_t hostileLife(const tEntity *e) {
-	uint16_t life = (uint16_t)(((int32_t)(int16_t)(e->x + HOSTILE_W) * 683) >> 10) + 2;
+#define LIFE_AT(x) ((((x) + HOSTILE_W) * 683UL) >> 10) + 2
+#define LIFE_ROW(x) LIFE_AT(x), LIFE_AT(x+1), LIFE_AT(x+2), LIFE_AT(x+3), \
+	LIFE_AT(x+4), LIFE_AT(x+5), LIFE_AT(x+6), LIFE_AT(x+7), \
+	LIFE_AT(x+8), LIFE_AT(x+9), LIFE_AT(x+10), LIFE_AT(x+11), \
+	LIFE_AT(x+12), LIFE_AT(x+13), LIFE_AT(x+14), LIFE_AT(x+15)
+	/* Identical rounded bounds for ordinary origins; all arithmetic below is
+	 * retained for legacy/injected coordinates outside the corridor. */
+	static const uint16_t horizontal[WORLD_W] = {
+		LIFE_ROW(0), LIFE_ROW(16), LIFE_ROW(32), LIFE_ROW(48),
+		LIFE_ROW(64), LIFE_ROW(80), LIFE_ROW(96), LIFE_ROW(112),
+		LIFE_ROW(128), LIFE_ROW(144), LIFE_ROW(160), LIFE_ROW(176),
+		LIFE_ROW(192), LIFE_ROW(208), LIFE_ROW(224), LIFE_ROW(240),
+		LIFE_ROW(256), LIFE_ROW(272), LIFE_ROW(288), LIFE_ROW(304)
+	};
+#undef LIFE_ROW
+#undef LIFE_AT
+	uint16_t life = (uint16_t)e->x < WORLD_W ? horizontal[(uint16_t)e->x] :
+		(uint16_t)(((int32_t)(int16_t)(e->x + HOSTILE_W) * 683) >> 10) + 2;
 	if(e->vy) {
 		int16_t room = e->vy > 0 ? PLAY_BOTTOM - HOSTILE_H - e->y : e->y - PLAY_TOP;
 		if(room < 0) room = 0;
@@ -327,13 +338,47 @@ static uint8_t staysApart(const tEntity *o, int16_t y, int8_t vy, uint16_t age) 
 		if(vy <= otherVy) return 1;
 	}
 	int16_t t = (int16_t)(o->age < age ? o->age : age);
-	int16_t d1 = (int16_t)(dy * 2 + (int16_t)(vy - otherVy) * t);
+	int16_t velocity = (int16_t)(vy - otherVy), travel;
+	/* Most converging rays differ by one/two half-pixels per tick. Word
+	 * additions avoid a 68000 MULS without changing endpoint wrap semantics. */
+	if(velocity == 1) travel = t;
+	else if(velocity == -1) travel = (int16_t)-t;
+	else if(velocity == 2) travel = (int16_t)(t + t);
+	else if(velocity == -2) travel = (int16_t)(-t - t);
+	else travel = (int16_t)(velocity * t);
+	int16_t d1 = (int16_t)(dy * 2 + travel);
 	return dy >= 0 ? d1 >= 2 * apart : d1 <= -2 * apart;
+}
+
+/* PLAY owns only two channels. Keep its common admission path to two counters
+ * and constant channel bits; boss/legacy ownership retains the general path. */
+static uint8_t admitPlayHostile(tGameState *s, tEntity *e) {
+	uint8_t fits = 0xc0, count6 = 0, count7 = 0;
+	const int16_t y = e->y;
+	const int8_t vy = e->vy;
+	const uint16_t age = hostileLife(e);
+	e->age = age; e->channel = 0;
+	tEntity *o = s->hostile;
+	for(uint8_t i = HOSTILE_COUNT; i; --i, ++o) {
+		uint8_t bit;
+		if(!o->active) continue;
+		if(o->channel == 6) { ++count6; bit = 0x40; }
+		else if(o->channel == 7) { ++count7; bit = 0x80; }
+		else continue;
+		if(!(fits & bit)) continue;
+		if(!o->age) o->age = hostileLife(o);
+		if(!staysApart(o, y, vy, age)) { fits &= (uint8_t)~bit; if(!fits) break; }
+	}
+	if((fits & 0x40) && count6 < BULLET_SPRITE_CAPACITY) e->channel = 6;
+	if((fits & 0x80) && count7 < (e->channel ? count6 : BULLET_SPRITE_CAPACITY)) e->channel = 7;
+	if(!e->channel) { e->active = 0; e->visible = 0; return 0; }
+	return 1;
 }
 
 /* One pass over the pool, with explicit scalar counters for the four DMA
  * owners. Least-occupied choice and low-channel tie breaking stay unchanged. */
 static uint8_t admitHostile(tGameState *s, tEntity *e) {
+	if(s->phase == PLAY) return admitPlayHostile(s, e);
 	uint8_t fits = logicHostileChannelMask(s), bestCount = BULLET_SPRITE_CAPACITY;
 	uint8_t count4 = 0, count5 = 0, count6 = 0, count7 = 0;
 	const int16_t y = e->y;
@@ -370,47 +415,92 @@ static uint8_t admitHostile(tGameState *s, tEntity *e) {
 	return 1;
 }
 
-static void fireHostile(tGameState *s, int16_t x, int16_t y, int8_t vy) {
+typedef struct {
+	tEntity *members[2][BULLET_SPRITE_CAPACITY];
+	uint8_t count[2], checked[2], valid;
+} tPlayAdmission;
+
+static void playAdmissionBegin(tGameState *s, tPlayAdmission *cache) {
+	cache->count[0] = cache->count[1] = 0; cache->valid = 1;
+	for(uint8_t i = 0; i < HOSTILE_COUNT; ++i) {
+		tEntity *e = &s->hostile[i];
+		if(!e->active || e->channel < 6 || e->channel > 7) continue;
+		uint8_t channel = e->channel - 6;
+		if(cache->count[channel] == BULLET_SPRITE_CAPACITY) { cache->valid = 0; return; }
+		cache->members[channel][cache->count[channel]++] = e;
+	}
+	cache->checked[0] = cache->count[0]; cache->checked[1] = cache->count[1];
+}
+
+static uint8_t admitVolleyHostile(tGameState *s, tEntity *e, tPlayAdmission *cache) {
+	if(!cache || !cache->valid) return admitHostile(s, e);
+	uint8_t bestCount = BULLET_SPRITE_CAPACITY;
+	const int16_t y = e->y;
+	const int8_t vy = e->vy;
+	const uint16_t age = hostileLife(e);
+	e->age = age; e->channel = 0;
+	for(uint8_t channel = 0; channel < 2; ++channel) {
+		uint8_t fits = 1;
+		for(uint8_t i = 0; i < cache->checked[channel]; ++i) {
+			tEntity *o = cache->members[channel][i];
+			if(!o->age) o->age = hostileLife(o);
+			if(!staysApart(o, y, vy, age)) { fits = 0; break; }
+		}
+		if(fits && cache->count[channel] < bestCount) {
+			bestCount = cache->count[channel]; e->channel = channel + 6;
+		}
+	}
+	if(!e->channel) { e->active = 0; e->visible = 0; return 0; }
+	/* New rays in this one chevron start FAN_SPACING apart and have
+	 * nondecreasing slopes, so they cannot conflict with one another. Their
+	 * occupancy still participates in least-loaded channel selection. */
+	++cache->count[e->channel - 6];
+	return 1;
+}
+
+static void fireHostile(tGameState *s, int16_t x, int16_t y, int8_t vy, tPlayAdmission *cache) {
 	tEntity *e = spawn(s->hostile, HOSTILE_COUNT, x, y, s->level, 1, HOSTILE_VX, vy);
-	if(e) admitHostile(s, e);
+	if(e) admitVolleyHostile(s, e, cache);
 }
 
 /* Chevron: the aimed centre ray leads, outer rays trail and diverge. Rays
  * start FAN_SPACING apart, so a 14px gap (wider than the 8px core) is always
  * open, and non-decreasing vy means neighbouring gaps never shrink. */
 static void fireFan(tGameState *s, int16_t x, int16_t y, uint8_t rays, int8_t aim) {
+	tPlayAdmission cache, *reserved = 0;
+	if(s->phase == PLAY) { playAdmissionBegin(s, &cache); reserved = &cache; }
 	int8_t ray, radius = rays / 2;
 	for(ray = -radius; ray <= radius; ++ray) {
 		int16_t rayY = y + ray * FAN_SPACING;
 		int16_t rayX = x + (ray < 0 ? -ray : ray) * FAN_STAGGER;
 		/* Clamping origins would stack distinct bullets on the corridor edge. */
 		if(rayY < PLAY_TOP || rayY + HOSTILE_H > PLAY_BOTTOM) continue;
-		fireHostile(s, rayX, rayY, (int8_t)clamp(aim + ray, -2, 2));
+		fireHostile(s, rayX, rayY, (int8_t)clamp(aim + ray, -2, 2), reserved);
 	}
 }
 
-static int16_t clampFormationY(const tGameState *s, const tEntity *e) {
-	/* Lane identity never changes when another member retires. */
-	if(e->waveId && e->waveId <= WAVE_TRACK_COUNT) {
-		uint8_t planned = s->waves[e->waveId - 1].planned;
-		if(planned == FORMATION_SIZE && e->waveMember < FORMATION_SIZE)
-			return clamp(e->y, s_laneLow[e->waveMember], s_laneLow[e->waveMember] + 9);
-	}
-	return clamp(e->y, PLAY_TOP, PLAY_BOTTOM - ENEMY_H);
-}
-
-static void updateEnemies(tGameState *s, uint8_t motionStep) {
-	uint8_t i;
+static uint8_t updateEnemies(tGameState *s, uint8_t motionStep) {
+	uint8_t i, lanes = 0, separated = 1;
 	for(i = 0; i < ENEMY_COUNT; ++i) {
 		tEntity *e = &s->enemies[i];
-		if(!e->active || e->kind == ENEMY_BOSS) continue;
+		if(!e->active) continue;
+		if(e->kind == ENEMY_BOSS) { separated = 0; continue; }
+		uint8_t tracked = e->waveId && e->waveId <= WAVE_TRACK_COUNT &&
+			s->waves[e->waveId - 1].planned == FORMATION_SIZE && e->waveMember < FORMATION_SIZE;
 		if(motionStep) {
 			++e->age;
 			e->x += halfStep(e->vx, s->enemyMotionFrame);
 			if(e->kind == ENEMY_WEAVER) e->y += halfStep((e->age & 32) ? -1 : 1, s->enemyMotionFrame);
 			if(e->kind == ENEMY_DART && e->age < 64) e->y += halfStep(direction(s->y - e->y), s->enemyMotionFrame);
-			e->y = clampFormationY(s, e);
+			e->y = tracked ? clamp(e->y, s_laneLow[e->waveMember], s_laneLow[e->waveMember] + 9) :
+				clamp(e->y, PLAY_TOP, PLAY_BOTTOM - ENEMY_H);
 		}
+		if(tracked && (motionStep || (e->y >= s_laneLow[e->waveMember] && e->y <= s_laneLow[e->waveMember] + 9))) {
+			uint8_t bit = 1u << e->waveMember;
+			if(lanes & bit) separated = 0;
+			lanes |= bit;
+		}
+		else separated = 0;
 		if(e->fireCountdown) --e->fireCountdown;
 		if(e->kind != ENEMY_ASTEROID && !e->fireCountdown) {
 			e->fireCountdown = s_enemyFireInterval[s->level];
@@ -420,11 +510,12 @@ static void updateEnemies(tGameState *s, uint8_t motionStep) {
 		}
 		if(e->x <= -ENEMY_W) retireEnemy(s, e, 0);
 	}
+	return separated;
 }
 
 static void startBoss(tGameState *s) {
 	clearPools(s);
-	memset(&s->boss, 0, sizeof(s->boss));
+	clearAligned(&s->boss, sizeof(s->boss));
 	s->boss.x = 240; s->boss.y = 104;
 	s->boss.hp = s_bossHealth[s->level]; s->boss.maxHp = s->boss.hp;
 	s->boss.cooldown = 50; s->boss.kind = s->level; s->boss.active = 1;
@@ -470,7 +561,7 @@ static void bossVolley(tGameState *s) {
 			/* 32px lanes leave 24px corridors; alternate volleys shift by 16. */
 			for(int16_t laneY = PLAY_TOP + 4 + ((s->boss.tick & 32) ? 16 : 0);
 				laneY + HOSTILE_H <= PLAY_BOTTOM; laneY += 32)
-				fireHostile(s, x, laneY, 0);
+				fireHostile(s, x, laneY, 0, 0);
 		}
 		break;
 	}
@@ -502,14 +593,20 @@ static void updateBoss(tGameState *s) {
 }
 
 static void moveProjectiles(tEntity *pool, uint8_t count, uint8_t playerShots, uint32_t frame) {
+	static const int8_t halfMotion[2][5] = {{-1, 0, 0, 0, 1}, {-1, -1, 0, 1, 1}};
+	const int8_t *motion = halfMotion[frame & 1];
+	const int16_t hostileStep = frame & 1 ? -2 : -1;
 	uint8_t i;
 	for(i = 0; i < count; ++i) {
 		tEntity *e = &pool[i];
+		if(!e->active) continue;
 		uint8_t width = playerShots ? shotWidth(e) : HOSTILE_W;
 		uint8_t height = playerShots ? shotHeight(e) : HOSTILE_H;
-		if(!e->active) continue;
-		e->x += playerShots ? e->vx : halfStep(e->vx, frame);
-		e->y += playerShots ? e->vy : halfStep(e->vy, frame);
+		if(playerShots) { e->x += e->vx; if(e->vy) e->y += e->vy; }
+		else {
+			e->x += e->vx == HOSTILE_VX ? hostileStep : halfStep(e->vx, frame);
+			if(e->vy) e->y += e->vy >= -2 && e->vy <= 2 ? motion[e->vy + 2] : halfStep(e->vy, frame);
+		}
 		if(!playerShots && e->age) --e->age;
 		/* Player shots are BOBs: beyond BOB_MAX_X they could not be drawn. */
 		if(e->x > (playerShots ? BOB_MAX_X : WORLD_W - 1) || e->x <= -width ||
@@ -520,8 +617,8 @@ static void moveProjectiles(tEntity *pool, uint8_t count, uint8_t playerShots, u
 
 static void killBoss(tGameState *s) {
 	addScore(s, (uint16_t)(2000 + s->level * 1000));
-	memset(s->shots, 0, sizeof(s->shots));
-	memset(s->hostile, 0, sizeof(s->hostile));
+	clearAligned(s->shots, sizeof(s->shots));
+	clearAligned(s->hostile, sizeof(s->hostile));
 	s->boss.active = 0; s->boss.visible = 0;
 	addEffect(s, FX_BOSS, s->boss.x, s->boss.y);
 	s->phase = BOSS_DYING; s->phaseFrame = 0;
@@ -531,11 +628,16 @@ static void killBoss(tGameState *s) {
 
 static void collideShots(tGameState *s) {
 	uint8_t i, j;
+	tEntity *targets[ENEMY_COUNT];
+	uint8_t targetCount = 255;
+	int16_t targetY = 0;
+	uint8_t targetHeight = 0;
 	for(i = 0; i < SHOT_COUNT; ++i) {
 		tEntity *shot = &s->shots[i];
 		if(!shot->active || !shot->visible || !onScreen(shot, shotHeight(shot))) continue;
+		uint8_t width = shotWidth(shot), height = shotHeight(shot);
 		if(s->phase == BOSS && s->boss.active && s->boss.visible &&
-			overlap(shot->x, shot->y, shotWidth(shot), shotHeight(shot),
+			overlap(shot->x, shot->y, width, height,
 				s->boss.x, s->boss.y, BOSS_W, BOSS_H)) {
 			shot->active = 0;
 			if(shot->hp) {
@@ -547,10 +649,21 @@ static void collideShots(tGameState *s) {
 		}
 		/* Boss mode has no ordinary enemy entities. */
 		if(s->phase == BOSS) continue;
-		for(j = 0; j < ENEMY_COUNT; ++j) {
-			tEntity *e = &s->enemies[j];
-			if(!e->active || !e->visible || !onScreen(e, ENEMY_H) || !overlap(shot->x, shot->y,
-				shotWidth(shot), shotHeight(shot), e->x, e->y, ENEMY_W, ENEMY_H)) continue;
+		/* Gather once, only when a shot needs it. Pool order preserves which
+		 * overlapping enemy is hit first. A prior shot may retire a target. */
+		if(targetCount == 255 || targetY != shot->y || targetHeight != height) {
+			targetCount = 0;
+			targetY = shot->y; targetHeight = height;
+			for(j = 0; j < ENEMY_COUNT; ++j) {
+				tEntity *e = &s->enemies[j];
+				if(e->active && e->visible && e->y < targetY + height && e->y + ENEMY_H > targetY &&
+					onScreen(e, ENEMY_H)) targets[targetCount++] = e;
+			}
+		}
+		for(j = 0; j < targetCount; ++j) {
+			tEntity *e = targets[j];
+			if(!e->active || !overlap(shot->x, shot->y, width, height,
+				e->x, e->y, ENEMY_W, ENEMY_H)) continue;
 			shot->active = 0;
 			if(e->hp <= shot->hp) {
 				retireEnemy(s, e, 1);
@@ -576,8 +689,8 @@ static void hurtHero(tGameState *s) {
 	s->moveRemainderX = 0; s->moveRemainderY = 0;
 	s->events |= EVENT_HIT | EVENT_EXPLOSION;
 	s->charge = 0; s->fireCooldown = 0;
-	memset(s->hostile, 0, sizeof(s->hostile));
-	memset(s->shots, 0, sizeof(s->shots));
+	clearAligned(s->hostile, sizeof(s->hostile));
+	clearAligned(s->shots, sizeof(s->shots));
 	addEffect(s, FX_HERO, s->x, s->y);
 	s->resumePhase = s->phase;
 	s->phase = HERO_DYING; s->phaseFrame = 0;
@@ -586,20 +699,23 @@ static void hurtHero(tGameState *s) {
 static void collideHero(tGameState *s) {
 	uint8_t i;
 	if(s->invulnerable) return;
+	const int16_t x = s->x + PLAYER_HIT_X, y = s->y + PLAYER_HIT_Y;
 	if(s->phase == BOSS && s->boss.active && s->boss.visible &&
-		overlap(s->x + PLAYER_HIT_X, s->y + PLAYER_HIT_Y, PLAYER_HIT_W, PLAYER_HIT_H,
+		overlap(x, y, PLAYER_HIT_W, PLAYER_HIT_H,
 			s->boss.x, s->boss.y, BOSS_W, BOSS_H)) { hurtHero(s); return; }
 	for(i = 0; i < HOSTILE_COUNT; ++i) {
 		tEntity *e = &s->hostile[i];
-		if(!e->active || !e->visible || !onScreen(e, HOSTILE_H)) continue;
-		if(overlap(s->x + PLAYER_HIT_X, s->y + PLAYER_HIT_Y, PLAYER_HIT_W, PLAYER_HIT_H,
-			e->x, e->y, HOSTILE_W, HOSTILE_H)) { hurtHero(s); return; }
+		if(!e->active || !e->visible) continue;
+		/* Most visible projectiles are far from the hitbox. Bounds matter only
+		 * for an actual overlap; keep them before committing any damage. */
+		if(overlap(x, y, PLAYER_HIT_W, PLAYER_HIT_H,
+			e->x, e->y, HOSTILE_W, HOSTILE_H) && onScreen(e, HOSTILE_H)) { hurtHero(s); return; }
 	}
 	if(s->phase == BOSS) return;
 	for(i = 0; i < ENEMY_COUNT; ++i) {
 		tEntity *e = &s->enemies[i];
-		if(e->active && e->visible && onScreen(e, ENEMY_H) && overlap(s->x + PLAYER_HIT_X, s->y + PLAYER_HIT_Y, PLAYER_HIT_W, PLAYER_HIT_H,
-			e->x, e->y, ENEMY_W, ENEMY_H)) { hurtHero(s); return; }
+		if(e->active && e->visible && overlap(x, y, PLAYER_HIT_W, PLAYER_HIT_H,
+			e->x, e->y, ENEMY_W, ENEMY_H) && onScreen(e, ENEMY_H)) { hurtHero(s); return; }
 	}
 }
 
@@ -612,11 +728,11 @@ static void resetSchedule(tEntity *pool, uint8_t count) {
  * here, or discarded if they could never be shown. */
 static void scheduleBullets(tGameState *s) {
 	uint8_t ownedChannels = logicHostileChannelMask(s);
+	uint8_t firstChannel = ownedChannels == 0xc0 ? 6 : 4;
 	for(uint8_t i = 0; i < HOSTILE_COUNT; ++i) {
 		tEntity *e = &s->hostile[i];
 		if(!e->active) { e->visible = 0; e->channel = 0; continue; }
-		if((e->channel < 4 || e->channel > 7 ||
-			!(ownedChannels & (1u << e->channel))) && !admitHostile(s, e)) continue;
+		if((!ownedChannels || e->channel < firstChannel || e->channel > 7) && !admitHostile(s, e)) continue;
 		e->visible = onScreen(e, HOSTILE_H);
 	}
 	for(uint8_t i = 0; i < SHOT_COUNT; ++i) {
@@ -626,7 +742,35 @@ static void scheduleBullets(tGameState *s) {
 	}
 }
 
-static void scheduleEnemies(tGameState *s) {
+static void scheduleEnemies(tGameState *s, uint8_t separated) {
+	/* The motion pass has already checked and clamped these distinct lanes.
+	 * No public-state cache: the proof is valid only inside this update. */
+	if(separated) {
+		for(uint8_t i = 0; i < ENEMY_COUNT; ++i) {
+			tEntity *e = &s->enemies[i];
+			e->visible = e->active && e->x >= 0 && e->x < WORLD_W;
+			e->channel = e->visible ? 4 : 0;
+		}
+		return;
+	}
+	/* Ordinary waves reserve six disjoint lanes. Validate their actual geometry
+	 * before taking the linear path; arbitrary/injected overlaps retain rotating
+	 * priority below. Off-screen entities never consume a DMA slot. */
+	uint8_t lanes = 0, formation = 1;
+	for(uint8_t i = 0; i < ENEMY_COUNT; ++i) {
+		tEntity *e = &s->enemies[i];
+		e->visible = e->channel = 0;
+		if(!e->active || !onScreen(e, ENEMY_H)) continue;
+		if(!e->waveId || e->waveId > WAVE_TRACK_COUNT ||
+			s->waves[e->waveId - 1].planned != FORMATION_SIZE ||
+			e->waveMember >= FORMATION_SIZE || e->y < s_laneLow[e->waveMember] ||
+			e->y > s_laneLow[e->waveMember] + 9 || (lanes & (1u << e->waveMember))) {
+			formation = 0; break;
+		}
+		lanes |= 1u << e->waveMember;
+		e->visible = 1; e->channel = 4;
+	}
+	if(formation) return;
 	uint8_t assigned = 0, start = (uint16_t)s->simFrame % ENEMY_COUNT;
 	tEntity *accepted[ENEMY_SPRITE_CAPACITY];
 	resetSchedule(s->enemies, ENEMY_COUNT);
@@ -644,9 +788,9 @@ static void scheduleEnemies(tGameState *s) {
 	}
 }
 
-static void scheduleSprites(tGameState *s) {
+static void scheduleSprites(tGameState *s, uint8_t separated) {
 	s->boss.visible = s->phase == BOSS && s->boss.active;
-	if(s->phase == PLAY) scheduleEnemies(s);
+	if(s->phase == PLAY) scheduleEnemies(s, separated);
 	scheduleBullets(s);
 	resetSchedule(s->pickups, BONUS_COUNT);
 	for(uint8_t i = 0; i < BONUS_COUNT; ++i)
@@ -808,11 +952,12 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	if(enemyStep) { s->enemyAccumulator -= 20; ++s->enemyMotionFrame; }
 	updateHero(s, input);
 	logicTrace(26);
+	uint8_t separated = 0;
 	if(s->phase == PLAY) {
 		++s->stageFrame;
 		if(s->waveTimer) --s->waveTimer;
 		if(!s->waveTimer && s->wave < g_stageWaveQuota[s->level] && !enemiesAlive(s)) spawnWave(s);
-		updateEnemies(s, enemyStep);
+		separated = updateEnemies(s, enemyStep);
 	}
 	else {
 		if(enemyStep) updateBoss(s);
@@ -830,7 +975,7 @@ uint8_t logicUpdate(tGameState *s, const tInput *input) {
 	collideShots(s);
 	if(s->phase == PLAY || s->phase == BOSS) collideHero(s);
 	logicTrace(30);
-	if(logicCombatActive(s)) scheduleSprites(s);
+	if(logicCombatActive(s)) scheduleSprites(s, separated);
 	logicTrace(31);
 	/* Collisions/death have precedence; a death tick cannot advance the gate. */
 	if(s->phase == PLAY) updateBossGate(s, wasQuiet);

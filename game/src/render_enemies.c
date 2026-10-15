@@ -14,6 +14,11 @@ static ULONG *s_pBlank;
 static tSpriteStream s_pStreams[2];
 static ULONG s_pPixels[ACTOR_FRAMES][2][ACTOR_HEIGHT];
 
+/* Startup-only image conversion: retain RAM for audio, not unrolled code. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+#endif
 UBYTE renderEnemiesCreate(const tView *pView, ULONG *pBlank) {
 	if(s_pView || !pView || !pBlank) return 0;
 	tBitMap *pStrip = artSectorEnemiesCreate();
@@ -32,6 +37,9 @@ UBYTE renderEnemiesCreate(const tView *pView, ULONG *pBlank) {
 		}
 	return 1;
 }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC pop_options
+#endif
 
 /* Visible channel-4 enemies in ascending Y (at most six: insertion sort). */
 static UBYTE gatherEnemies(tGameState *pState, tEntity **pList) {

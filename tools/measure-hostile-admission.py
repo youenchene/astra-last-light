@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def instrument(source):
-    admission = 'admitReserved(s, e, cache)' if 'static uint8_t admitReserved(' in source else 'admitHostile(s, e)'
+    admission = ('admitVolleyHostile(s, e, cache)' if 'static uint8_t admitVolleyHostile(' in source else
+                 'admitReserved(s, e, cache)' if 'static uint8_t admitReserved(' in source else 'admitHostile(s, e)')
     replacements = [
         ('#include "logic.h"', '#include "logic.h"\nstatic unsigned long opportunities, eligible, accepted, full, conflicts;'),
         (f'\tif(e) {admission};',

@@ -31,6 +31,7 @@ typedef struct { UWORD pPalette[32]; } tVPort;
 static tBitMap buffers[2], *s_pScreen, *s_pLabels;
 static tVPort viewport, *s_pVPort = &viewport;
 static UBYTE s_buffer;
+static void renderPaletteChanged(void) {}
 static void starsReset(void) {}
 static void panelQueue(tPhase phase) {(void)phase;}
 static void scoreDraw(ULONG n, UBYTE dirty) {(void)n;(void)dirty;}
@@ -38,6 +39,7 @@ static void bossLabelDraw(void) {}
 static void blitRect(tBitMap *b,UWORD x,UWORD y,UWORD w,UWORD h,UBYTE c) {
     for(unsigned yy=y; yy<y+h; ++yy) memset(&b->pixels[yy][x],c,w);
 }
+static void chargePatch(UWORD first,UBYTE width,UBYTE color) { blitRect(s_pScreen,44+first,19,width,4,color); }
 static void blitCopy(tBitMap *a,int x,int y,tBitMap *b,int xx,int yy,int w,int h,int m) {}
 static void blitCopyAligned(tBitMap *a,int x,int y,tBitMap *b,int xx,int yy,int w,int h) {}
 '''

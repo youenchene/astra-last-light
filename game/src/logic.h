@@ -60,10 +60,12 @@
 #define CHARGE_FRAMES 50
 #define RESPAWN_FRAMES 100
 
-typedef enum {
+enum {
 	TITLE, PLAY, BOSS, CLEAR, GAMEOVER, WIN,
 	SECTOR_INTRO, BOSS_INTRO, BOSS_DYING, HERO_DYING
-} tPhase;
+};
+/* Only ten phase IDs exist; byte storage avoids 32-bit enum traffic on 68000. */
+typedef uint8_t tPhase;
 enum { FX_ENEMY, FX_ASTEROID, FX_HERO, FX_BOSS };
 enum {
 	EVENT_SHOT = 1, EVENT_EXPLOSION = 2, EVENT_HIT = 4,
@@ -200,9 +202,18 @@ void logicScenePresented(tGameState *pState, uint16_t epoch);
 void logicSetPresentationBusy(tGameState *pState, uint8_t busy);
 /* Caller supplies a P key edge. Fire must be released after resume before reuse. */
 void logicTogglePause(tGameState *pState);
-uint8_t logicCombatActive(const tGameState *pState);
-uint8_t logicWorldScrolling(const tGameState *pState);
+/* Tiny read-only queries are inline across logic/render/audio translation units. */
+static inline uint8_t logicCombatActive(const tGameState *s) {
+	return s && (s->phase == PLAY || s->phase == BOSS);
+}
+static inline uint8_t logicWorldScrolling(const tGameState *s) {
+	return s && s->phase == PLAY && !s->manualPause;
+}
 /* Hardware channel bitmask, independent of bullet kind/palette. */
-uint8_t logicHostileChannelMask(const tGameState *pState);
+static inline uint8_t logicHostileChannelMask(const tGameState *s) {
+	if(!s) return 0;
+	tPhase phase = s->phase == HERO_DYING ? s->resumePhase : s->phase;
+	return phase == PLAY ? 0xc0 : phase == BOSS ? 0xf0 : 0;
+}
 
 #endif

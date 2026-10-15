@@ -17,6 +17,8 @@
 
 static tView *s_pView;
 static tVPort *s_pVPort;
+static tCopBfr *s_paletteCopperA;
+static UBYTE s_paletteDirty[2];
 static ULONG *s_pBlank;
 static UBYTE s_inScene, s_sceneId, s_closingOpening;
 static UWORD s_sceneEpoch;
@@ -39,10 +41,15 @@ static UBYTE isScene(tPhase phase) {
 	return phase == SECTOR_INTRO || phase == BOSS_INTRO || phase == CLEAR || phase == WIN;
 }
 
+void renderPaletteChanged(void) { s_paletteDirty[0] = s_paletteDirty[1] = 1; }
+
 void renderSyncPalette(void) {
+	UBYTE buffer = s_pView->pCopList->pBackBfr != s_paletteCopperA;
+	if(!s_paletteDirty[buffer]) return;
 	for(UBYTE index = 0; index < 32; ++index)
 		copSetMoveVal(&s_pView->pCopList->pBackBfr->pList[ASTRA_COP_PALETTE + index].sMove,
 			s_pVPort->pPalette[index]);
+	s_paletteDirty[buffer] = 0;
 }
 
 void renderPreparePalette(void) {
@@ -52,10 +59,12 @@ void renderPreparePalette(void) {
 	for(UBYTE ink = 1; ink < 16; ++ink) palette[16 + ink] = g_pArtHero32Palette[ink];
 	for(UBYTE index = 0; index < 32; ++index)
 		s_pVPort->pPalette[index] = palette[index];
+	renderPaletteChanged();
 }
 
 void renderTitleFlash(UBYTE bright) {
 	if(!bright) return;
+	s_paletteDirty[s_pView->pCopList->pBackBfr != s_paletteCopperA] = 1;
 	for(UBYTE ink = 6; ink <= 14; ink += 8)
 		copSetMoveVal(&s_pView->pCopList->pBackBfr->pList[ASTRA_COP_PALETTE + ink].sMove, 0xfff);
 }
@@ -70,11 +79,13 @@ void renderPalette(void) {
 		copSetMove(&s_pView->pCopList->pFrontBfr->pList[ASTRA_COP_PALETTE + index].sMove,
 			&g_pCustom->color[index], color);
 	}
+	s_paletteDirty[0] = s_paletteDirty[1] = 0;
 }
 
 UBYTE renderCreate(tView *pView, tVPort *pVPort, tSimpleBufferManager *pBuffer) {
 	s_pView = pView;
 	s_pVPort = pVPort;
+	s_paletteCopperA = pView->pCopList->pBackBfr;
 	s_pBlank = memAllocChipClear(sizeof(ULONG));
 	if(!constructionResult(s_pBlank != 0, 0)) return 0;
 	/* Initialize the entire reservation, including padding overwritten by

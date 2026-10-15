@@ -99,14 +99,14 @@ UBYTE renderBulletsCreate(const tView *pView, ULONG *pBlank) {
 /* One pass over the pool marks drawable hostiles per channel. */
 static void gatherChannels(tEntity *pHostile, UBYTE mask, UBYTE show, ULONG *pDrawn) {
 	ULONG membership = 1;
+	UBYTE firstChannel = mask == 0xc0 ? 6 : 4;
 	for(UBYTE index = 0; index < HOSTILE_COUNT; ++index, membership <<= 1) {
 		tEntity *pEntity = &pHostile[index];
 		pEntity->visible = 0;
 		if(!show || !pEntity->active || pEntity->x <= -HOSTILE_W ||
 			pEntity->x >= WORLD_W || pEntity->y < PLAY_TOP ||
 			pEntity->y > PLAY_BOTTOM - HOSTILE_H) continue;
-		if(pEntity->channel < BULLET_FIRST_CHANNEL || pEntity->channel > 7 ||
-			!(mask & (1U << pEntity->channel))) continue;
+		if(!mask || pEntity->channel < firstChannel || pEntity->channel > 7) continue;
 		pDrawn[pEntity->channel - BULLET_FIRST_CHANNEL] |= membership;
 	}
 }

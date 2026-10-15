@@ -15,7 +15,7 @@ static inline UBYTE stripValid(const tBitMap *pStrip, UWORD width, UWORD rows) {
 /* Split a validated 4bpp interleaved strip into attached-sprite rows:
  * pOut[frame][part][row], part = column * 2 + (0: planes 0/1, 1: planes 2/3),
  * each ULONG = (low plane word << 16) | high plane word, as sprite DMA reads. */
-static inline void stripSplit(const tBitMap *pStrip, UWORD width, UBYTE frames,
+static inline __attribute__((always_inline)) void stripSplit(const tBitMap *pStrip, UWORD width, UBYTE frames,
 	UBYTE height, ULONG *pOut) {
 	UBYTE columns = width / 16;
 	UWORD bytesPerPlane = width / 8;
