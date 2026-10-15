@@ -108,6 +108,12 @@ static UBYTE pixelRead(const tBitMap *pBitmap, UWORD x, UWORD y) {
 	return color;
 }
 
+/* The font cache is constructed once, before hardware takeover. Keep its setup
+ * loops compact; only the resulting masks, not unrolled startup code, are hot. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+#endif
 static void fontMasksCreate(void) {
 	for(UBYTE size = 0; size < 3; ++size) {
 		UBYTE scale = 1 << size;
@@ -130,6 +136,9 @@ static void fontMasksCreate(void) {
 			(s_pGlyphMasks[0]['S' - 'A'][row] >> 18) |
 			(s_pGlyphMasks[0]['S' - 'A'][row] >> 24);
 }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC pop_options
+#endif
 
 /* Startup precedes language selection. Cache both languages in one allocation;
  * select the source bank at draw time, never freeze the startup preference. */
@@ -406,6 +415,30 @@ static void decorCopperSwitch(tCopCmd *commands, UWORD y, const tBitMap *bitmap,
 	}
 }
 
+/* Once active, only the delay and occasionally pointers change. All WAITs,
+ * register addresses, fetch width and modulos remain those of the full builder. */
+static void decorCopperScroll(tCopCmd *commands, UWORD y, UWORD sourceY,
+	UBYTE before, UBYTE after) {
+	(void)y; /* WAIT positions and register addresses were set at activation. */
+	LONG offset = after ? fetchModeCalcBplOffsetX(s_pVPort, after, 0) : 0;
+	if(!before || !after) {
+		UWORD start = fetchModeGetDDfStrt(s_pVPort), modulo = s_pDecor->BytesPerRow - 40;
+		if(after) fetchModeApplyXScrollCopper(s_pVPort, &start, &modulo);
+		copSetMoveVal(&commands[1].sMove, fetchModeGetDDfStop(s_pVPort));
+		copSetMoveVal(&commands[2].sMove, start);
+		copSetMoveVal(&commands[3].sMove, modulo);
+		copSetMoveVal(&commands[4].sMove, modulo);
+	}
+	copSetMoveVal(&commands[5].sMove, after ? fetchModeCalcBplShift(s_pVPort, after, 0) : 0);
+	if(offset == (before ? fetchModeCalcBplOffsetX(s_pVPort, before, 0) : 0)) return;
+	offset += (ULONG)sourceY * s_pDecor->BytesPerRow;
+	for(UBYTE plane = 0; plane < 4; ++plane) {
+		ULONG address = (ULONG)s_pDecor->Planes[plane] + offset;
+		copSetMoveVal(&commands[6 + plane * 2].sMove, address >> 16);
+		copSetMoveVal(&commands[7 + plane * 2].sMove, address & 0xffff);
+	}
+}
+
 void renderWorldCopper(const tGameState *pState, UBYTE ready) {
 	tCopBfr *back = s_pVPort->pView->pCopList->pBackBfr;
 	UBYTE buffer = back != s_pDecorCopperA;
@@ -418,11 +451,16 @@ void renderWorldCopper(const tGameState *pState, UBYTE ready) {
 		return;
 	}
 	UBYTE changed = !s_decorCopper[buffer].enabled || s_decorCopper[buffer].level != s_ubLevel;
-	if(changed || s_decorCopper[buffer].top != s_topScroll)
-		decorCopperSwitch(commands, DECOR_TOP, s_pDecor, s_ubLevel * 48, s_topScroll, 1);
-	if(changed || s_decorCopper[buffer].bottom != s_bottomScroll)
-		decorCopperSwitch(commands + 29, DECOR_BOTTOM, s_pDecor,
+	if(changed || s_decorCopper[buffer].top != s_topScroll) {
+		if(changed) decorCopperSwitch(commands, DECOR_TOP, s_pDecor, s_ubLevel * 48, s_topScroll, 1);
+		else decorCopperScroll(commands, DECOR_TOP, s_ubLevel * 48, s_decorCopper[buffer].top, s_topScroll);
+	}
+	if(changed || s_decorCopper[buffer].bottom != s_bottomScroll) {
+		if(changed) decorCopperSwitch(commands + 29, DECOR_BOTTOM, s_pDecor,
 			s_ubLevel * 48 + DECOR_HEIGHT, s_bottomScroll, 1);
+		else decorCopperScroll(commands + 29, DECOR_BOTTOM, s_ubLevel * 48 + DECOR_HEIGHT,
+			s_decorCopper[buffer].bottom, s_bottomScroll);
+	}
 	if(!s_decorCopper[buffer].enabled || s_decorCopper[buffer].screen != s_pScreen) {
 		decorCopperSwitch(commands + 14, DECOR_TOP + DECOR_HEIGHT, s_pScreen,
 			DECOR_TOP + DECOR_HEIGHT, 0, 0);
@@ -438,6 +476,10 @@ void renderWorldCopper(const tGameState *pState, UBYTE ready) {
 	s_decorCopper[buffer].bottom = s_bottomScroll;
 }
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+#endif
 UBYTE renderWorldCreate(tVPort *pVPort, tBitMap *pFront, tBitMap *pScreen) {
 	s_pVPort = pVPort;
 	s_pDecorCopperA = pVPort->pView->pCopList->pBackBfr;
@@ -475,6 +517,9 @@ UBYTE renderWorldCreate(tVPort *pVPort, tBitMap *pFront, tBitMap *pScreen) {
 	bitmapDestroy(pStrip);
 	return 1;
 }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC pop_options
+#endif
 
 static void decorRows(UWORD scroll, UWORD band, UWORD destY, UWORD row, UWORD rows) {
 	UWORD sourceY = s_ubLevel * 48 + band + row;
@@ -656,6 +701,24 @@ static void bossLabelDraw(void) {
 	}
 }
 
+/* Small charge deltas need only one/two bytes in each of four planes. Unlike
+ * a full bar clear, this preserves every unchanged and exterior HUD pixel. */
+static void chargePatch(UWORD first, UBYTE width, UBYTE color) {
+	UWORD x = 44 + first;
+	UWORD mask = (UWORD)(0xffffu << (16 - width));
+	mask >>= x & 7;
+	UBYTE high = mask >> 8, low = mask;
+	UWORD offset = 19 * s_pScreen->BytesPerRow + (x >> 3);
+	blitWait();
+	for(UBYTE plane = 0; plane < 4; ++plane) {
+		UBYTE *dest = s_pScreen->Planes[plane] + offset;
+		for(UBYTE row = 0; row < 4; ++row, dest += s_pScreen->BytesPerRow) {
+			if(color & (1u << plane)) { dest[0] |= high; if(low) dest[1] |= low; }
+			else { dest[0] &= (UBYTE)~high; if(low) dest[1] &= (UBYTE)~low; }
+		}
+	}
+}
+
 static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	if(dirty || s_ubWeapon != pState->weaponLevel) {
 		blitRect(s_pScreen, 50, 249, 6, 7, 0);
@@ -701,11 +764,22 @@ static void hudDraw(const tGameState *pState, UBYTE dirty) {
 	hudBobMark(HB_LABELS_END);
 	if(dirty || s_ubCharge != pState->charge ||
 		(ready && HISTORY.chargeInk != (pState->frame & 8))) {
-		blitRect(s_pScreen, 44, 19, 100, 4, 2);
-		hudBobOperation(HO_CHARGE_CLEAR, 1);
-		if(pState->charge) blitRect(s_pScreen, 44, 19,
-			ready ? 100 : pState->charge << 1, 4, ready ? ((pState->frame & 8) ? 7 : 14) : 15);
-		if(pState->charge) { hudBobOperation(HO_CHARGE_FILL, 1); }
+		if(!dirty && !ready && s_ubCharge < CHARGE_FRAMES) {
+			UWORD before = s_ubCharge << 1, after = pState->charge << 1;
+			UWORD first = before < after ? before : after;
+			UBYTE width = before < after ? after - before : before - after;
+			UBYTE color = before < after ? 15 : 2;
+			if(width && width <= 4) chargePatch(first, width, color);
+			else if(width) blitRect(s_pScreen, 44 + first, 19, width, 4, color);
+			if(width) { hudBobOperation(before < after ? HO_CHARGE_FILL : HO_CHARGE_CLEAR, 1); }
+		}
+		else {
+			blitRect(s_pScreen, 44, 19, 100, 4, 2);
+			hudBobOperation(HO_CHARGE_CLEAR, 1);
+			if(pState->charge) blitRect(s_pScreen, 44, 19,
+				ready ? 100 : pState->charge << 1, 4, ready ? ((pState->frame & 8) ? 7 : 14) : 15);
+			if(pState->charge) { hudBobOperation(HO_CHARGE_FILL, 1); }
+		}
 	}
 	hudBobMark(HB_CHARGE_END);
 	UBYTE bossHud = pState->phase == BOSS;
@@ -817,6 +891,7 @@ void renderWorldBegin(const tGameState *pState) {
 	s_pVPort->pPalette[4] = s_ePhase == TITLE ? s_uwOriginalStarColor : 0xbdf;
 	/* Shadow palette only; the completed target publishes these colors atomically. */
 	s_pVPort->pPalette[11] = s_ePhase == WIN ? 0xfa9 : s_uwOriginalRoseColor;
+	renderPaletteChanged();
 	if(s_ePhase == TITLE) {
 		queueRect(0, 224, WORLD_W, 8, 0);
 		queueCentered(224, localizedSector(level), 1, 5);

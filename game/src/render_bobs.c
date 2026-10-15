@@ -3,6 +3,7 @@
 #include "render_boss.h"
 #include "render_effects.h"
 #include "render_scenes.h"
+#include "render_shots.h"
 #include "art.h"
 #include "combat_perf.h"
 #include "galaxy_trace.h"
@@ -12,18 +13,13 @@
 #define BONUS_HEIGHT 16
 #define BONUS_FRAMES BONUS_KIND_COUNT
 #define LANCE_FRAMES 2
-/* At most two lances live at once (50-tick charge, 70-tick flight). */
-#define LANCE_BOBS 4
 
 typedef struct { tBitMap *pFrames, *pMask; } tStrip;
 
 static tBitMap *s_pScreen;
 static tStrip s_sBonus, s_sShot, s_sLance;
 static UBYTE *s_pBonusData[BONUS_FRAMES], *s_pBonusMask[BONUS_FRAMES];
-static UBYTE *s_pLanceData[LANCE_FRAMES], *s_pLanceMask[LANCE_FRAMES];
 static tBob s_pBonusBobs[BONUS_COUNT];
-static tBob s_pShotBobs[SHOT_COUNT];
-static tBob s_pLanceBobs[LANCE_BOBS];
 static UBYTE s_isManagerCreated;
 static UBYTE s_isFrameOpen;
 
@@ -53,10 +49,8 @@ UBYTE renderBobsCreate(tBitMap *pFront, tBitMap *pScreen) {
 		s_pBonusData[frame] = bobCalcFrameAddress(s_sBonus.pFrames, frame * BONUS_HEIGHT);
 		s_pBonusMask[frame] = bobCalcFrameAddress(s_sBonus.pMask, frame * BONUS_HEIGHT);
 	}
-	for(UBYTE frame = 0; frame < LANCE_FRAMES; ++frame) {
-		s_pLanceData[frame] = bobCalcFrameAddress(s_sLance.pFrames, frame * CHARGED_SHOT_H);
-		s_pLanceMask[frame] = bobCalcFrameAddress(s_sLance.pMask, frame * CHARGED_SHOT_H);
-	}
+	if(!renderShotsCreate(pFront, pScreen, s_sShot.pFrames, s_sShot.pMask,
+		s_sLance.pFrames, s_sLance.pMask)) { renderBobsDestroy(); return 0; }
 	s_pScreen = pScreen;
 	bobManagerCreate(pFront, pScreen, WORLD_H);
 	s_isManagerCreated = 1;
@@ -67,23 +61,18 @@ UBYTE renderBobsCreate(tBitMap *pFront, tBitMap *pScreen) {
 	for(UBYTE i = 0; i < BONUS_COUNT; ++i)
 		bobInit(&s_pBonusBobs[i], BOB_WIDTH, BONUS_HEIGHT, 1,
 			s_pBonusData[0], s_pBonusMask[0], 0, PLAY_TOP);
-	for(UBYTE i = 0; i < SHOT_COUNT; ++i)
-		bobInit(&s_pShotBobs[i], BOB_WIDTH, SHOT_H, 1,
-			s_sShot.pFrames->Planes[0], s_sShot.pMask->Planes[0], 0, PLAY_TOP);
-	for(UBYTE i = 0; i < LANCE_BOBS; ++i)
-		bobInit(&s_pLanceBobs[i], BOB_WIDTH, CHARGED_SHOT_H, 1,
-			s_pLanceData[0], s_pLanceMask[0], 0, PLAY_TOP);
 	bobReallocateBuffers();
 	if(!bobBuffersReady()) { renderBobsDestroy(); return 0; }
 	return 1;
 }
 
-void renderBobsBind(tBitMap *pScreen) { s_pScreen = pScreen; }
+void renderBobsBind(tBitMap *pScreen) { s_pScreen = pScreen; renderShotsBind(pScreen); }
 
 void renderBobsBegin(void) {
 	if(!s_isManagerCreated || s_isFrameOpen) return;
 	/* Select by identity, including after scenes where no BOB queue was run.
 	 * Restore this bitmap's N-2 background, never the other bitmap's queue. */
+	renderShotsRestore();
 	bobSetCurrentBuffer(s_pScreen);
 	bobBegin(s_pScreen);
 	combatPerfBegin(CP_WAIT);
@@ -115,35 +104,12 @@ static void drawPickups(tGameState *pState, UBYTE show) {
 	}
 }
 
-static void drawShots(tGameState *pState, UBYTE show) {
-	UBYTE lances = 0, flash = (pState->frame >> 2) & 1;
-	for(UBYTE i = 0; i < SHOT_COUNT; ++i) {
-		tEntity *pShot = &pState->shots[i];
-		UBYTE charged = pShot->kind == SHOT_CHARGED;
-		pShot->visible = 0;
-		if(!show || pShot->kind > SHOT_CHARGED ||
-			!fits(pShot, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
-		if((pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO) && renderScenesOccludes(pShot->x, pShot->y,
-			BOB_WIDTH, charged ? CHARGED_SHOT_H : SHOT_H)) continue;
-		if(!charged) {
-			push(&s_pShotBobs[i], pShot);
-			hudBobPushed(HB_SHOT, pShot->x);
-			pShot->visible = 1; continue;
-		}
-		if(lances >= LANCE_BOBS) continue;
-		tBob *pBob = &s_pLanceBobs[lances++];
-		bobSetFrame(pBob, s_pLanceData[flash], s_pLanceMask[flash]);
-		push(pBob, pShot);
-		hudBobPushed(HB_LANCE, pShot->x);
-		pShot->visible = 1;
-	}
-}
-
 void renderBobsDraw(tGameState *pState) {
 	hudBobMark(HB_BOBS_BEGIN);
 	combatPerfBegin(CP_BOBS);
+	UBYTE show = 0;
 	if(pState) {
-		UBYTE show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS ||
+		show = s_isFrameOpen && (pState->phase == PLAY || pState->phase == BOSS ||
 			pState->phase == SECTOR_INTRO || pState->phase == BOSS_INTRO);
 		renderBossQueue(pState, s_isFrameOpen);
 		hudBobMark(HB_BOSS_QUEUE_END);
@@ -153,11 +119,14 @@ void renderBobsDraw(tGameState *pState) {
 		hudBobMark(HB_EFFECTS_QUEUE_END);
 		drawPickups(pState, show);
 		hudBobMark(HB_PICKUPS_END);
-		drawShots(pState, show);
-		hudBobMark(HB_SHOTS_END);
 	}
-	if(!s_isFrameOpen) { combatPerfEnd(CP_BOBS); return; }
+	if(!s_isFrameOpen) { renderShotsDraw(pState, 0); combatPerfEnd(CP_BOBS); return; }
 	bobEnd();
+	/* Shot backgrounds include current BOB pixels. Their next restoration
+	 * therefore precedes ACE's own restore, and their draw follows its wait. */
+	blitWait();
+	renderShotsDraw(pState, show);
+	hudBobMark(HB_SHOTS_END);
 	hudBobMark(HB_FLUSH_END);
 	combatPerfBegin(CP_WAIT);
 	blitWait();
@@ -172,10 +141,12 @@ void renderBobsDiscard(void) {
 	if(!s_isManagerCreated || s_isFrameOpen) return;
 	blitWait();
 	bobDiscardUndraw();
+	renderShotsDiscard();
 }
 
 void renderBobsDestroy(void) {
 	blitWait();
+	renderShotsDestroy();
 	if(s_isManagerCreated) bobManagerDestroy();
 	s_isManagerCreated = 0;
 	s_isFrameOpen = 0;

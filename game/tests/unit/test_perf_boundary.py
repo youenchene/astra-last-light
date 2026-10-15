@@ -57,6 +57,18 @@ void agkPerfReport(void);
 int main(int argc, char **argv) {
     assert(argc==3);
     unsigned count=atoi(argv[1]), miss=atoi(argv[2]);
+    /* Guarded arithmetic is byte-for-byte the original formula, including
+     * large sums, long stalls, and every nonzero legacy frame divisor. */
+    uint32_t seed=17;
+    for(unsigned n=0;n<20000;++n) {
+        seed=seed*1664525u+1013904223u;
+        ULONG sum=n<1000?n:seed;
+        UWORD divisor=1+n%50, lines=n<1000?n:(UWORD)seed;
+        UBYTE vbls=1+n%255;
+        assert(astraPerfAverage(sum,divisor)==(UWORD)(sum/divisor));
+        assert(astraPerfPercent(lines,vbls)==(UWORD)((lines*100)/(313*vbls)));
+        assert(astraPerfPercent(lines,1)==(UWORD)((lines*100)/313));
+    }
     for(unsigned i=0;i<count;++i) {
         agkPerfBegin();
         beam+=20;

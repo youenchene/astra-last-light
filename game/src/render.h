@@ -38,6 +38,8 @@ void renderPalette(void);
 void renderPreparePalette(void);
 /* Publish viewport colors into all 32 raw copper palette slots. */
 void renderSyncPalette(void);
+/* Shadow colors changed: both physical lists must receive their next update. */
+void renderPaletteChanged(void);
 /* Override only the unpublished title's lettering; never mutate shadow colors. */
 void renderTitleFlash(UBYTE bright);
 /* Bind every pixel renderer to the actual back bitmap after vblank. */

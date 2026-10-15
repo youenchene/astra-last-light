@@ -53,6 +53,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	${CMAKE_CURRENT_SOURCE_DIR}/tools/patch-perf.py ${AGK_KIT}/runtime/src/perf.c)
 
 file(GLOB_RECURSE SOURCES src/*.c)
+# Keep combat at the kit's speed optimization. Cold asset conversion and the
+# original intro fit their frame budget without large O3 setup expansions.
+set_source_files_properties(src/intro.c PROPERTIES COMPILE_OPTIONS "-O2")
 # Art converted by agk (art/ -> build/art/art.c + art.h), if the project has any
 if(EXISTS ${CMAKE_BINARY_DIR}/art/art.c)
 	# AGK's pinned generator assumes allocation always succeeds. Keep the
@@ -61,6 +64,7 @@ if(EXISTS ${CMAKE_BINARY_DIR}/art/art.c)
 	string(REGEX REPLACE "(tBitMap \\*pBm = bitmapCreate\\([^;]+;)"
 		"\\1\n\tif (!pBm) return 0;" ART_SOURCE "${ART_SOURCE}")
 	file(WRITE ${CMAKE_BINARY_DIR}/art/art-safe.c "${ART_SOURCE}")
+	set_source_files_properties(${CMAKE_BINARY_DIR}/art/art-safe.c PROPERTIES COMPILE_OPTIONS "-O2")
 	list(APPEND SOURCES ${CMAKE_BINARY_DIR}/art/art-safe.c)
 	include_directories(${CMAKE_BINARY_DIR}/art)
 endif()

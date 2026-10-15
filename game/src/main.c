@@ -259,6 +259,7 @@ static void publishFrame(void) {
 		if(!languageSelectTargetReady(&s_language, target)) return;
 		for(UBYTE ink = 0; ink < 16; ++ink)
 			s_pVPort->pPalette[ink] = ink < 4 ? g_languagePalette[ink] : 0;
+		renderPaletteChanged();
 		renderSyncPalette();
 		s_pBuffer->ubDirtyCounter = 1;
 		viewProcessManagers(s_pView);
@@ -279,6 +280,8 @@ static void publishFrame(void) {
 		 * visible pixels, palette and DMA stream identities remain immutable. */
 		return;
 	}
+	/* The licensed intro owns direct palette fades; retain its every-tick copy. */
+	if(!s_isIntroDone) renderPaletteChanged();
 	renderSyncPalette();
 	if(s_isIntroDone && s_sState.phase == TITLE && s_confirm.active && renderBothReady()) {
 		s_confirmSubmitted = 1;

@@ -10,6 +10,7 @@ class HudBobOperationTests(unittest.TestCase):
     def test_changed_glyphs_and_successful_pushes_follow_actual_eligibility(self):
         world=(ROOT/'game/src/render_world.c').read_text().replace('__attribute__((noinline)) ','')
         bobs=(ROOT/'game/src/render_bobs.c').read_text()
+        shots=(ROOT/'game/src/render_shots.c').read_text()
         prelude=r'''
 #include <assert.h>
 #include <stdint.h>
@@ -20,6 +21,8 @@ class HudBobOperationTests(unittest.TestCase):
 typedef uint8_t UBYTE;
 typedef uint16_t UWORD;
 typedef uint32_t ULONG;
+typedef int16_t WORD;
+typedef struct { UBYTE *Planes[4]; } tBitMap;
 unsigned char galaxyTraceTarget=1;
 unsigned short hudBobOperations[HO_COUNT],hudBobPushes[HB_CATEGORY_COUNT],hudBobUnaligned[HB_CATEGORY_COUNT];
 static unsigned pushed,glyphCalls,waits;
@@ -37,14 +40,32 @@ typedef struct {struct {UWORD uwX,uwY;} sPos;} tBob;
 #define BONUS_HEIGHT 16
 #define BOB_WIDTH 16
 #define LANCE_BOBS 4
-static tBob s_pBonusBobs[BONUS_COUNT],s_pShotBobs[SHOT_COUNT],s_pLanceBobs[LANCE_BOBS];
-static UBYTE *s_pBonusData[BONUS_FRAMES],*s_pBonusMask[BONUS_FRAMES],*s_pLanceData[2],*s_pLanceMask[2];
+static tBob s_pBonusBobs[BONUS_COUNT];
+static UBYTE *s_pBonusData[BONUS_FRAMES],*s_pBonusMask[BONUS_FRAMES];
 static void bobPush(tBob *b) {(void)b;++pushed;}
 static void bobSetFrame(tBob *b,UBYTE *p,UBYTE *m) {(void)b;(void)p;(void)m;}
 static UBYTE renderScenesOccludes(int x,int y,int w,int h) {(void)y;(void)w;(void)h;return x==100;}
+#define USEA 0x800
+#define USEB 0x400
+#define USEC 0x200
+#define USED 0x100
+#define MINTERM_A 0xf0
+#define MINTERM_COOKIE 0xca
+#define ASHIFTSHIFT 12
+#define HSIZEBITS 6
+static struct {
+    UWORD bltcon0,bltcon1,bltafwm,bltalwm;
+    WORD bltamod,bltbmod,bltcmod,bltdmod;
+    UBYTE *bltapt,*bltbpt,*bltcpt,*bltdpt;
+} custom,*g_pCustom=&custom;
+static unsigned blits;
+static void submit(UWORD size) {(void)size;++blits;}
 '''
         exercise=r'''
 int main(void) {
+    static tShotBacking backing[2];static UBYTE screenData[40960];
+    static tBitMap screen;screen.Planes[0]=screenData;s_screen=&screen;s_background=backing;
+    s_buffers[0]=s_buffers[1]=&screen;
     memcpy(history.scoreText,"00000000",9);
     scoreDraw(600,0);
     assert(hudBobOperations[HO_SCORE_CALLS]==1 && hudBobOperations[HO_SCORE_CHANGED]==1);
@@ -70,18 +91,21 @@ int main(void) {
         s.shots[i].kind=i?SHOT_CHARGED:0;
     }
     s.shots[6].x=-1;
-    drawShots(&s,1);
-    assert(hudBobPushes[HB_SHOT]==1 && hudBobPushes[HB_LANCE]==4 && pushed==6);
+    renderShotsDraw(&s,1);
+    assert(hudBobPushes[HB_SHOT]==1 && hudBobPushes[HB_LANCE]==4 && pushed==1);
+    assert(s_history[0].count==5 && blits==10);
     assert(hudBobUnaligned[HB_LANCE]==4 && !s.shots[5].visible && !s.shots[6].visible);
-    drawShots(&s,0);
-    assert(pushed==6);
+    renderShotsDraw(&s,0);
+    assert(pushed==1 && blits==10);
     galaxyTraceTarget=0;
     drawPickups(&s,1);
-    assert(pushed==7 && hudBobPushes[HB_PICKUP]==1);
+    assert(pushed==2 && hudBobPushes[HB_PICKUP]==1);
 }
 '''
         code=prelude+'\n'.join(function(world,n) for n in ('numberText','scoreDraw'))
-        code+='\n'.join(function(bobs,n) for n in ('fits','push','drawPickups','drawShots'))+exercise
+        code+='\n'.join(function(bobs,n) for n in ('fits','push','drawPickups'))
+        code+='\n'+shots[shots.index('#define LANCE_SLOTS'):shots.index('static inline void submit')]
+        code+=function(shots,'copySetup')+function(shots,'renderShotsDraw')+exercise
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)
             (path/'counts.c').write_text(code)
